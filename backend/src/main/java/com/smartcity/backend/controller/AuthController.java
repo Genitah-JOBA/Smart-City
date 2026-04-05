@@ -42,7 +42,7 @@ public class AuthController {
             return ResponseEntity.badRequest().body("Le nom est vide !");
         }
         if (utilisateurRepository.findByEmail(user.getEmail()).isPresent()) {
-            return ResponseEntity.badRequest().body("Email déjà utilisé");
+            return ResponseEntity.badRequest().body("Cet email est déjà pris");
         }
         if (user.getRole() == null || user.getRole().isEmpty()) {
             return ResponseEntity.badRequest().body("Le rôle est vide !");

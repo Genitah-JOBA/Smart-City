@@ -8,6 +8,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import java.util.Collections;
 
 import java.util.ArrayList;
 
@@ -19,11 +21,15 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        // On cherche par email car c'est ton identifiant
         Utilisateur user = utilisateurRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("Utilisateur non trouvé avec l'email : " + email));
+                .orElseThrow(() -> new UsernameNotFoundException("Utilisateur non trouvé : " + email));
 
-        // On retourne un objet User de Spring Security
-        return new User(user.getEmail(), user.getMotDePasse(), new ArrayList<>());
+        // ✅ On ajoute le rôle de l'utilisateur (ex: ROLE_CITIZEN)
+        return new User(
+            user.getEmail(), 
+            user.getMotDePasse(), 
+            Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole()))
+        );
     }
+
 }

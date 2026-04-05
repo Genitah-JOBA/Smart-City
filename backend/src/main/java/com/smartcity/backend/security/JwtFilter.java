@@ -26,22 +26,30 @@ public class JwtFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        String path = request.getRequestURI();
-        if (path.startsWith("/api/auth/")) {
-            filterChain.doFilter(request, response);
-            return;
+        String authHeader = request.getHeader("Authorization");
+        String token = null;
+        String email = null;
+
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            token = authHeader.substring(7);
+            try {
+                email = jwtUtil.extractEmail(token);
+            } catch (Exception e) {
+                logger.error("Impossible d'extraire l'email du token : " + e.getMessage());
+            }
         }
 
-        String authHeader = request.getHeader("Authorization");
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String token = authHeader.substring(7);
-            String email = jwtUtil.extractEmail(token);
+        // On vérifie si l'email est là ET si l'utilisateur n'est pas déjà authentifié
+        if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            UserDetails userDetails = service.loadUserByUsername(email);
 
-            if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                UserDetails userDetails = service.loadUserByUsername(email);
+            // AJOUT : Vérification de la validité du token (Expiration, Secret)
+            if (jwtUtil.validateToken(token, userDetails)) {
                 UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                         userDetails, null, userDetails.getAuthorities());
                 auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                
+                // C'est cette ligne qui "ouvre" la porte 403
                 SecurityContextHolder.getContext().setAuthentication(auth);
             }
         }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { MapPin, Smartphone, Building2, Shield, ArrowRight, Eye, EyeOff } from "lucide-react";
 
@@ -12,6 +12,16 @@ export default function Register() {
   const [focusedField, setFocusedField] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -21,6 +31,11 @@ export default function Register() {
     // 1. Contrôle Nom : Pas de chiffres
     if (/\d/.test(nom)) {
       newErrors.nom = "Le nom ne doit pas contenir de chiffres.";
+    }
+
+    const nameRegex = /^[a-zA-ZÀ-ÿ\s]+$/;
+    if (!nameRegex.test(nom)) {
+      newErrors.nom = "Le nom ne doit contenir que des lettres, espaces ou tirets.";
     }
 
     // 2. Contrôle Email : Doit finir par @gmail.com
@@ -33,13 +48,12 @@ export default function Register() {
       newErrors.motDePasse = "Le mot de passe doit contenir plus de 6 caractères.";
     }
 
-    // Si des erreurs existent, on bloque l'envoi
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      return; // Le curseur reste ici, l'envoi est stoppé
+      return;
     }
 
-    setErrors({}); // On vide les erreurs si tout est OK
+    setErrors({});
 
     try {
       const response = await fetch("http://localhost:8081/api/auth/register", {
@@ -63,6 +77,7 @@ export default function Register() {
       setMessage("Votre compte a été créé avec succès !");
       setShowModal(true);
       setNom(""); setEmail(""); setMotDePasse("");
+      
     } catch (error) {
       setIsSuccess(false);
       setMessage(error.message);
@@ -81,7 +96,7 @@ export default function Register() {
 
   const validatePassword = (e) => {
     if (motDePasse !== "" && motDePasse.length < 6) {
-      setErrors(prev => ({ ...prev, motDePasse: "Le mot de passe doit être > 6 caractères" }));
+      setErrors(prev => ({ ...prev, motDePasse: "Ce mot de passe est trop court. Il doit être > 6 caractères" }));
       setTimeout(() => e.target.focus(), 0);
     } else {
       setErrors(prev => ({ ...prev, motDePasse: null }));
@@ -97,28 +112,27 @@ export default function Register() {
   const [errors, setErrors] = useState({});
 
   return (
-    <div className="h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen h-auto md:h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-3 sm:p-4 relative overflow-y-auto md:overflow-hidden">
       {/* Message Box */}
       {showModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white rounded-2xl p-8 max-w-sm w-full shadow-2xl transform animate-in zoom-in-95 duration-300">
+          <div className="bg-white rounded-2xl p-6 sm:p-8 max-w-[90%] sm:max-w-sm w-full shadow-2xl transform animate-in zoom-in-95 duration-300 mx-4">
             <div className="text-center">
-              {/* Icône dynamique (Check ou Erreur) */}
-              <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-4 ${isSuccess ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
-                {isSuccess ? <Shield className="w-8 h-8" /> : <div className="text-2xl font-bold">!</div>}
+              <div className={`mx-auto w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center mb-4 ${isSuccess ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
+                {isSuccess ? <Shield className="w-7 h-7 sm:w-8 sm:h-8" /> : <div className="text-2xl font-bold">!</div>}
               </div>
               
-              <h3 className={`text-xl font-bold mb-2 ${isSuccess ? 'text-slate-900' : 'text-red-600'}`}>
+              <h3 className={`text-lg sm:text-xl font-bold mb-2 ${isSuccess ? 'text-slate-900' : 'text-red-600'}`}>
                 {isSuccess ? "Félicitations !" : "Oups !"}
               </h3>
               
-              <p className="text-slate-600 text-sm mb-6">
+              <p className="text-slate-600 text-xs sm:text-sm mb-6 break-words">
                 {message}
               </p>
 
               <button
                 onClick={() => setShowModal(false)}
-                className={`w-full py-3 rounded-xl font-bold text-white transition-all shadow-lg ${
+                className={`w-full py-2.5 sm:py-3 rounded-xl font-bold text-white transition-all shadow-lg text-sm sm:text-base ${
                   isSuccess 
                     ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20' 
                     : 'bg-slate-800 hover:bg-slate-900 shadow-slate-950/20'
@@ -131,116 +145,114 @@ export default function Register() {
         </div>
       )}
 
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-10">
+      {/* Background Pattern - Responsive */}
+      <div className="absolute inset-0 opacity-5 sm:opacity-10">
         <div className="absolute inset-0" style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0 L60 30 L30 60 L0 30 Z' fill='none' stroke='white' stroke-width='0.5'/%3E%3C/svg%3E")`,
-          backgroundSize: '30px 30px'
+          backgroundSize: '20px 20px sm:30px 30px'
         }} />
       </div>
 
-      {/* Main Form Container */}
-      <div className="relative w-full max-w-5xl bg-white/10 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500" />
+      {/* Main Form Container - Responsive */}
+      <div className="relative w-full max-w-full sm:max-w-xl md:max-w-4xl lg:max-w-5xl bg-white/10 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-2xl border border-white/30 overflow-hidden mx-2 sm:mx-4">
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-600 to-teal-500 bg-gradient-to-r" />
         
-        <div className="grid md:grid-cols-2 gap-0">
-          {/* Left Side - Branding & Info */}
-          <div className="relative p-8 md:p-10 flex flex-col justify-between overflow-hidden min-h-full">
+        <div className="flex flex-col md:grid md:grid-cols-2 gap-0">
+          {/* Left Side - Branding & Info - Responsive */}
+          <div className="relative p-6 sm:p-8 md:p-10 flex flex-col justify-between overflow-hidden min-h-[300px] md:min-h-full">
             
-            {/* Contenu (Z-index pour passer au-dessus de l'image) */}
             <div className="relative z-10">
-              <div className="flex items-center gap-3 mb-10">
-                {/* Logo avec rappel du vert nature de l'image */}
-                <div className="w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                  <MapPin className="w-6 h-6 text-white" />
+              <div className="flex items-center gap-3 mb-6 sm:mb-8 md:mb-10">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-500 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                  <MapPin className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-white tracking-tight">SmartCity</h1>
-                  <p className="text-emerald-400 text-xs font-medium uppercase tracking-wider">Plateforme citoyenne</p>
+                  <h1 className="text-3xl sm:text-4xl font-Bellota text-white tracking-widest italic font-extrabold">SmartCity</h1>
+                  <p className="text-emerald-400 text-[10px] sm:text-xs font-medium uppercase tracking-wider">Plateforme citoyenne</p>
                 </div>
               </div>
               
-              <div className="space-y-4">
-                <h2 className="text-4xl font-extrabold text-white leading-tight">
+              <div className="space-y-3 sm:space-y-4">
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white leading-tight">
                   Rejoignez la<br />
                   <span className="text-emerald-400">révolution urbaine</span>
                 </h2>
-                <p className="text-slate-100/90 text-sm leading-relaxed max-w-sm">
+                <p className="text-slate-100/90 text-xs sm:text-sm leading-relaxed max-w-sm">
                   Participez activement à l'amélioration de votre ville en signalant les problèmes et en contribuant à une communauté plus responsable.
                 </p>
               </div>
             </div>
 
-            {/* Liste à puces ergonomique */}
-            <div className="relative z-10 mt-8 space-y-3 bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/10">
+            <div className="relative z-10 mt-6 sm:mt-8 space-y-2 sm:space-y-3 bg-white/2 backdrop-blur-md p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-white/10">
               <div className="flex items-center gap-3 text-white/90">
                 <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-                <span className="text-xs font-medium">Signalement en temps réel</span>
+                <span className="text-[10px] sm:text-xs font-medium">Signalement en temps réel</span>
               </div>
               <div className="flex items-center gap-3 text-white/90">
                 <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-                <span className="text-xs font-medium">Suivi des interventions</span>
+                <span className="text-[10px] sm:text-xs font-medium">Suivi des interventions</span>
               </div>
               <div className="flex items-center gap-3 text-white/90">
                 <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-                <span className="text-xs font-medium">Impact communautaire</span>
+                <span className="text-[10px] sm:text-xs font-medium">Impact communautaire</span>
               </div>
             </div>
           </div>
+          
 
-          {/* Right Side - Registration Form */}
-          <div className="relative p-8 md:p-10 overflow-y-auto min-h-full">
+          {/* Right Side - Registration Form - Responsive */}
+          <div className="relative p-6 sm:p-8 md:p-10 overflow-y-auto max-h-[60vh] md:max-h-none ring-1 ring-emerald-500">
             <div 
               className="absolute inset-0 z-0"
               style={{ 
-                backgroundImage: `url('/Image/Smart.jpg')`, // Vérifie bien le nom du fichier
+                backgroundImage: `url('/Image/Smart.jpg')`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center'
               }}
             >
-              {/* OVERLAY : Indispensable pour l'ergonomie. 
-                  Il assombrit l'image pour que le texte blanc soit lisible */}
-              <div className="absolute inset-0 bg-slate-950/65 backdrop-blur-[2px]" />
+              <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-[2px]" />
             </div>
 
-            {/* FORMULAIRE (z-10 pour être au-dessus de l'image) */}
-            <form onSubmit={handleRegister} className="relative z-10 space-y-4">
-              <div>
-                <h3 className="text-2xl font-bold text-white mb-1">Inscription</h3>
-                <p className="text-white/80 text-sm">Créez votre compte en quelques secondes</p>
+            <form onSubmit={handleRegister} className="relative z-10 space-y-3 sm:space-y-4">
+              <div className="text-center sm:text-left">
+                <h3 className="text-xl sm:text-2xl font-bold text-white text-center mb-1">Inscription</h3>
+                <p className="text-white/80 text-xs sm:text-sm text-center">Créez votre compte en quelques secondes</p>
               </div>
 
               {/* Name Input */}
               <div className="space-y-1">
-                <label className="text-white/80 text-xs font-medium">Nom complet</label>
-                <div className={`relative transition-all duration-300 ${focusedField === 'nom' ? 'scale-[1.02]' : ''}`}>
+                <label className="text-white/80 text-[10px] sm:text-xs font-medium">Nom complet</label>
+                <div className={`relative transition-all duration-300 ${focusedField === 'nom' ? 'scale-[1.01] sm:scale-[1.02]' : ''}`}>
                   <input
                     type="text"
                     placeholder="Jean Dupont"
                     value={nom}
                     onChange={(e) => setNom(e.target.value.replace(/[0-9]/g, ""))}
-                    className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white placeholder-white/70 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all text-sm backdrop-blur-md"
+                    onFocus={() => setFocusedField('nom')}
+                    onBlur={() => setFocusedField(null)}
+                    className="w-full bg-white/10 border border-white/20 rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 text-white placeholder-white/70 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all text-xs sm:text-sm backdrop-blur-md"
                     required
                   />
-                  {errors.nom && <p className="text-red-400 text-[10px] mt-1">{errors.nom}</p>}
+                  {errors.nom && <p className="text-red-400 text-[9px] sm:text-[10px] mt-1">{errors.nom}</p>}
                 </div>
               </div>
 
               {/* Email Input */}
               <div className="space-y-1">
-                <label className="text-white/80 text-xs font-medium">Email</label>
-                <div className={`relative transition-all duration-300 ${focusedField === 'email' ? 'scale-[1.02]' : ''}`}>
+                <label className="text-white/80 text-[10px] sm:text-xs font-medium">Email</label>
+                <div className={`relative transition-all duration-300 ${focusedField === 'email' ? 'scale-[1.01] sm:scale-[1.02]' : ''}`}>
                   <input
                     type="email"
-                    placeholder="jean@exemple.com"
+                    placeholder="jean@gmail.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     onBlur={validateEmail}
-                    className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white placeholder-white/70 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all text-sm backdrop-blur-md"
+                    onFocus={() => setFocusedField('email')}
+                    className="w-full bg-white/10 border border-white/20 rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 text-white placeholder-white/70 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all text-xs sm:text-sm backdrop-blur-md"
                     required
                   />
                   {errors.email && (
-                    <p className="text-red-400 text-[11px] mt-1 font-semibold animate-pulse">
+                    <p className="text-red-400 text-[9px] sm:text-[10px] mt-1 font-semibold break-words">
                       ⚠️ {errors.email}
                     </p>
                   )}
@@ -249,67 +261,105 @@ export default function Register() {
 
               {/* Password Input */}
               <div className="space-y-1">
-                <label className="text-white/80 text-xs font-medium">Mot de passe</label>
-                <div className={`relative transition-all duration-300 ${focusedField === 'password' ? 'scale-[1.02]' : ''}`}>
+                <label className="text-white/80 text-[10px] sm:text-xs font-medium">Mot de passe</label>
+                <div className={`relative transition-all duration-300 ${focusedField === 'password' ? 'scale-[1.01] sm:scale-[1.02]' : ''}`}>
                   <input
                     type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
                     value={motDePasse}
                     onChange={(e) => setMotDePasse(e.target.value)}
                     onBlur={validatePassword}
-                    className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white placeholder-white/70 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all pr-12 text-sm backdrop-blur-md"
+                    onFocus={() => setFocusedField('password')}
+                    className="w-full bg-white/10 border border-white/20 rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 text-white placeholder-white/70 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all pr-10 sm:pr-12 text-xs sm:text-sm backdrop-blur-md"
                     required
                   />
                   {errors.motDePasse && (
-                    <p className="text-red-400 text-[11px] mt-1 font-semibold animate-pulse">
+                    <p className="text-red-400 text-[9px] sm:text-[10px] mt-1 font-semibold">
                       ⚠️ {errors.motDePasse}
                     </p>
                   )}
+                  
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60"
+                    className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60"
                   >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    {showPassword ? <EyeOff size={14} className="sm:w-4 sm:h-4" /> : <Eye size={14} className="sm:w-4 sm:h-4" />}
                   </button>
                 </div>
               </div>
 
-              {/* Role Selection */}
+              {/* Role Selection - Responsive Grid */}
               <div className="space-y-1">
-                <label className="text-white/80 text-xs font-medium">Type de compte</label>
-                <div className="grid grid-cols-3 gap-2">
+                <label className="text-white/80 text-[10px] sm:text-xs font-medium">Type de compte</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {roles.map((r) => {
                     const Icon = r.icon;
                     const isSelected = role === r.id;
+                    
+                    // Définition des couleurs pour chaque rôle
+                    const getRoleColor = () => {
+                      switch(r.id) {
+                        case "CITIZEN":
+                          return "from-emerald-600 to-teal-500 bg-gradient-to-r";
+                        case "AGENT":
+                          return "from-blue-500 to-cyan-500 bg-gradient-to-r";
+                        case "ADMIN":
+                          return "from-purple-500 to-pink-500 bg-gradient-to-r";
+                        default:
+                          return "bg-emerald-600";
+                      }
+                    };
+                    
+                    // Couleur de fond pour l'état non sélectionné
+                    const getHoverColor = () => {
+                      switch(r.id) {
+                        case "CITIZEN":
+                          return "hover:bg-blue-500/20";
+                        case "AGENT":
+                          return "hover:bg-emerald-500/20";
+                        case "ADMIN":
+                          return "hover:bg-purple-500/20";
+                        default:
+                          return "hover:bg-white/10";
+                      }
+                    };
+                    
                     return (
                       <button
                         key={r.id}
                         type="button"
                         onClick={() => setRole(r.id)}
-                        className={`relative py-2 rounded-xl transition-all ${
+                        className={`relative py-2 px-2 rounded-xl transition-all duration-300 ${
                           isSelected 
-                            ? `bg-emerald-600 shadow-lg scale-105 text-white` 
-                            : 'bg-white/5 hover:bg-white/10 border border-white/10 text-white/70'
+                            ? `${getRoleColor()} shadow-lg scale-[1.02] text-white font-bold` 
+                            : `bg-white/5 ${getHoverColor()} border border-white/10 text-white/70`
                         }`}
                       >
-                        <Icon className="w-4 h-4 mx-auto mb-0.5" />
-                        <span className="text-[11px] font-medium">{r.label}</span>
+                        <Icon className={`w-4 h-4 mx-auto mb-0.5 transition-all ${isSelected ? 'scale-110' : ''}`} />
+                        <span className="text-[10px] sm:text-[11px] font-medium truncate">{r.label}</span>
+                        
+                        {/* Effet de brillance pour le rôle sélectionné */}
+                        {isSelected && (
+                          <div className="absolute inset-0 rounded-xl overflow-hidden">
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-shine" />
+                          </div>
+                        )}
                       </button>
                     );
                   })}
                 </div>
               </div>
 
-              {/* Submit Button - Couleur Emeraude pour rappeler la nature */}
-              <button
+              {/* Submit Button */}
+              <button to="/signalement"
                 type="submit"
-                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl shadow-lg shadow-emerald-900/20 transition-all transform hover:scale-[1.01] active:scale-[0.98] flex items-center justify-center gap-2"
+                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 sm:py-3 rounded-xl shadow-lg shadow-emerald-900/20 transition-all transform hover:scale-[1.01] active:scale-[0.98] flex items-center justify-center gap-2 text-sm sm:text-base"
               >
-                Créer mon compte <ArrowRight className="w-5 h-5" />
+                Créer mon compte <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
 
-              <p className="text-center text-white/80 text-xs">
+              <p className="text-center text-white/80 text-[10px] sm:text-xs">
                 Déjà un compte ?{" "}
                 <Link to="/login" className="text-emerald-400 hover:text-emerald-300 font-medium hover:underline">
                   Se connecter
@@ -319,6 +369,30 @@ export default function Register() {
           </div>
         </div>
       </div>
+
+      {/* Animation CSS pour le responsive spectaculaire */}
+      <style jsx>{`
+        @media (max-width: 640px) {
+          .rounded-3xl {
+            border-radius: 1rem;
+          }
+        }
+        
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+        
+        .animate-in {
+          animation: fadeIn 0.3s ease-out;
+        }
+      `}</style>
     </div>
   );
 }
