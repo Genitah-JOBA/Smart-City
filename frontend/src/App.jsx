@@ -1,7 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import Register from "./Register";
-import Login from "./Login";
 import Navbar from "./Navbar";
+import Auth from "./Auth";  // Changé: auth → Auth (première lettre en majuscule)
 
 // Pages Citoyen
 import Signalements from "./Signalements";
@@ -30,7 +29,7 @@ function App() {
   // Composant wrapper qui affiche la Navbar si l'utilisateur est connecté
   const ProtectedLayout = ({ children }) => {
     if (!token) {
-      return <Navigate to="/login" />;
+      return <Navigate to="/auth" />;  // Changé: /Auth → /auth (minuscule pour correspondre à la route)
     }
     return (
       <>
@@ -42,7 +41,7 @@ function App() {
 
   // Redirection basée sur le rôle
   const getDefaultRoute = () => {
-    if (!token) return "/login";
+    if (!token) return "/auth";
     if (userRole === "ADMIN") return "/admin/dashboard";
     if (userRole === "AGENT") return "/agent/dashboard";
     return "/signalements";
@@ -52,8 +51,7 @@ function App() {
     <Router>
       <Routes>
         {/* Routes publiques (sans navbar) */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+        <Route path="/auth" element={<Auth />} />
         
         {/* ========== ROUTES CITOYEN ========== */}
         <Route path="/signalements" element={
@@ -125,7 +123,8 @@ function App() {
           </ProtectedLayout>
         } />
         
-        {/*<Route path="/admin/signalements" element={
+        {/* Routes Admin commentées temporairement
+        <Route path="/admin/signalements" element={
           <ProtectedLayout>
             <AdminSignalements />
           </ProtectedLayout>
@@ -147,7 +146,8 @@ function App() {
           <ProtectedLayout>
             <AdminProfil />
           </ProtectedLayout>
-        } />*/}
+        } />
+        */}
         
         {/* Ancienne route Admin (compatibilité) */}
         <Route path="/admin/problemes" element={

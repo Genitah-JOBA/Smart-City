@@ -17,6 +17,7 @@ export default function Auth() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [message, setMessage] = useState("");
   const [isMobile, setIsMobile] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const navigate = useNavigate();
   
   // États spécifiques à l'inscription
@@ -32,6 +33,22 @@ export default function Auth() {
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Vérifier si l'utilisateur est déjà connecté au chargement
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const userRole = localStorage.getItem("userRole");
+    if (token && userRole && !isRedirecting) {
+      // Redirection automatique si déjà connecté
+      if (userRole === "ADMIN") {
+        navigate("/admin/dashboard");
+      } else if (userRole === "AGENT") {
+        navigate("/agent/signalements-resolus");
+      } else {
+        navigate("/signalements");
+      }
+    }
   }, []);
 
   // Fonction pour basculer entre login et register avec animation spectaculaire
@@ -104,6 +121,20 @@ export default function Auth() {
     }
   };
 
+  // Fonction de redirection après connexion
+  const redirectToDashboard = (role) => {
+    setIsRedirecting(true);
+    setShowModal(false);
+    
+    if (role === "ADMIN") {
+      navigate("/admin/dashboard");
+    } else if (role === "AGENT") {
+      navigate("/agent/signalements-resolus");
+    } else {
+      navigate("/signalements");
+    }
+  };
+
   // Gestion de la connexion
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -143,23 +174,20 @@ export default function Auth() {
       localStorage.setItem("userRole", normalizedRole);
 
       setIsSuccess(true);
-      setMessage("Connexion réussie !");
+      setMessage(`Connexion réussie ! Bienvenue ${email.split('@')[0]}`);
       setShowModal(true);
       setEmail(""); 
       setMotDePasse("");
 
+      // Redirection après 2 secondes
       setTimeout(() => {
-        if (normalizedRole === "ADMIN") {
-          navigate("/admin/dashboard");
-        } else if (normalizedRole === "AGENT") {
-          navigate("/agent/signalements-resolus");
-        } else {
-          navigate("/signalements");
-        }
-      }, 1500);
+        redirectToDashboard(normalizedRole);
+      }, 2000);
       
     } catch (error) {
+      setIsSuccess(false);
       setMessage(error.message);
+      setShowModal(true);
     }
   };
 
@@ -209,7 +237,7 @@ export default function Auth() {
       }
 
       setIsSuccess(true);
-      setMessage("Votre compte a été créé avec succès !");
+      setMessage("Votre compte a été créé avec succès ! Redirection vers la page de connexion...");
       setShowModal(true);
       setNom(""); 
       setEmail(""); 
@@ -217,6 +245,7 @@ export default function Auth() {
       
       setTimeout(() => {
         setShowModal(false);
+        // Basculer vers le formulaire de connexion
         setAnimationDirection("right");
         setIsAnimating(true);
         setTimeout(() => {
@@ -284,7 +313,7 @@ export default function Auth() {
       <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full bg-emerald-500/5 blur-3xl animate-pulse-slow" />
       <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-emerald-400/5 blur-2xl animate-pulse-slow animation-delay-1000" />
 
-      {/* Message Box */}
+      {/* Message Box - MODIFIÉ : Pas de fermeture automatique pour le succès */}
       {showModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
           <div className="bg-white rounded-2xl p-6 sm:p-8 max-w-[90%] sm:max-w-sm w-full shadow-2xl transform animate-modal-pop">
@@ -297,14 +326,26 @@ export default function Auth() {
               </h3>
               <p className="text-slate-600 text-xs sm:text-sm mb-6 break-words">{message}</p>
               <button
-                onClick={() => setShowModal(false)}
+                onClick={() => {
+                  if (isSuccess && !isRedirecting) {
+                    // Pour le succès de connexion, on redirige
+                    const userRole = localStorage.getItem("userRole");
+                    if (userRole) {
+                      redirectToDashboard(userRole);
+                    } else {
+                      setShowModal(false);
+                    }
+                  } else {
+                    setShowModal(false);
+                  }
+                }}
                 className={`w-full py-2.5 sm:py-3 rounded-xl font-bold text-white transition-all shadow-lg text-sm sm:text-base hover-lift ${
                   isSuccess 
                     ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20' 
                     : 'bg-slate-800 hover:bg-slate-900 shadow-slate-950/20'
                 }`}
               >
-                {isSuccess ? "Continuer" : "Réessayer"}
+                {isSuccess ? (isRedirecting ? "Redirection..." : "Continuer") : "Réessayer"}
               </button>
             </div>
           </div>
@@ -536,7 +577,7 @@ export default function Auth() {
                       })}
                     </div>
                     <p className="text-emerald-400 text-xs text-center">
-                      {role === "CITIZEN" ? " Signalez des problèmes dans votre quartier" : " Gérez et résolvez les signalements citoyens"}
+                      {role === "CITIZEN" ? "👤 Signalez des problèmes dans votre quartier" : "🏢 Gérez et résolvez les signalements citoyens"}
                     </p>
                   </div>
 

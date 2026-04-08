@@ -12,6 +12,7 @@ export default function Navbar() {
   const [userName, setUserName] = useState("");
   const [userRole, setUserRole] = useState("");
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const token = localStorage.getItem("token");
@@ -45,7 +46,16 @@ export default function Navbar() {
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("userRole");
-    navigate("/login");
+    setShowLogoutModal(false);
+    navigate("/auth");
+  };
+
+  const openLogoutModal = () => {
+    setShowLogoutModal(true);
+  };
+
+  const closeLogoutModal = () => {
+    setShowLogoutModal(false);
   };
 
   // Navigation selon le rôle
@@ -98,6 +108,42 @@ export default function Navbar() {
 
   return (
     <>
+      {/* Modal de confirmation de déconnexion */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
+          <div className="bg-white rounded-2xl p-6 sm:p-8 max-w-[90%] sm:max-w-sm w-full shadow-2xl transform animate-modal-pop">
+            <div className="text-center">
+              <div className="mx-auto w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center mb-4 bg-red-100 text-red-600 animate-scale">
+                <LogOut className="w-7 h-7 sm:w-8 sm:h-8" />
+              </div>
+              
+              <h3 className="text-lg sm:text-xl font-bold mb-2 text-slate-900">
+                Déconnexion
+              </h3>
+              
+              <p className="text-slate-600 text-xs sm:text-sm mb-6 break-words">
+                Êtes-vous sûr de vouloir vous déconnecter ?
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={closeLogoutModal}
+                  className="flex-1 py-2.5 sm:py-3 rounded-xl font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-all text-sm sm:text-base"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="flex-1 py-2.5 sm:py-3 rounded-xl font-bold text-white bg-red-500 hover:bg-red-600 transition-all shadow-lg text-sm sm:text-base"
+                >
+                  Déconnexion
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Navbar transparente et stylée */}
       <nav className={`
         fixed top-0 left-0 right-0 z-50 transition-all duration-500
@@ -207,7 +253,7 @@ export default function Navbar() {
 
               {/* Bouton déconnexion stylé */}
               <button
-                onClick={handleLogout}
+                onClick={openLogoutModal}
                 className="group relative flex items-center gap-2 px-4 py-2 rounded-full overflow-hidden transition-all duration-300 hover:scale-105"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-red-600/20 rounded-full opacity-0 group-hover:opacity-100 transition"></div>
@@ -277,7 +323,7 @@ export default function Navbar() {
               </div>
               
               <button
-                onClick={handleLogout}
+                onClick={openLogoutModal}
                 className="w-full flex items-center justify-center gap-2 px-4 py-3 mt-3 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all duration-300 border border-red-500/20"
               >
                 <LogOut size={18} />
@@ -290,6 +336,26 @@ export default function Navbar() {
 
       {/* Spacer avec animation */}
       <div className="h-16 sm:h-20"></div>
+
+      {/* Styles CSS pour les animations */}
+      <style jsx>{`
+        @keyframes fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes modal-pop {
+          0% { transform: scale(0.8); opacity: 0; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes scale {
+          0% { transform: scale(0.8); }
+          100% { transform: scale(1); }
+        }
+        
+        .animate-fade-in { animation: fade-in 0.2s ease-out; }
+        .animate-modal-pop { animation: modal-pop 0.3s ease-out; }
+        .animate-scale { animation: scale 0.3s ease-out; }
+      `}</style>
     </>
   );
 }
