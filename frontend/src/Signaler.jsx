@@ -1,8 +1,13 @@
 import { useEffect, useState } from "react";
-import { Camera, MapPin, Send, Trash2, Edit2, X, Shield, Road, Lightbulb, Trash, Droplets } from "lucide-react";
+import { 
+  Camera, MapPin, Send, Trash2, Edit2, X, Shield, Road, 
+  Lightbulb, Trash, Droplets, Search, Filter, Calendar, User,
+  Clock, CheckCircle, RefreshCw, Maximize2, ChevronLeft, ChevronRight
+} from "lucide-react";
 
 export default function Signaler() {
   const [signalements, setSignalements] = useState([]);
+  const [filteredSignalements, setFilteredSignalements] = useState([]);
   const [formData, setFormData] = useState({
     titre: "",
     description: "",
@@ -24,6 +29,25 @@ export default function Signaler() {
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
   const [manualLocation, setManualLocation] = useState(false);
+  
+  // État pour le modal de détail
+  const [selectedSignalement, setSelectedSignalement] = useState(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  
+  // États pour le filtrage
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterType, setFilterType] = useState("TOUS");
+  const [filterStatus, setFilterStatus] = useState("TOUS");
+  const [showFilters, setShowFilters] = useState(false);
+  
+  // Récupérer l'utilisateur connecté
+  const [currentUserId, setCurrentUserId] = useState(null);
+  const [currentUserRole, setCurrentUserRole] = useState(null);
+
+  // État pour annuler les modifications
+  const [originalFormData, setOriginalFormData] = useState(null);
+
   const [availableCities, setAvailableCities] = useState([
     "Antananarivo", "Antsirabe", "Fianarantsoa", "Mahajanga", "Toamasina", 
     "Toliara", "Antsiranana", "Ambatondrazaka", "Ambanja", "Ambovombe",
@@ -36,53 +60,19 @@ export default function Signaler() {
     "Vangaindrano", "Vatomandry", "Vohémar", "Vohipeno", "Vondrozo"
   ]);
 
-  // Catégories avec leurs icônes et couleurs
   const categories = [
-    { 
-      id: "VOIRIE", 
-      name: "Voirie / Routes", 
-      icon: Road, 
-      color: "from-green-800 to-green-700",
-      borderColor: "border-blue-500/50",
-      description: "Nids-de-poule, trottoirs endommagés, signalisation"
-    },
-    { 
-      id: "ECLAIRAGE", 
-      name: "Éclairage Public", 
-      icon: Lightbulb, 
-      color: "from-green-600 to-green-500",
-      borderColor: "border-yellow-500/50",
-      description: "Lampadaires défectueux, manque d'éclairage"
-    },
-    { 
-      id: "DECHETS", 
-      name: "Déchets / Propreté", 
-      icon: Trash, 
-      color: "from-teal-600 to-teal-500",
-      borderColor: "border-green-500/50",
-      description: "Dépôts sauvages, poubelles pleines, saleté"
-    },
-    { 
-      id: "EAU", 
-      name: "Eau / Assainissement", 
-      icon: Droplets, 
-      color: "from-green-400 to-green-300",
-      borderColor: "border-cyan-500/50",
-      description: "Canalisations bouchées, inondations, fuites d'eau"
-    }
+    { id: "VOIRIE", name: "Voirie / Routes", icon: Road, color: "from-green-800 to-green-700", iconColor: "text-green-400" },
+    { id: "ECLAIRAGE", name: "Éclairage Public", icon: Lightbulb, color: "from-green-600 to-green-500", iconColor: "text-green-400" },
+    { id: "DECHETS", name: "Déchets / Propreté", icon: Trash, color: "from-teal-600 to-teal-500", iconColor: "text-teal-400" },
+    { id: "EAU", name: "Eau / Assainissement", icon: Droplets, color: "from-green-400 to-green-300", iconColor: "text-green-400" }
   ];
 
-  // Fonction améliorée pour convertir les coordonnées en adresse à Madagascar
   const getAddressFromCoordinates = async (lat, lng) => {
     setIsLoadingAddress(true);
     try {
       const response = await fetch(
         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=fr&countrycodes=mg`,
-        {
-          headers: {
-            'User-Agent': 'SmartCityApp/1.0'
-          }
-        }
+        { headers: { 'User-Agent': 'SmartCityApp/1.0' } }
       );
       const data = await response.json();
       
@@ -110,31 +100,18 @@ export default function Signaler() {
           finalAddress = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
         }
         
-        return {
-          fullAddress: finalAddress,
-          ville: finalVille,
-          commune: commune
-        };
+        return { fullAddress: finalAddress, ville: finalVille, commune: commune };
       }
       
-      return {
-        fullAddress: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
-        ville: "",
-        commune: ""
-      };
+      return { fullAddress: `${lat.toFixed(4)}, ${lng.toFixed(4)}`, ville: "", commune: "" };
     } catch (error) {
       console.error("Erreur de géocodage:", error);
-      return {
-        fullAddress: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
-        ville: "",
-        commune: ""
-      };
+      return { fullAddress: `${lat.toFixed(4)}, ${lng.toFixed(4)}`, ville: "", commune: "" };
     } finally {
       setIsLoadingAddress(false);
     }
   };
 
-  // Validation des champs
   const validateField = (name, value) => {
     switch (name) {
       case 'titre':
@@ -147,9 +124,6 @@ export default function Signaler() {
         if (value.length < 10) return "La description doit contenir au moins 10 caractères";
         if (value.length > 500) return "La description ne doit pas dépasser 500 caractères";
         return null;
-      case 'ville':
-        if (!value.trim() && !formData.latitude) return "La ville est requise";
-        return null;
       case 'imageUrl':
         if (value && !value.match(/^https?:\/\/.+\..+/)) {
           return "L'URL de l'image n'est pas valide";
@@ -160,65 +134,51 @@ export default function Signaler() {
     }
   };
 
-  const validatePosition = () => {
-    if (!formData.latitude || !formData.longitude || formData.latitude === "" || formData.longitude === "") {
-      if (!manualLocation && !formData.ville) {
-        return "La position est obligatoire. Veuillez cliquer sur 'Ma position' ou sélectionner une ville";
-      }
-    }
-    return null;
-  };
-
-  const validateImages = () => {
-    if (images.length === 0) {
-      return "Au moins une image est obligatoire";
-    }
-    return null;
-  };
+  const validateImages = () => images.length === 0 ? "Au moins une image est obligatoire" : null;
 
   const handleFieldChange = (name, value) => {
     setFormData({ ...formData, [name]: value });
-    const error = validateField(name, value);
-    setErrors({ ...errors, [name]: error });
+    setErrors({ ...errors, [name]: validateField(name, value) });
   };
 
   const validateForm = () => {
-    const newErrors = {};
-    newErrors.titre = validateField('titre', formData.titre);
-    newErrors.description = validateField('description', formData.description);
-    if (formData.imageUrl) {
-      newErrors.imageUrl = validateField('imageUrl', formData.imageUrl);
-    }
-    
-    const positionError = validatePosition();
-    if (positionError) {
-      newErrors.position = positionError;
-    }
-    
-    const imagesError = validateImages();
-    if (imagesError) {
-      newErrors.images = imagesError;
-    }
-    
+    const newErrors = {
+      titre: validateField('titre', formData.titre),
+      description: validateField('description', formData.description),
+      images: validateImages()
+    };
     setErrors(newErrors);
-    return !Object.values(newErrors).some(error => error !== null);
+    return !Object.values(newErrors).some(e => e);
+  };
+
+  // Récupérer les infos de l'utilisateur connecté
+  const fetchCurrentUser = async () => {
+    if (!token) return;
+    try {
+      const response = await fetch("http://localhost:8081/api/auth/me", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const userData = await response.json();
+        setCurrentUserId(userData.id);
+        setCurrentUserRole(userData.role);
+      }
+    } catch (error) {
+      console.error("Erreur récupération utilisateur:", error);
+    }
   };
 
   const fetchSignalements = async () => {
     if (!token) return;
-
     try {
       const res = await fetch("http://localhost:8081/api/signalements", {
-        method: "GET",
-        headers: { 
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json"
-        },
+        headers: { "Authorization": `Bearer ${token}` }
       });
-
       if (res.ok) {
         const data = await res.json();
-        setSignalements(data);
+        const sortedData = data.sort((a, b) => new Date(b.dateCreation) - new Date(a.dateCreation));
+        setSignalements(sortedData);
+        setFilteredSignalements(sortedData);
       }
     } catch (error) {
       console.error("Erreur de chargement:", error);
@@ -227,58 +187,56 @@ export default function Signaler() {
 
   useEffect(() => { 
     if (token) {
-      fetchSignalements(); 
+      fetchSignalements();
+      fetchCurrentUser();
     }
   }, []);
 
-  const getGeolocation = () => {
-    setManualLocation(false);
-    navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-            const { latitude, longitude } = pos.coords;
-            
-            console.log("Coordonnées détectées:", { latitude, longitude });
-            
-            const addressData = await getAddressFromCoordinates(latitude, longitude);
-            
-            console.log("Adresse convertie:", addressData);
-            
-            setFormData({ 
-                ...formData, 
-                latitude: latitude.toString(), 
-                longitude: longitude.toString(),
-                address: addressData.fullAddress,
-                ville: addressData.ville,
-                commune: addressData.commune
-            });
-            
-            if (errors.position) {
-                setErrors({ ...errors, position: null });
-            }
-        },
-        (error) => {
-            console.error("Erreur GPS:", error);
-            setMessage("Impossible de détecter votre position. Veuillez sélectionner votre ville manuellement.");
-            setIsSuccess(false);
-            setShowModal(true);
-            setManualLocation(true);
-            setTimeout(() => setShowModal(false), 3000);
-        }
-    );
-  };
-
-  const handleVilleChange = (ville) => {
-    setFormData({ 
-      ...formData, 
-      ville: ville,
-      address: ville,
-      latitude: "",
-      longitude: ""
-    });
-    setManualLocation(true);
-    if (errors.position) {
-      setErrors({ ...errors, position: null });
+  // Fonction de filtrage
+  useEffect(() => {
+    let filtered = [...signalements];
+    
+    if (searchTerm) {
+      filtered = filtered.filter(s => 
+        s.titre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        s.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        s.address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        s.ville?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
     }
+    
+    if (filterType !== "TOUS") {
+      filtered = filtered.filter(s => s.type === filterType);
+    }
+    
+    if (filterStatus !== "TOUS") {
+      filtered = filtered.filter(s => s.statut === filterStatus);
+    }
+    
+    setFilteredSignalements(filtered);
+  }, [searchTerm, filterType, filterStatus, signalements]);
+
+  const getGeolocation = () => {
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const addressData = await getAddressFromCoordinates(pos.coords.latitude, pos.coords.longitude);
+        setFormData({ 
+          ...formData, 
+          latitude: pos.coords.latitude.toString(), 
+          longitude: pos.coords.longitude.toString(),
+          address: addressData.fullAddress,
+          ville: addressData.ville,
+          commune: addressData.commune
+        });
+        if (errors.position) setErrors({ ...errors, position: null });
+      },
+      (error) => {
+        setMessage("Impossible de détecter votre position.");
+        setIsSuccess(false);
+        setShowModal(true);
+        setTimeout(() => setShowModal(false), 3000);
+      }
+    );
   };
 
   const addImage = () => {
@@ -286,29 +244,15 @@ export default function Signaler() {
       if (!errors.imageUrl) {
         setImages([...images, { url: formData.imageUrl }]);
         setFormData({ ...formData, imageUrl: "" });
-        if (errors.images) {
-          setErrors({ ...errors, images: null });
-        }
-      } else {
-        setMessage(errors.imageUrl);
-        setIsSuccess(false);
-        setShowModal(true);
-        setTimeout(() => setShowModal(false), 2000);
+        if (errors.images) setErrors({ ...errors, images: null });
       }
-    } else {
-      setMessage("Veuillez entrer une URL d'image");
-      setIsSuccess(false);
-      setShowModal(true);
-      setTimeout(() => setShowModal(false), 1500);
     }
   };
 
   const removeImage = (index) => {
     const newImages = images.filter((_, idx) => idx !== index);
     setImages(newImages);
-    if (newImages.length === 0) {
-      setErrors({ ...errors, images: "Au moins une image est obligatoire" });
-    }
+    if (newImages.length === 0) setErrors({ ...errors, images: "Au moins une image est obligatoire" });
   };
 
   const confirmDelete = (id) => {
@@ -320,151 +264,81 @@ export default function Signaler() {
 
   const handleDelete = async () => {
     if (!deleteConfirmId) return;
-    if (!token) {
-      setMessage("Token manquant, veuillez vous reconnecter");
-      setIsSuccess(false);
-      setShowModal(true);
-      return;
-    }
-    
     try {
       const res = await fetch(`http://localhost:8081/api/signalements/${deleteConfirmId}`, { 
-        method: "DELETE", 
-        headers: { 
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json"
-        }
+        method: "DELETE", headers: { "Authorization": `Bearer ${token}` }
       });
-      
       if (res.ok) {
         fetchSignalements();
         if (editingId === deleteConfirmId) {
-          setEditingId(null);
-          setFormData({
-            titre: "",
-            description: "",
-            type: "VOIRIE",
-            latitude: "",
-            longitude: "",
-            address: "",
-            ville: "",
-            commune: "",
-            imageUrl: ""
-          });
-          setImages([]);
+          handleCancelEdit();
         }
         setMessage("Signalement supprimé avec succès !");
         setIsSuccess(true);
         setShowModal(true);
         setTimeout(() => setShowModal(false), 2000);
-      } else {
-        setMessage("Erreur lors de la suppression");
-        setIsSuccess(false);
-        setShowModal(true);
-        setTimeout(() => setShowModal(false), 2000);
       }
-    } catch (error) {
-      setMessage("Erreur réseau, veuillez réessayer");
-      setIsSuccess(false);
-      setShowModal(true);
-      setTimeout(() => setShowModal(false), 2000);
-    } finally {
-      setDeleteConfirmId(null);
-    }
+    } catch (error) { console.error(error); }
+    finally { setDeleteConfirmId(null); }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!validateForm()) {
-        setMessage("Veuillez corriger les erreurs dans le formulaire");
-        setIsSuccess(false);
-        setShowModal(true);
-        setTimeout(() => setShowModal(false), 3000);
-        return;
-    }
-
-    if (!token) {
-        setMessage("Token manquant, veuillez vous reconnecter");
-        setIsSuccess(false);
-        setShowModal(true);
-        return;
+      setMessage("Veuillez corriger les erreurs");
+      setIsSuccess(false);
+      setShowModal(true);
+      setTimeout(() => setShowModal(false), 3000);
+      return;
     }
 
     const method = editingId ? "PUT" : "POST";
-    const url = editingId 
-        ? `http://localhost:8081/api/signalements/${editingId}`
-        : "http://localhost:8081/api/signalements";
-
-    const cleanFormData = {
-        titre: formData.titre,
-        description: formData.description,
-        type: formData.type,
-        latitude: formData.latitude ? parseFloat(formData.latitude) : null,
-        longitude: formData.longitude ? parseFloat(formData.longitude) : null,
-        address: formData.address || formData.ville || "",
-        ville: formData.ville || "",
-        commune: formData.commune || "",
-        statut: "EN_ATTENTE"
-    };
-
+    const url = `http://localhost:8081/api/signalements${editingId ? `/${editingId}` : ''}`;
     const payload = {
-        ...cleanFormData,
-        images: images.map(img => ({ url: img.url }))
+      titre: formData.titre, description: formData.description, type: formData.type,
+      latitude: formData.latitude ? parseFloat(formData.latitude) : null,
+      longitude: formData.longitude ? parseFloat(formData.longitude) : null,
+      address: formData.address || formData.ville, ville: formData.ville,
+      commune: formData.commune, statut: "EN_ATTENTE",
+      images: images.map(img => ({ url: img.url }))
     };
 
     try {
-        const res = await fetch(url, {
-            method: method,
-            headers: { 
-                "Authorization": `Bearer ${token}`,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(payload),
-        });
-
-        if (res.ok) {
-            const savedSignalement = await res.json();
-            console.log("Signalement sauvegardé:", savedSignalement);
-            
-            setFormData({ 
-                titre: "", 
-                description: "", 
-                type: "VOIRIE", 
-                latitude: "", 
-                longitude: "",
-                address: "",
-                ville: "",
-                commune: "",
-                imageUrl: "" 
-            });
-            setImages([]);
-            setEditingId(null);
-            setManualLocation(false);
-            fetchSignalements();
-            
-            setMessage(editingId ? "Signalement modifié avec succès !" : "Signalement créé avec succès !");
-            setIsSuccess(true);
-            setShowModal(true);
-            setTimeout(() => setShowModal(false), 2000);
-        } else {
-            const errorText = await res.text();
-            console.error("Erreur réponse:", res.status, errorText);
-            setMessage(`Erreur: ${errorText || "Une erreur est survenue"}`);
-            setIsSuccess(false);
-            setShowModal(true);
-            setTimeout(() => setShowModal(false), 3000);
-        }
-    } catch (error) {
-        console.error("Erreur réseau:", error);
-        setMessage("Erreur réseau, veuillez réessayer");
-        setIsSuccess(false);
+      const res = await fetch(url, { method, headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      if (res.ok) {
+        handleCancelEdit();
+        fetchSignalements();
+        setMessage(editingId ? "Signalement modifié !" : "Signalement créé !");
+        setIsSuccess(true);
         setShowModal(true);
-        setTimeout(() => setShowModal(false), 3000);
-    }
+        setTimeout(() => setShowModal(false), 2000);
+      }
+    } catch (error) { console.error(error); }
   };
 
   const handleEdit = (signalement) => {
+    if (signalement.utilisateur?.id !== currentUserId && currentUserRole !== "ADMIN") {
+      setMessage("Vous n'êtes pas autorisé à modifier ce signalement");
+      setIsSuccess(false);
+      setShowModal(true);
+      setTimeout(() => setShowModal(false), 2000);
+      return;
+    }
+    
+    // Sauvegarder les données originales pour pouvoir annuler
+    setOriginalFormData({
+      titre: formData.titre,
+      description: formData.description,
+      type: formData.type,
+      latitude: formData.latitude,
+      longitude: formData.longitude,
+      address: formData.address,
+      ville: formData.ville,
+      commune: formData.commune,
+      imageUrl: formData.imageUrl
+    });
+    setOriginalImages([...images]);
+    
     setEditingId(signalement.id);
     setFormData({
       titre: signalement.titre || "",
@@ -481,69 +355,260 @@ export default function Signaler() {
     window.scrollTo(0, 0);
   };
 
-  const token = localStorage.getItem("token");
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    if (originalFormData) {
+      setFormData(originalFormData);
+      setImages(originalImages || []);
+      setOriginalFormData(null);
+      setOriginalImages([]);
+    } else {
+      setFormData({
+        titre: "",
+        description: "",
+        type: "VOIRIE",
+        latitude: "",
+        longitude: "",
+        address: "",
+        ville: "",
+        commune: "",
+        imageUrl: ""
+      });
+      setImages([]);
+    }
+    setErrors({});
+    setManualLocation(false);
+  };
 
-  // Récupérer la catégorie sélectionnée
+  const canDelete = (signalement) => {
+    return currentUserRole === "ADMIN" || signalement.utilisateur?.id === currentUserId;
+  };
+
+  const canEdit = (signalement) => {
+    return signalement.utilisateur?.id === currentUserId;
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "Date inconnue";
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
+  };
+
+  // Ouvrir le modal de détail
+  const openDetailModal = (signalement) => {
+    setSelectedSignalement(signalement);
+    setCurrentImageIndex(0);
+    setShowDetailModal(true);
+  };
+
+  // Fermer le modal de détail
+  const closeDetailModal = () => {
+    setSelectedSignalement(null);
+    setShowDetailModal(false);
+    setCurrentImageIndex(0);
+  };
+
+  // Navigation dans le carrousel classique
+  const nextImage = () => {
+    if (selectedSignalement && selectedSignalement.images) {
+      setCurrentImageIndex((prev) => (prev + 1) % selectedSignalement.images.length);
+    }
+  };
+
+  const prevImage = () => {
+    if (selectedSignalement && selectedSignalement.images) {
+      setCurrentImageIndex((prev) => (prev - 1 + selectedSignalement.images.length) % selectedSignalement.images.length);
+    }
+  };
+
+  const token = localStorage.getItem("token");
   const selectedCategory = categories.find(c => c.id === formData.type);
+  const [originalImages, setOriginalImages] = useState([]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 relative overflow-hidden">
-      {/* Message Box */}
+      
+      {/* Modal de confirmation */}
       {showModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white rounded-2xl p-6 sm:p-8 max-w-[90%] sm:max-w-sm w-full shadow-2xl transform animate-in zoom-in-95 duration-300 mx-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
             <div className="text-center">
-              <div className={`mx-auto w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center mb-4 ${
-                isSuccess ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'
-              }`}>
-                {isSuccess ? (
-                  <Shield className="w-7 h-7 sm:w-8 sm:h-8" />
-                ) : deleteConfirmId ? (
-                  <div className="text-2xl font-bold">?</div>
-                ) : (
-                  <div className="text-2xl font-bold">!</div>
-                )}
+              <div className={`mx-auto w-14 h-14 rounded-full flex items-center justify-center mb-4 ${isSuccess ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
+                {isSuccess ? <Shield className="w-7 h-7" /> : deleteConfirmId ? <div className="text-2xl font-bold">?</div> : <div className="text-2xl font-bold">!</div>}
               </div>
-              
-              <h3 className={`text-lg sm:text-xl font-bold mb-2 ${
-                isSuccess ? 'text-slate-900' : deleteConfirmId ? 'text-amber-600' : 'text-red-600'
-              }`}>
-                {isSuccess ? "Succès !" : deleteConfirmId ? "Confirmation" : "Erreur !"}
+              <h3 className={`text-lg font-bold mb-2 ${isSuccess ? 'text-slate-900' : deleteConfirmId ? 'text-amber-600' : 'text-red-600'}`}>
+                {isSuccess ? "Succès" : deleteConfirmId ? "Confirmation" : "Erreur"}
               </h3>
-              
-              <p className="text-slate-600 text-xs sm:text-sm mb-6 break-words">
-                {message}
-              </p>
-
+              <p className="text-slate-600 text-sm mb-6">{message}</p>
               {deleteConfirmId ? (
                 <div className="flex gap-3">
-                  <button
-                    onClick={() => {
-                      setDeleteConfirmId(null);
-                      setShowModal(false);
-                    }}
-                    className="flex-1 py-2.5 sm:py-3 rounded-xl font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-all text-sm sm:text-base"
-                  >
-                    Annuler
-                  </button>
-                  <button
-                    onClick={handleDelete}
-                    className="flex-1 py-2.5 sm:py-3 rounded-xl font-bold text-white bg-red-500 hover:bg-red-600 transition-all shadow-lg text-sm sm:text-base"
-                  >
-                    Supprimer
-                  </button>
+                  <button onClick={() => { setDeleteConfirmId(null); setShowModal(false); }} className="flex-1 py-2 rounded-xl font-semibold bg-slate-100">Annuler</button>
+                  <button onClick={handleDelete} className="flex-1 py-2 rounded-xl font-semibold text-white bg-red-500">Supprimer</button>
                 </div>
               ) : (
+                <button onClick={() => setShowModal(false)} className={`w-full py-2 rounded-xl font-semibold text-white ${isSuccess ? 'bg-emerald-500' : 'bg-slate-800'}`}>Fermer</button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de détail du signalement avec carrousel classique */}
+      {showDetailModal && selectedSignalement && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md animate-fade-in">
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-white/20 animate-modal-pop custom-scrollbar">
+            
+            {/* Carrousel classique */}
+            {selectedSignalement.images && selectedSignalement.images.length > 0 && (
+              <div className="relative h-64 md:h-96 overflow-hidden rounded-t-2xl bg-slate-900/50">
+                <img 
+                  src={selectedSignalement.images[currentImageIndex].url} 
+                  className="w-full h-full object-contain transition-opacity duration-300" 
+                  alt={`Image ${currentImageIndex + 1}`} 
+                />
+                
+                {/* Flèches de navigation */}
+                {selectedSignalement.images.length > 1 && (
+                  <>
+                    <button
+                      onClick={prevImage}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-black/50 rounded-full hover:bg-black/70 transition text-white z-20"
+                    >
+                      <ChevronLeft size={24} />
+                    </button>
+                    <button
+                      onClick={nextImage}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-black/50 rounded-full hover:bg-black/70 transition text-white z-20"
+                    >
+                      <ChevronRight size={24} />
+                    </button>
+                    
+                    {/* Indicateurs de page */}
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-20">
+                      {selectedSignalement.images.map((_, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setCurrentImageIndex(idx)}
+                          className={`w-2 h-2 rounded-full transition-all ${
+                            idx === currentImageIndex 
+                              ? 'bg-emerald-500 w-6' 
+                              : 'bg-white/50 hover:bg-white/70'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+                
                 <button
-                  onClick={() => setShowModal(false)}
-                  className={`w-full py-2.5 sm:py-3 rounded-xl font-bold text-white transition-all shadow-lg text-sm sm:text-base ${
-                    isSuccess 
-                      ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20' 
-                      : 'bg-slate-800 hover:bg-slate-900 shadow-slate-950/20'
-                  }`}
+                  onClick={closeDetailModal}
+                  className="absolute top-4 right-4 p-2 bg-black/50 rounded-full hover:bg-black/70 transition text-white z-20"
                 >
-                  Fermer
+                  <X size={20} />
                 </button>
+              </div>
+            )}
+            
+            <div className="p-6 space-y-4">
+              {/* En-tête */}
+              <div className="flex justify-between items-start">
+                <div className="flex items-center gap-2">
+                  <div className={`p-2 rounded-xl bg-gradient-to-r ${categories.find(c => c.id === selectedSignalement.type)?.color || 'from-emerald-500 to-green-600'}`}>
+                    {(() => {
+                      const Icon = categories.find(c => c.id === selectedSignalement.type)?.icon || Road;
+                      return <Icon size={20} className="text-white" />;
+                    })()}
+                  </div>
+                  <span className="text-emerald-400 font-medium">{selectedSignalement.type}</span>
+                </div>
+                <span className={`text-xs px-3 py-1 rounded-full ${
+                  selectedSignalement.statut === 'EN_ATTENTE' 
+                    ? 'bg-amber-500/20 text-amber-300' 
+                    : 'bg-green-500/20 text-green-300'
+                }`}>
+                  {selectedSignalement.statut === 'EN_ATTENTE' ? '⏳ En attente' : '✅ Traité'}
+                </span>
+              </div>
+
+              {/* Titre */}
+              <h2 className="text-2xl font-bold text-white">{selectedSignalement.titre}</h2>
+              
+              {/* Description complète */}
+              <div>
+                <h3 className="text-white/70 text-sm font-medium mb-2">📝 Description</h3>
+                <p className="text-white/80 text-sm leading-relaxed">{selectedSignalement.description}</p>
+              </div>
+              
+              {/* Localisation */}
+              <div>
+                <h3 className="text-white/70 text-sm font-medium mb-2">📍 Localisation</h3>
+                <div className="bg-white/5 rounded-lg p-3">
+                  <p className="text-white text-sm">{selectedSignalement.address || selectedSignalement.ville || "Position non définie"}</p>
+                  {selectedSignalement.latitude && selectedSignalement.longitude && (
+                    <p className="text-white/40 text-xs mt-1">
+                      Coordonnées : {selectedSignalement.latitude.toFixed(6)}, {selectedSignalement.longitude.toFixed(6)}
+                    </p>
+                  )}
+                </div>
+              </div>
+              
+              {/* Informations supplémentaires */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-white/5 rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-white/50 text-xs mb-1">
+                    <Calendar size={12} />
+                    <span>Date de publication</span>
+                  </div>
+                  <p className="text-white text-sm">{formatDate(selectedSignalement.dateCreation)}</p>
+                </div>
+                <div className="bg-white/5 rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-white/50 text-xs mb-1">
+                    <User size={12} />
+                    <span>Publié par</span>
+                  </div>
+                  <p className="text-white text-sm">{selectedSignalement.utilisateur?.nom || "Anonyme"}</p>
+                </div>
+              </div>
+              
+              {/* Compteur d'images */}
+              {selectedSignalement.images && selectedSignalement.images.length > 1 && (
+                <div className="text-center text-white/40 text-sm">
+                  {currentImageIndex + 1} / {selectedSignalement.images.length}
+                </div>
+              )}
+              
+              {/* Boutons d'action */}
+              {(canEdit(selectedSignalement) || canDelete(selectedSignalement)) && (
+                <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
+                  {canEdit(selectedSignalement) && (
+                    <button 
+                      onClick={() => {
+                        closeDetailModal();
+                        handleEdit(selectedSignalement);
+                      }} 
+                      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white transition"
+                    >
+                      <Edit2 size={16} /> Modifier
+                    </button>
+                  )}
+                  {canDelete(selectedSignalement) && (
+                    <button 
+                      onClick={() => {
+                        closeDetailModal();
+                        confirmDelete(selectedSignalement.id);
+                      }} 
+                      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white transition"
+                    >
+                      <Trash2 size={16} /> Supprimer
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -561,321 +626,337 @@ export default function Signaler() {
       <div className="relative z-10 container mx-auto max-w-6xl">
         
         {/* Formulaire de signalement */}
-        <div className="relative bg-white/10 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-2xl border border-white/30 overflow-hidden mb-8">
+        <div className="relative bg-white/10 backdrop-blur-xl rounded-2xl border border-white/30 overflow-hidden mb-8">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-600 to-teal-500" />
           
-          <div className="relative p-6 sm:p-8 md:p-10">
-            <div 
-              className="absolute inset-0 z-0"
-              style={{ 
-                backgroundImage: `url('/Image/Smart.jpg')`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center'
-              }}
-            >
+          <div className="relative p-6 md:p-10">
+            <div className="absolute inset-0 z-0" style={{ backgroundImage: `url('/Image/Smart.jpg')`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
               <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-[2px]" />
             </div>
 
-            <form onSubmit={handleSubmit} className="relative z-10 space-y-4 sm:space-y-5">
+            <form onSubmit={handleSubmit} className="relative z-10 space-y-4">
               <div className="text-center">
-                <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">
-                  {editingId ? " Modifier le signalement" : " Nouveau signalement"}
-                </h2>
-                <p className="text-white/80 text-xs sm:text-sm">
-                  Signalez un problème dans votre quartier à Madagascar
-                </p>
+                <h2 className="text-2xl font-bold text-white">{editingId ? "Modifier le signalement" : "Nouveau signalement"}</h2>
+                <p className="text-white/60 text-sm">Signalez un problème à Madagascar</p>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-white/80 text-xs font-medium">Titre du signalement *</label>
-                <div className={`transition-all duration-300 ${focusedField === 'titre' ? 'scale-[1.01]' : ''}`}>
-                  <input
-                    type="text" 
-                    placeholder="Ex: Nid-de-poule dangereux" 
-                    value={formData.titre || ""} 
-                    required
-                    onChange={(e) => handleFieldChange('titre', e.target.value)}
-                    onFocus={() => setFocusedField('titre')}
-                    onBlur={() => setFocusedField(null)}
-                    className={`w-full bg-white/10 border rounded-xl px-4 py-2.5 text-white placeholder-white/70 focus:outline-none focus:ring-2 transition-all text-sm backdrop-blur-md ${
-                      errors.titre 
-                        ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' 
-                        : 'border-white/20 focus:border-emerald-500 focus:ring-emerald-500/20'
-                    }`}
-                  />
-                </div>
-                {errors.titre && (
-                  <p className="text-red-400 text-xs mt-1">{errors.titre}</p>
-                )}
+              <div>
+                <input type="text" placeholder="Titre du signalement *" value={formData.titre || ""} onChange={(e) => handleFieldChange('titre', e.target.value)} className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/50 focus:outline-none focus:border-emerald-500" />
+                {errors.titre && <p className="text-red-400 text-xs mt-1">{errors.titre}</p>}
               </div>
 
-              <div className="space-y-1">
-                <label className="text-white/80 text-xs font-medium text-center block">Catégorie *</label>
-                <div className="grid grid-cols-4 gap-2 max-w-2xl mx-auto">
-                  {categories.map((category) => {
-                    const Icon = category.icon;
-                    const isSelected = formData.type === category.id;
-                    return (
-                      <button
-                        key={category.id}
-                        type="button"
-                        onClick={() => setFormData({...formData, type: category.id})}
-                        className={`
-                          relative p-2 sm:p-3 rounded-xl transition-all duration-300 transform hover:scale-[1.02]
-                          ${isSelected 
-                            ? `bg-gradient-to-r ${category.color} text-white shadow-lg scale-[1.02]` 
-                            : `bg-white/10 border border-white/20 text-white/70 hover:bg-white/20`
-                          }
-                        `}
-                      >
-                        <div className="flex flex-col items-center gap-1">
-                          <Icon size={18} className={isSelected ? "text-white" : category.iconColor} />
-                          <span className="text-[10px] sm:text-xs font-medium text-center">
-                            {category.name.split(' ')[0]}
-                          </span>
-                        </div>
-                        {isSelected && (
-                          <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center">
-                            <div className="w-2 h-2 bg-white rounded-full"></div>
-                          </div>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-                {selectedCategory && (
-                  <p className="text-emerald-300 text-xs mt-1 text-center">
-                    {selectedCategory.description}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-white/80 text-xs font-medium">Description *</label>
-                <textarea
-                  placeholder="Décrivez précisément le problème..." 
-                  value={formData.description || ""} 
-                  required
-                  onChange={(e) => handleFieldChange('description', e.target.value)}
-                  className={`w-full bg-white/10 border rounded-xl px-4 py-2.5 text-white placeholder-white/70 focus:outline-none focus:ring-2 transition-all text-sm backdrop-blur-md h-28 resize-none ${
-                    errors.description 
-                      ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' 
-                      : 'border-white/20 focus:border-emerald-500 focus:ring-emerald-500/20'
-                  }`}
-                />
-                {errors.description && (
-                  <p className="text-red-400 text-xs mt-1">{errors.description}</p>
-                )}
-                <p className="text-white/50 text-xs text-right">
-                  {formData.description.length}/500 caractères
-                </p>
-              </div>
-
-              {/* Localisation avec option GPS ou manuelle */}
-              <div className="space-y-3">
-                <label className="text-white/80 text-xs font-medium">Localisation *</label>
-                
-                {/* Option 1: GPS */}
-                <div className={`bg-emerald-600/20 backdrop-blur-sm p-4 rounded-xl border ${errors.position && !formData.ville && !formData.latitude ? 'border-red-500' : 'border-emerald-500/30'}`}>
-                  <button
-                    type="button" 
-                    onClick={getGeolocation} 
-                    className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg transition-all transform hover:scale-[1.02] text-sm w-full justify-center mb-3"
-                    disabled={isLoadingAddress}
-                  >
-                    <MapPin size={16} /> 
-                    {isLoadingAddress ? "Chargement..." : " Utiliser ma position GPS"}
-                  </button>
-                  
-                  {formData.address && (
-                    <div className="text-white text-sm mt-2 p-2 bg-white/10 rounded-lg">
-                      <span className="text-emerald-300"> Adresse détectée :</span><br />
-                      {formData.address}
-                    </div>
-                  )}
-                </div>
-
-                {/* Option 2: Sélection manuelle de la ville */}
-                <div className="bg-white/10 backdrop-blur-sm p-4 rounded-xl border border-white/20">
-                  <p className="text-white/70 text-xs mb-2">Ou sélectionnez votre ville manuellement :</p>
-                  <select
-                    value={formData.ville || ""}
-                    onChange={(e) => handleVilleChange(e.target.value)}
-                    className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all text-sm backdrop-blur-md"
-                  >
-                    <option value="" className="bg-slate-800">-- Sélectionnez une ville --</option>
-                    {availableCities.sort().map((city) => (
-                      <option key={city} value={city} className="bg-slate-800">
-                        {city}
-                      </option>
-                    ))}
-                  </select>
-                  {formData.ville && (
-                    <p className="text-emerald-300 text-xs mt-2">
-                      ✓ Ville sélectionnée : {formData.ville}
-                    </p>
-                  )}
-                </div>
-
-                {errors.position && (
-                  <p className="text-red-400 text-xs mt-1">{errors.position}</p>
-                )}
-              </div>
-
-              {/* Images - OBLIGATOIRES */}
-              <div className="space-y-2">
-                <label className="text-white/80 text-xs font-medium">Images * (au moins une)</label>
-                <div className={`flex gap-3 p-4 rounded-xl border ${
-                  errors.images && images.length === 0 ? 'border-red-500' : 'border-white/20'
-                }`}>
-                  <input
-                    type="text" 
-                    placeholder="URL de l'image" 
-                    value={formData.imageUrl || ""}
-                    onChange={(e) => handleFieldChange('imageUrl', e.target.value)}
-                    className={`flex-1 bg-white/10 border rounded-xl px-4 py-2.5 text-white placeholder-white/70 focus:outline-none focus:ring-2 transition-all text-sm backdrop-blur-md ${
-                      errors.imageUrl 
-                        ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' 
-                        : 'border-white/20 focus:border-emerald-500 focus:ring-emerald-500/20'
-                    }`}
-                  />
-                  <button 
-                    type="button" 
-                    onClick={addImage} 
-                    className="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-lg transition-all flex items-center gap-2 text-sm"
-                  >
-                    <Camera size={18}/> Ajouter
-                  </button>
-                </div>
-                {errors.imageUrl && (
-                  <p className="text-red-400 text-xs mt-1">{errors.imageUrl}</p>
-                )}
-                {errors.images && images.length === 0 && (
-                  <p className="text-red-400 text-xs mt-1">{errors.images}</p>
-                )}
-                
-                {images.length > 0 && (
-                  <div className="flex gap-3 overflow-x-auto pb-2 mt-2">
-                    {images.map((img, i) => (
-                      <div key={i} className="relative group flex-shrink-0">
-                        <img src={img.url} className="w-20 h-20 object-cover rounded-lg border-2 border-white/30 shadow-lg" alt="Preview" />
-                        <button 
-                          type="button"
-                          onClick={() => removeImage(i)} 
-                          className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition shadow-lg"
-                        >
-                          <X size={14}/>
-                        </button>
+              {/* Catégories */}
+              <div className="grid grid-cols-4 gap-2">
+                {categories.map((category) => {
+                  const Icon = category.icon;
+                  const isSelected = formData.type === category.id;
+                  return (
+                    <button key={category.id} type="button" onClick={() => setFormData({...formData, type: category.id})} className={`p-3 rounded-xl transition ${isSelected ? `bg-gradient-to-r ${category.color} text-white shadow-lg` : 'bg-white/10 border border-white/20 text-white/70'}`}>
+                      <div className="flex flex-col items-center gap-1">
+                        <Icon size={20} />
+                        <span className="text-xs">{category.name.split(' ')[0]}</span>
                       </div>
-                    ))}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div>
+                <textarea placeholder="Description détaillée *" value={formData.description || ""} onChange={(e) => handleFieldChange('description', e.target.value)} rows="3" className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/50 focus:outline-none focus:border-emerald-500" />
+                {errors.description && <p className="text-red-400 text-xs mt-1">{errors.description}</p>}
+              </div>
+
+              {/* Localisation */}
+              <div className="space-y-3">
+                <label className="text-white/80 text-sm">📍 Localisation *</label>
+                <button type="button" onClick={getGeolocation} className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg transition">
+                  <MapPin size={16} /> Utiliser ma position GPS
+                </button>
+                {formData.address && (
+                  <div className="bg-white/10 rounded-lg p-3">
+                    <p className="text-emerald-400 text-sm">Adresse détectée :</p>
+                    <p className="text-white text-sm">{formData.address}</p>
                   </div>
                 )}
               </div>
 
-              <button 
-                type="submit" 
-                className="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-bold py-3 rounded-xl shadow-lg shadow-emerald-900/20 transition-all transform hover:scale-[1.01] active:scale-[0.98] flex items-center justify-center gap-2 text-base"
-              >
-                <Send size={18}/> 
-                {editingId ? "Mettre à jour" : "Envoyer le signalement"}
-              </button>
-              
-              {editingId && (
-                <button 
-                  type="button"
-                  onClick={() => {
-                    setEditingId(null);
-                    setFormData({
-                      titre: "",
-                      description: "",
-                      type: "VOIRIE",
-                      latitude: "",
-                      longitude: "",
-                      address: "",
-                      ville: "",
-                      commune: "",
-                      imageUrl: ""
-                    });
-                    setImages([]);
-                    setErrors({});
-                    setManualLocation(false);
-                  }}
-                  className="w-full bg-gray-600/50 hover:bg-gray-600 text-white font-bold py-2.5 rounded-xl transition-all backdrop-blur-sm text-sm"
-                >
-                  Annuler la modification
-                </button>
+              {/* Images */}
+              <div className="flex gap-2">
+                <input type="text" placeholder="URL de l'image" value={formData.imageUrl || ""} onChange={(e) => setFormData({...formData, imageUrl: e.target.value})} className="flex-1 bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/50" />
+                <button type="button" onClick={addImage} className="bg-emerald-600 hover:bg-emerald-500 text-white px-5 rounded-xl transition">Ajouter</button>
+              </div>
+              {errors.images && <p className="text-red-400 text-xs">{errors.images}</p>}
+
+              {images.length > 0 && (
+                <div className="flex gap-3 overflow-x-auto custom-scrollbar pb-2">
+                  {images.map((img, i) => (
+                    <div key={i} className="relative flex-shrink-0">
+                      <img src={img.url} className="w-20 h-20 object-cover rounded-lg" alt="" />
+                      <button type="button" onClick={() => removeImage(i)} className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1"><X size={12} className="text-white" /></button>
+                    </div>
+                  ))}
+                </div>
               )}
+
+              <div className="flex gap-3">
+                <button type="submit" className="flex-1 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2">
+                  <Send size={18}/> {editingId ? "Mettre à jour" : "Envoyer"}
+                </button>
+                
+                {/* Bouton Annuler qui apparaît en mode édition */}
+                {editingId && (
+                  <button
+                    type="button"
+                    onClick={handleCancelEdit}
+                    className="flex-1 bg-gray-600/50 hover:bg-gray-600 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2"
+                  >
+                    <X size={18} /> Annuler
+                  </button>
+                )}
+              </div>
             </form>
           </div>
+        </div>
+
+        {/* Barre de recherche et filtres */}
+        <div className="mb-6 space-y-3">
+          <div className="flex gap-3">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/40 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Rechercher par titre, description ou localisation..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-white/10 border border-white/20 rounded-xl pl-10 pr-4 py-3 text-white placeholder-white/50 focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white hover:bg-white/20 transition flex items-center gap-2"
+            >
+              <Filter size={18} />
+              <span className="hidden sm:inline">Filtres</span>
+            </button>
+          </div>
+          
+          {/* Panneau de filtres */}
+          {showFilters && (
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-5 border border-white/20">
+              <div className="mb-5">
+                <label className="text-white/70 text-xs font-medium block mb-3 flex items-center gap-2">
+                  <div className="w-1 h-4 bg-emerald-500 rounded-full"></div>
+                  Type de problème
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                  <button
+                    onClick={() => setFilterType("TOUS")}
+                    className={`group relative flex flex-col items-center gap-2 p-3 transition-all duration-300 ${filterType === "TOUS" ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-lg scale-[1.02]' : 'bg-white/5 border border-white/20 text-white/70 hover:bg-white/15'}`}
+                    style={{ borderRadius: '20px' }}
+                  >
+                    <div className={`p-2 rounded-full transition-all ${filterType === "TOUS" ? 'bg-white/20' : 'bg-white/5'}`}>
+                      <Filter size={18} className={filterType === "TOUS" ? "text-white" : "text-emerald-400"} />
+                    </div>
+                    <span className="text-xs font-medium">Tous</span>
+                    {filterType === "TOUS" && <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full animate-pulse" />}
+                  </button>
+                  {categories.map((cat) => {
+                    const Icon = cat.icon;
+                    const isSelected = filterType === cat.id;
+                    return (
+                      <button
+                        key={cat.id}
+                        onClick={() => setFilterType(cat.id)}
+                        className={`group relative flex flex-col items-center gap-2 p-3 transition-all duration-300 ${isSelected ? `bg-gradient-to-r ${cat.color} text-white shadow-lg scale-[1.02]` : 'bg-white/5 border border-white/20 text-white/70 hover:bg-white/15'}`}
+                        style={{ borderRadius: '20px' }}
+                      >
+                        <div className={`p-2 rounded-full transition-all ${isSelected ? 'bg-white/20 scale-110' : 'bg-white/5 group-hover:scale-110'}`}>
+                          <Icon size={18} className={isSelected ? "text-white" : cat.iconColor} />
+                        </div>
+                        <span className="text-xs font-medium text-center">{cat.name.split(' ')[0]}</span>
+                        {isSelected && <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full animate-pulse" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <label className="text-white/70 text-xs font-medium block mb-3 flex items-center gap-2">
+                  <div className="w-1 h-4 bg-emerald-500 rounded-full"></div>
+                  Statut
+                </label>
+                <div className="flex gap-3">
+                  <button onClick={() => setFilterStatus("TOUS")} className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 transition-all duration-300 ${filterStatus === "TOUS" ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-lg scale-[1.02]' : 'bg-white/5 border border-white/20 text-white/70 hover:bg-white/15'}`} style={{ borderRadius: '50% 10% 50% 10% / 10% 50% 10% 50%' }}>
+                    <Filter size={14} className="text-white" />
+                    <span className="text-sm font-medium">Tous</span>
+                  </button>
+                  <button onClick={() => setFilterStatus("EN_ATTENTE")} className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 transition-all duration-300 ${filterStatus === "EN_ATTENTE" ? 'bg-gradient-to-r from-amber-600 to-amber-500 text-white shadow-lg scale-[1.02]' : 'bg-white/5 border border-white/20 text-white/70 hover:bg-white/15'}`} style={{ borderRadius: '50% 10% 50% 10% / 10% 50% 10% 50%' }}>
+                    <Clock size={14} className="text-white" />
+                    <span className="text-sm font-medium">En attente</span>
+                  </button>
+                  <button onClick={() => setFilterStatus("RESOLU")} className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 transition-all duration-300 ${filterStatus === "RESOLU" ? 'bg-gradient-to-r from-green-600 to-green-500 text-white shadow-lg scale-[1.02]' : 'bg-white/5 border border-white/20 text-white/70 hover:bg-white/15'}`} style={{ borderRadius: '50% 10% 50% 10% / 10% 50% 10% 50%' }}>
+                    <CheckCircle size={14} className="text-white" />
+                    <span className="text-sm font-medium">Résolu</span>
+                  </button>
+                </div>
+              </div>
+
+              {(filterType !== "TOUS" || filterStatus !== "TOUS" || searchTerm) && (
+                <div className="mt-4 pt-3 border-t border-white/10 flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                    <span className="text-white/50 text-xs">{filteredSignalements.length} résultat(s) trouvé(s)</span>
+                  </div>
+                  <button onClick={() => { setSearchTerm(""); setFilterType("TOUS"); setFilterStatus("TOUS"); }} className="text-emerald-400 text-xs hover:text-emerald-300 transition-all duration-300 flex items-center gap-1 hover:gap-2">
+                    <RefreshCw size={12} />
+                    Réinitialiser les filtres
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Liste des signalements */}
         <div className="space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="text-xl font-bold text-white"> Tous les signalements</h3>
-            <span className="bg-emerald-600/30 text-emerald-300 px-3 py-1 rounded-full text-sm backdrop-blur-sm">
-              {signalements.length} signalement(s)
+            <h3 className="text-xl font-bold text-white">Tous les signalements</h3>
+            <span className="bg-emerald-600/30 text-emerald-300 px-3 py-1 rounded-full text-sm">
+              {filteredSignalements.length} signalement(s)
             </span>
           </div>
           
-          {signalements.length === 0 ? (
-            <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/30 p-12 text-center">
-              <p className="text-white/70 text-lg">Aucun signalement pour le moment</p>
-              <p className="text-white/50 text-sm mt-2">Soyez le premier à signaler un problème !</p>
+          {filteredSignalements.length === 0 ? (
+            <div className="bg-white/10 rounded-2xl p-12 text-center">
+              <p className="text-white/70">Aucun signalement trouvé</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {signalements.map((s) => (
-                <div key={s.id} className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/30 overflow-hidden hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]">
-                  {s.images && s.images[0] && (
-                    <div className="relative h-48 overflow-hidden">
-                      <img src={s.images[0].url} className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" alt={s.titre} />
-                    </div>
-                  )}
-                  <div className="p-5 space-y-3">
-                    <div className="flex justify-between items-start">
-                      <span className="text-xs font-bold bg-emerald-600/30 text-emerald-300 px-3 py-1 rounded-full backdrop-blur-sm">
-                        {s.type}
-                      </span>
-                      <span className={`text-xs font-bold px-3 py-1 rounded-full backdrop-blur-sm ${
-                        s.statut === 'EN_ATTENTE' 
-                          ? 'bg-amber-600/30 text-amber-300' 
-                          : 'bg-green-600/30 text-green-300'
-                      }`}>
-                        {s.statut === 'EN_ATTENTE' ? '⏳ En attente' : '✅ Traité'}
-                      </span>
-                    </div>
-                    <h4 className="text-lg font-bold text-white line-clamp-1">{s.titre}</h4>
-                    <p className="text-white/70 text-sm line-clamp-2">{s.description}</p>
-                    <div className="flex items-start gap-2 text-white/60 text-xs">
-                      <MapPin size={14} className="mt-0.5 flex-shrink-0" />
-                      <span className="line-clamp-2">
-                        { s.address || s.ville || (s.latitude && s.longitude ? `${s.latitude.toFixed(4)}, ${s.longitude.toFixed(4)}` : "Position non définie")}
-                      </span>
-                    </div>
-                    <div className="flex justify-end gap-3 pt-2 border-t border-white/20">
-                      <button 
-                        onClick={() => handleEdit(s)} 
-                        className="text-emerald-400 hover:text-emerald-300 hover:bg-white/10 p-2 rounded-lg transition-colors"
-                        title="Modifier"
-                      >
-                        <Edit2 size={18}/>
-                      </button>
-                      <button 
-                        onClick={() => confirmDelete(s.id)} 
-                        className="text-red-400 hover:text-red-300 hover:bg-white/10 p-2 rounded-lg transition-colors"
-                        title="Supprimer"
-                      >
-                        <Trash2 size={18}/>
-                      </button>
+              {filteredSignalements.map((s) => {
+                const category = categories.find(c => c.id === s.type);
+                const Icon = category?.icon || Road;
+                
+                return (
+                  <div key={s.id} className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/30 overflow-hidden hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] cursor-pointer group">
+                    {/* Image avec bouton "Voir plus" au survol */}
+                    {s.images && s.images[0] && (
+                      <div className="relative h-48 overflow-hidden" onClick={() => openDetailModal(s)}>
+                        <img src={s.images[0].url} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" alt={s.titre} />
+                        {/* Overlay et bouton Voir plus au survol */}
+                        <div className="absolute inset-0 bg-white/10 border border-white/20 rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-center gap-2">
+                          <span className="text-white text-sm font-medium opacity-0 group-hover:opacity-100 transition-all duration-300 delay-100">
+                            Voir plus
+                          </span>
+                        </div>
+                        {/* Badge multi-images */}
+                        {s.images.length > 1 && (
+                          <div className="absolute bottom-2 right-2 bg-black/60 rounded-full px-2 py-1 text-xs text-white flex items-center gap-1">
+                            <Camera size={10} />
+                            {s.images.length} photos
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Informations réduites */}
+                    <div className="p-4 space-y-2" onClick={() => openDetailModal(s)}>
+                      <div className="flex justify-between items-start">
+                        <div className="flex items-center gap-2">
+                          <div className={`p-1.5 rounded-lg bg-gradient-to-r ${category?.color || 'from-emerald-500 to-green-600'}`}>
+                            <Icon size={14} className="text-white" />
+                          </div>
+                          <span className="text-xs text-emerald-300">{category?.name.split(' ')[0] || s.type}</span>
+                        </div>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          s.statut === 'EN_ATTENTE' 
+                            ? 'bg-amber-500/20 text-amber-300' 
+                            : 'bg-green-500/20 text-green-300'
+                        }`}>
+                          {s.statut === 'EN_ATTENTE' ? '⏳ En attente' : '✅ Traité'}
+                        </span>
+                      </div>
+                      
+                      <h4 className="font-bold text-white text-lg line-clamp-1">{s.titre}</h4>
+                      <p className="text-white/60 text-sm line-clamp-2">{s.description}</p>
+                      
+                      <div className="flex items-start gap-2 text-white/40 text-xs">
+                        <MapPin size={12} className="mt-0.5 flex-shrink-0" />
+                        <span className="line-clamp-1">{s.address || s.ville || "Position non définie"}</span>
+                      </div>
+                      
+                      <div className="flex items-center gap-3 text-white/40 text-xs pt-1">
+                        <div className="flex items-center gap-1">
+                          <Calendar size={12} />
+                          <span>{formatDate(s.dateCreation)}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <User size={12} />
+                          <span>{s.utilisateur?.nom || "Anonyme"}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
       </div>
+
+      {/* Styles personnalisés pour le scroll */}
+      <style jsx>{`
+        @keyframes fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes modal-pop {
+          0% { transform: scale(0.9); opacity: 0; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-fade-in { animation: fade-in 0.2s ease-out; }
+        .animate-modal-pop { animation: modal-pop 0.3s ease-out; }
+        
+        /* Custom scrollbar moderne */
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+          height: 6px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 10px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(16, 185, 129, 0.4);
+          border-radius: 10px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(16, 185, 129, 0.6);
+        }
+        
+        /* Appliquer le scroll personnalisé à toute la page */
+        *::-webkit-scrollbar {
+          width: 8px;
+          height: 8px;
+        }
+        
+        *::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 10px;
+        }
+        
+        *::-webkit-scrollbar-thumb {
+          background: rgba(16, 185, 129, 0.4);
+          border-radius: 10px;
+        }
+        
+        *::-webkit-scrollbar-thumb:hover {
+          background: rgba(16, 185, 129, 0.6);
+        }
+      `}</style>
     </div>
   );
 }
