@@ -5,11 +5,7 @@ import java.util.ArrayList;
 import java.time.LocalDateTime;
 import org.hibernate.annotations.CreationTimestamp;
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
+import lombok.*;
 
 @Entity
 @Getter
@@ -27,7 +23,16 @@ public class Signalement {
     private String type;
     private String statut = "EN_ATTENTE";
     
-    // Relation vers les images
+    private Double latitude;
+    private Double longitude;
+    
+    @Column(length = 500)
+    private String address;
+    
+    private String ville;
+    
+    private String commune;
+    
     @OneToMany(mappedBy = "signalement", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Image> images = new ArrayList<>();
 
@@ -38,8 +43,4 @@ public class Signalement {
     @CreationTimestamp
     @Column(name = "date_creation", updatable = false)
     private LocalDateTime dateCreation;
-    
-    // ❌ SUPPRIMEZ tout ce qui est en dessous :
-    // @PutMapping, @PathVariable, ResponseEntity, Principal, etc.
-    // Ces annotations n'ont rien à faire dans le modèle !
 }

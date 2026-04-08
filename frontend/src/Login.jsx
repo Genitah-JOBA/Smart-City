@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate  } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { MapPin, Smartphone, Building2, Shield, ArrowRight, Eye, EyeOff } from "lucide-react";
 
 export default function Login() {
@@ -16,13 +16,49 @@ export default function Login() {
   const navigate = useNavigate();
 
   useEffect(() => {
-      const checkMobile = () => {
-        setIsMobile(window.innerWidth < 768);
-      };
-      checkMobile();
-      window.addEventListener('resize', checkMobile);
-      return () => window.removeEventListener('resize', checkMobile);
-    }, []);
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Fonction pour décoder le token JWT
+  const decodeToken = (token) => {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload;
+    } catch (error) {
+      console.error("Erreur décodage token:", error);
+      return null;
+    }
+  };
+
+  // Fonction pour récupérer le rôle de l'utilisateur depuis le backend
+  const fetchUserRole = async (token, email) => {
+    try {
+      const response = await fetch("http://localhost:8081/api/auth/me", {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      });
+      
+      if (response.ok) {
+        const userData = await response.json();
+        console.log("Données utilisateur:", userData);
+        return userData.role || userData.role?.toUpperCase() || "CITIZEN";
+      }
+    } catch (error) {
+      console.error("Erreur récupération rôle:", error);
+    }
+    
+    // Fallback: essayer de décoder le token
+    const decoded = decodeToken(token);
+    return decoded?.role || decoded?.roles?.[0] || "CITIZEN";
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -62,9 +98,18 @@ export default function Login() {
       const token = await response.text();
       console.log("Token reçu:", token);
       
-      // ✅ STOCKER LE TOKEN DANS LOCALSTORAGE
+      // Stocker le token
       localStorage.setItem("token", token);
-      console.log("Token stocké avec succès");
+      
+      // Récupérer le rôle via une requête API
+      const userRole = await fetchUserRole(token, email);
+      console.log("Rôle utilisateur récupéré:", userRole);
+      
+      // Normaliser le rôle (mettre en majuscules)
+      const normalizedRole = userRole.toUpperCase();
+      
+      // Stocker le rôle dans localStorage
+      localStorage.setItem("userRole", normalizedRole);
 
       setIsSuccess(true);
       setMessage("Connexion réussie !");
@@ -72,9 +117,16 @@ export default function Login() {
       setEmail(""); 
       setMotDePasse("");
 
-      // Petit délai pour que l'utilisateur voie le message de succès
+      // Redirection selon le rôle après 1.5 secondes
       setTimeout(() => {
-        navigate("/signalement");
+        console.log("Redirection pour le rôle:", normalizedRole);
+        if (normalizedRole === "ADMIN") {
+          navigate("/admin/dashboard");
+        } else if (normalizedRole === "AGENT") {
+          navigate("/agent/signalements-resolus");
+        } else {
+          navigate("/signalements");
+        }
       }, 1500);
       
     } catch (error) {
@@ -143,20 +195,24 @@ export default function Login() {
         }} />
       </div>
 
+      {/* Container  */}
       <div className="relative w-full max-w-full sm:max-w-xl md:max-w-4xl lg:max-w-5xl bg-white/10 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-2xl border border-white/30 overflow-hidden mx-2 sm:mx-4">
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-600 to-teal-500 bg-gradient-to-r" />
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-600 to-teal-500" />
         
         <div className="flex flex-col md:grid md:grid-cols-2 gap-0">
-          {/* Left Side - Branding & Info - Responsive */}
+          {/* Left Side - Branding & Info */}
           <div className="relative p-6 sm:p-8 md:p-10 flex flex-col justify-between overflow-hidden min-h-[300px] md:min-h-full">
-            
             <div className="relative z-10">
               <div className="flex items-center gap-3 mb-6 sm:mb-8 md:mb-10">
                 <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-500 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
                   <MapPin className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
-                <div>
-                  <h1 className="text-3xl sm:text-4xl font-Bellota text-white tracking-widest italic font-extrabold">SmartCity</h1>
+                <div className="relative">
+                  <h1 className="text-xl font-bold tracking-tight">
+                    <span className="bg-gradient-to-r from-white via-white to-emerald-400 bg-clip-text text-transparent">
+                      SmartCity
+                    </span>
+                  </h1>
                   <p className="text-emerald-400 text-[10px] sm:text-xs font-medium uppercase tracking-wider">Plateforme citoyenne</p>
                 </div>
               </div>
@@ -188,28 +244,16 @@ export default function Login() {
             </div>
           </div>
 
-          {/* Right */}
-
-          <div className="relative p-6 sm:p-8 text-items-center md:p-10 overflow-y-auto max-h-[60vh] md:max-h-none ring-1 ring-emerald-500">
-            <div 
-              className="absolute inset-0 z-0"
-              style={{ 
-                backgroundImage: `url('/Image/Smart.jpg')`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center'
-              }}
-            >
+          {/* Right Side - Login Form */}
+          <div className="relative p-6 sm:p-8 md:p-10 overflow-y-auto max-h-[60vh] md:max-h-none ring-1 ring-emerald-500">
+            <div className="absolute inset-0 z-0" style={{ backgroundImage: `url('/Image/Smart.jpg')`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
               <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-[2px]" />
             </div>
 
-            <form
-              onSubmit={handleLogin}
-              className="relative z-10 space-y-3 sm:space-y-4"
-            >
-
-              <div className="text-center sm:text-left">
-                <h3 className="text-xl sm:text-2xl text-center font-bold text-white mb-1">CONNEXION</h3>
-                <p className="text-white/80 text-xs text-center sm:text-sm">Connectez-vous pour accéder à votre compte</p>
+            <form onSubmit={handleLogin} className="relative z-10 space-y-3 sm:space-y-4">
+              <div className="text-center">
+                <h3 className="text-xl sm:text-2xl font-bold text-white mb-1">CONNEXION</h3>
+                <p className="text-white/80 text-xs">Connectez-vous pour accéder à votre compte</p>
               </div>
 
               <div className="space-y-1">
@@ -237,7 +281,7 @@ export default function Login() {
                 <label className="text-white/80 text-[10px] sm:text-xs font-medium">Mot de passe</label>
                 <div className={`relative transition-all duration-300 ${focusedField === 'password' ? 'scale-[1.01] sm:scale-[1.02]' : ''}`}>
                   <input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
                     value={motDePasse}
                     onChange={(e) => setMotDePasse(e.target.value)}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { MapPin, Smartphone, Building2, Shield, ArrowRight, Eye, EyeOff } from "lucide-react";
 
 export default function Register() {
@@ -13,6 +13,7 @@ export default function Register() {
   const [showModal, setShowModal] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const checkMobile = () => {
@@ -76,7 +77,14 @@ export default function Register() {
       setIsSuccess(true);
       setMessage("Votre compte a été créé avec succès !");
       setShowModal(true);
-      setNom(""); setEmail(""); setMotDePasse("");
+      setNom(""); 
+      setEmail(""); 
+      setMotDePasse("");
+      
+      
+      setTimeout(() => {
+        navigate("/login");
+      }, 2000);
       
     } catch (error) {
       setIsSuccess(false);
@@ -104,9 +112,8 @@ export default function Register() {
   };
 
   const roles = [
-    { id: "CITIZEN", label: "Citoyen", icon: Smartphone, color: "from-blue-500 to-cyan-500" },
-    { id: "AGENT", label: "Agent Municipal", icon: Building2, color: "from-emerald-500 to-teal-500" },
-    { id: "ADMIN", label: "Administrateur", icon: Shield, color: "from-purple-500 to-pink-500" },
+    { id: "CITIZEN", label: "Citoyen", icon: Smartphone, color: "from-emerald-500 to-teal-500", description: "Signalez des problèmes dans votre quartier" },
+    { id: "AGENT", label: "Agent Municipal", icon: Building2, color: "from-green-600 to-green-400", description: "Gérez et résolvez les signalements" },
   ];
 
   const [errors, setErrors] = useState({});
@@ -155,7 +162,7 @@ export default function Register() {
 
       {/* Main Form Container - Responsive */}
       <div className="relative w-full max-w-full sm:max-w-xl md:max-w-4xl lg:max-w-5xl bg-white/10 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-2xl border border-white/30 overflow-hidden mx-2 sm:mx-4">
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-600 to-teal-500 bg-gradient-to-r" />
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-600 to-teal-500" />
         
         <div className="flex flex-col md:grid md:grid-cols-2 gap-0">
           {/* Left Side - Branding & Info - Responsive */}
@@ -166,8 +173,12 @@ export default function Register() {
                 <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-500 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
                   <MapPin className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
-                <div>
-                  <h1 className="text-3xl sm:text-4xl font-Bellota text-white tracking-widest italic font-extrabold">SmartCity</h1>
+                <div className="relative">
+                  <h1 className="text-xl font-bold tracking-tight">
+                    <span className="bg-gradient-to-r from-white via-white to-emerald-400 bg-clip-text text-transparent">
+                      SmartCity
+                    </span>
+                  </h1>
                   <p className="text-emerald-400 text-[10px] sm:text-xs font-medium uppercase tracking-wider">Plateforme citoyenne</p>
                 </div>
               </div>
@@ -202,7 +213,7 @@ export default function Register() {
 
           {/* Right Side - Registration Form - Responsive */}
           <div className="relative p-6 sm:p-8 md:p-10 overflow-y-auto max-h-[60vh] md:max-h-none ring-1 ring-emerald-500">
-            <div 
+            <div
               className="absolute inset-0 z-0"
               style={{ 
                 backgroundImage: `url('/Image/Smart.jpg')`,
@@ -214,9 +225,9 @@ export default function Register() {
             </div>
 
             <form onSubmit={handleRegister} className="relative z-10 space-y-3 sm:space-y-4">
-              <div className="text-center sm:text-left">
-                <h3 className="text-xl sm:text-2xl font-bold text-white text-center mb-1">Inscription</h3>
-                <p className="text-white/80 text-xs sm:text-sm text-center">Créez votre compte en quelques secondes</p>
+              <div className="text-center">
+                <h3 className="text-xl sm:text-2xl font-bold text-white mb-1">Inscription</h3>
+                <p className="text-white/80 text-xs sm:text-sm">Créez votre compte en quelques secondes</p>
               </div>
 
               {/* Name Input */}
@@ -289,70 +300,60 @@ export default function Register() {
                 </div>
               </div>
 
-              {/* Role Selection - Responsive Grid */}
-              <div className="space-y-1">
-                <label className="text-white/80 text-[10px] sm:text-xs font-medium">Type de compte</label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  {roles.map((r) => {
-                    const Icon = r.icon;
-                    const isSelected = role === r.id;
-                    
-                    // Définition des couleurs pour chaque rôle
-                    const getRoleColor = () => {
-                      switch(r.id) {
-                        case "CITIZEN":
-                          return "from-emerald-600 to-teal-500 bg-gradient-to-r";
-                        case "AGENT":
-                          return "from-blue-500 to-cyan-500 bg-gradient-to-r";
-                        case "ADMIN":
-                          return "from-purple-500 to-pink-500 bg-gradient-to-r";
-                        default:
-                          return "bg-emerald-600";
-                      }
-                    };
-                    
-                    // Couleur de fond pour l'état non sélectionné
-                    const getHoverColor = () => {
-                      switch(r.id) {
-                        case "CITIZEN":
-                          return "hover:bg-blue-500/20";
-                        case "AGENT":
-                          return "hover:bg-emerald-500/20";
-                        case "ADMIN":
-                          return "hover:bg-purple-500/20";
-                        default:
-                          return "hover:bg-white/10";
-                      }
-                    };
-                    
-                    return (
-                      <button
-                        key={r.id}
-                        type="button"
-                        onClick={() => setRole(r.id)}
-                        className={`relative py-2 px-2 rounded-xl transition-all duration-300 ${
-                          isSelected 
-                            ? `${getRoleColor()} shadow-lg scale-[1.02] text-white font-bold` 
-                            : `bg-white/5 ${getHoverColor()} border border-white/10 text-white/70`
-                        }`}
-                      >
-                        <Icon className={`w-4 h-4 mx-auto mb-0.5 transition-all ${isSelected ? 'scale-110' : ''}`} />
-                        <span className="text-[10px] sm:text-[11px] font-medium truncate">{r.label}</span>
-                        
-                        {/* Effet de brillance pour le rôle sélectionné */}
-                        {isSelected && (
-                          <div className="absolute inset-0 rounded-xl overflow-hidden">
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-shine" />
-                          </div>
-                        )}
-                      </button>
-                    );
-                  })}
+              {/* Role Selection - CENTRÉ */}
+              <div className="space-y-2">
+                <label className="text-white/80 text-[10px] sm:text-xs font-medium text-center block">Type de compte</label>
+                <div className="flex justify-center">
+                  <div className="grid grid-cols-2 gap-3 max-w-md mx-auto">
+                    {roles.map((r) => {
+                      const Icon = r.icon;
+                      const isSelected = role === r.id;
+                      
+                      const getRoleColor = () => {
+                        switch(r.id) {
+                          case "CITIZEN":
+                            return "from-emerald-600 to-teal-500";
+                          case "AGENT":
+                            return "from-green-600 to-green-400";
+                          default:
+                            return "from-emerald-600 to-teal-500";
+                        }
+                      };
+                      
+                      return (
+                        <button
+                          key={r.id}
+                          type="button"
+                          onClick={() => setRole(r.id)}
+                          className={`relative py-3 px-4 rounded-xl transition-all duration-300 w-36 ${
+                            isSelected 
+                              ? `bg-gradient-to-r ${getRoleColor()} shadow-lg scale-[1.02] text-white font-bold` 
+                              : `bg-white/5 hover:bg-white/10 border border-white/20 text-white/70`
+                          }`}
+                        >
+                          <Icon className={`w-5 h-5 mx-auto mb-1 transition-all ${isSelected ? 'scale-110' : ''}`} />
+                          <span className="text-xs font-medium">{r.label}</span>
+                          
+                          {isSelected && (
+                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center">
+                              <div className="w-2 h-2 bg-white rounded-full"></div>
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
+                {/* Description du rôle sélectionné */}
+                <p className="text-emerald-400 text-xs text-center mt-2">
+                  {role === "CITIZEN" 
+                    ? " Signalez des problèmes dans votre quartier" 
+                    : " Gérez et résolvez les signalements citoyens"}
+                </p>
               </div>
 
               {/* Submit Button */}
-              <button to="/signalement"
+              <button
                 type="submit"
                 className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 sm:py-3 rounded-xl shadow-lg shadow-emerald-900/20 transition-all transform hover:scale-[1.01] active:scale-[0.98] flex items-center justify-center gap-2 text-sm sm:text-base"
               >
@@ -370,14 +371,7 @@ export default function Register() {
         </div>
       </div>
 
-      {/* Animation CSS pour le responsive spectaculaire */}
-      <style jsx>{`
-        @media (max-width: 640px) {
-          .rounded-3xl {
-            border-radius: 1rem;
-          }
-        }
-        
+      <style>{`
         @keyframes fadeIn {
           from {
             opacity: 0;

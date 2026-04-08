@@ -60,11 +60,16 @@ public class SignalementController {
             Signalement existingSignalement = signalementRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Signalement non trouvé"));
             
+            // Mise à jour des champs
             existingSignalement.setTitre(signalementDetails.getTitre());
             existingSignalement.setDescription(signalementDetails.getDescription());
             existingSignalement.setType(signalementDetails.getType());
+            existingSignalement.setLatitude(signalementDetails.getLatitude());
+            existingSignalement.setLongitude(signalementDetails.getLongitude());
+            existingSignalement.setAddress(signalementDetails.getAddress());
+            existingSignalement.setVille(signalementDetails.getVille());
+            existingSignalement.setCommune(signalementDetails.getCommune());
             
-            // Mise à jour des images si nécessaire
             if (signalementDetails.getImages() != null && !signalementDetails.getImages().isEmpty()) {
                 existingSignalement.getImages().clear();
                 for (Image img : signalementDetails.getImages()) {

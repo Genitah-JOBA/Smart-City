@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Camera, MapPin, Send, Trash2, Edit2, X, Shield, Road, Lightbulb, Trash, Droplets } from "lucide-react";
 
-export default function Signalements() {
+export default function Signaler() {
   const [signalements, setSignalements] = useState([]);
   const [formData, setFormData] = useState({
     titre: "",
