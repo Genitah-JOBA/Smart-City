@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { 
   Camera, MapPin, Send, Trash2, Edit2, X, Shield, Road, 
   Lightbulb, Trash, Droplets, Search, Filter, Calendar, User,
-  Clock, CheckCircle, RefreshCw, Maximize2, ChevronLeft, ChevronRight
+  Clock, CheckCircle, RefreshCw, Maximize2, ChevronLeft, ChevronRight,
+  AlertTriangle, PlayCircle
 } from "lucide-react";
 
 export default function Signaler() {
@@ -47,6 +48,7 @@ export default function Signaler() {
 
   // État pour annuler les modifications
   const [originalFormData, setOriginalFormData] = useState(null);
+  const [originalImages, setOriginalImages] = useState([]);
 
   const [availableCities, setAvailableCities] = useState([
     "Antananarivo", "Antsirabe", "Fianarantsoa", "Mahajanga", "Toamasina", 
@@ -66,6 +68,59 @@ export default function Signaler() {
     { id: "DECHETS", name: "Déchets / Propreté", icon: Trash, color: "from-teal-600 to-teal-500", iconColor: "text-teal-400" },
     { id: "EAU", name: "Eau / Assainissement", icon: Droplets, color: "from-green-400 to-green-300", iconColor: "text-green-400" }
   ];
+
+  // Obtenir la couleur du statut
+  const getStatusColor = (statut) => {
+    const colors = {
+      'EN_ATTENTE': 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+      'EN_COURS': 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+      'RESOLU': 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+      'TRAITE': 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+    };
+    return colors[statut] || 'bg-gray-500/20 text-gray-300 border-gray-500/30';
+  };
+
+  // Obtenir l'icône du statut
+  const getStatusIcon = (statut) => {
+    const icons = {
+      'EN_ATTENTE': AlertTriangle,
+      'EN_COURS': PlayCircle,
+      'RESOLU': CheckCircle,
+      'TRAITE': CheckCircle
+    };
+    return icons[statut] || AlertTriangle;
+  };
+
+  // Obtenir le texte du statut
+  const getStatusText = (statut) => {
+    const texts = {
+      'EN_ATTENTE': 'En attente',
+      'EN_COURS': 'En cours',
+      'RESOLU': 'Résolu',
+      'TRAITE': 'Traité'
+    };
+    return texts[statut] || statut;
+  };
+
+  // Obtenir le style du badge de statut pour le filtre
+  const getStatusBadgeStyle = (statut) => {
+    const styles = {
+      'EN_ATTENTE': 'bg-amber-500/20 text-amber-300',
+      'EN_COURS': 'bg-blue-500/20 text-blue-300',
+      'RESOLU': 'bg-green-500/20 text-green-300'
+    };
+    return styles[statut] || 'bg-gray-500/20 text-gray-300';
+  };
+
+  // Obtenir le libellé du statut pour le filtre
+  const getStatusFilterLabel = (statut) => {
+    const labels = {
+      'EN_ATTENTE': 'En attente',
+      'EN_COURS': 'En cours',
+      'RESOLU': 'Résolu'
+    };
+    return labels[statut] || statut;
+  };
 
   const getAddressFromCoordinates = async (lat, lng) => {
     setIsLoadingAddress(true);
@@ -429,7 +484,6 @@ export default function Signaler() {
 
   const token = localStorage.getItem("token");
   const selectedCategory = categories.find(c => c.id === formData.type);
-  const [originalImages, setOriginalImages] = useState([]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 relative overflow-hidden">
@@ -527,12 +581,13 @@ export default function Signaler() {
                   </div>
                   <span className="text-emerald-400 font-medium">{selectedSignalement.type}</span>
                 </div>
-                <span className={`text-xs px-3 py-1 rounded-full ${
-                  selectedSignalement.statut === 'EN_ATTENTE' 
-                    ? 'bg-amber-500/20 text-amber-300' 
-                    : 'bg-green-500/20 text-green-300'
-                }`}>
-                  {selectedSignalement.statut === 'EN_ATTENTE' ? '⏳ En attente' : '✅ Traité'}
+                {/* Statut avec icône */}
+                <span className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border ${getStatusColor(selectedSignalement.statut)}`}>
+                  {(() => {
+                    const StatusIcon = getStatusIcon(selectedSignalement.statut);
+                    return <StatusIcon size={12} />;
+                  })()}
+                  {getStatusText(selectedSignalement.statut)}
                 </span>
               </div>
 
@@ -541,7 +596,7 @@ export default function Signaler() {
               
               {/* Description complète */}
               <div>
-                <h3 className="text-white/70 text-sm font-medium mb-2">📝 Description</h3>
+                <h3 className="text-white/70 text-sm font-medium mb-2"> Description</h3>
                 <p className="text-white/80 text-sm leading-relaxed">{selectedSignalement.description}</p>
               </div>
               
@@ -603,7 +658,7 @@ export default function Signaler() {
                         closeDetailModal();
                         confirmDelete(selectedSignalement.id);
                       }} 
-                      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white transition"
+                      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-400 hover:bg-red-500 text-white transition"
                     >
                       <Trash2 size={16} /> Supprimer
                     </button>
@@ -781,22 +836,58 @@ export default function Signaler() {
                 </div>
               </div>
 
+              {/* Filtres de statut avec EN_COURS */}
               <div className="mb-4">
                 <label className="text-white/70 text-xs font-medium block mb-3 flex items-center gap-2">
                   <div className="w-1 h-4 bg-emerald-500 rounded-full"></div>
                   Statut
                 </label>
-                <div className="flex gap-3">
-                  <button onClick={() => setFilterStatus("TOUS")} className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 transition-all duration-300 ${filterStatus === "TOUS" ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-lg scale-[1.02]' : 'bg-white/5 border border-white/20 text-white/70 hover:bg-white/15'}`} style={{ borderRadius: '50% 10% 50% 10% / 10% 50% 10% 50%' }}>
-                    <Filter size={14} className="text-white" />
+                <div className="grid grid-cols-4 gap-3">
+                  <button 
+                    onClick={() => setFilterStatus("TOUS")} 
+                    className={`flex items-center justify-center gap-2 py-3 px-4 transition-all duration-300 rounded-xl ${
+                      filterStatus === "TOUS" 
+                        ? 'bg-gradient-to-r from-gray-600 to-gray-500 text-white shadow-lg scale-[1.02]' 
+                        : 'bg-white/5 border border-white/20 text-white/70 hover:bg-white/15'
+                    }`}
+                  >
+                    <Filter size={14} />
                     <span className="text-sm font-medium">Tous</span>
                   </button>
-                  <button onClick={() => setFilterStatus("EN_ATTENTE")} className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 transition-all duration-300 ${filterStatus === "EN_ATTENTE" ? 'bg-gradient-to-r from-amber-600 to-amber-500 text-white shadow-lg scale-[1.02]' : 'bg-white/5 border border-white/20 text-white/70 hover:bg-white/15'}`} style={{ borderRadius: '50% 10% 50% 10% / 10% 50% 10% 50%' }}>
-                    <Clock size={14} className="text-white" />
+                  
+                  <button 
+                    onClick={() => setFilterStatus("EN_ATTENTE")} 
+                    className={`flex items-center justify-center gap-2 py-3 px-4 transition-all duration-300 rounded-xl ${
+                      filterStatus === "EN_ATTENTE" 
+                        ? 'bg-gradient-to-r from-amber-600 to-amber-500 text-white shadow-lg scale-[1.02]' 
+                        : 'bg-white/5 border border-white/20 text-white/70 hover:bg-white/15'
+                    }`}
+                  >
+                    <AlertTriangle size={14} />
                     <span className="text-sm font-medium">En attente</span>
                   </button>
-                  <button onClick={() => setFilterStatus("RESOLU")} className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 transition-all duration-300 ${filterStatus === "RESOLU" ? 'bg-gradient-to-r from-green-600 to-green-500 text-white shadow-lg scale-[1.02]' : 'bg-white/5 border border-white/20 text-white/70 hover:bg-white/15'}`} style={{ borderRadius: '50% 10% 50% 10% / 10% 50% 10% 50%' }}>
-                    <CheckCircle size={14} className="text-white" />
+                  
+                  <button 
+                    onClick={() => setFilterStatus("EN_COURS")} 
+                    className={`flex items-center justify-center gap-2 py-3 px-4 transition-all duration-300 rounded-xl ${
+                      filterStatus === "EN_COURS" 
+                        ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg scale-[1.02]' 
+                        : 'bg-white/5 border border-white/20 text-white/70 hover:bg-white/15'
+                    }`}
+                  >
+                    <PlayCircle size={14} />
+                    <span className="text-sm font-medium">En cours</span>
+                  </button>
+                  
+                  <button 
+                    onClick={() => setFilterStatus("RESOLU")} 
+                    className={`flex items-center justify-center gap-2 py-3 px-4 transition-all duration-300 rounded-xl ${
+                      filterStatus === "RESOLU" 
+                        ? 'bg-gradient-to-r from-green-600 to-green-500 text-white shadow-lg scale-[1.02]' 
+                        : 'bg-white/5 border border-white/20 text-white/70 hover:bg-white/15'
+                    }`}
+                  >
+                    <CheckCircle size={14} />
                     <span className="text-sm font-medium">Résolu</span>
                   </button>
                 </div>
@@ -836,16 +927,17 @@ export default function Signaler() {
               {filteredSignalements.map((s) => {
                 const category = categories.find(c => c.id === s.type);
                 const Icon = category?.icon || Road;
+                const StatusIcon = getStatusIcon(s.statut);
                 
                 return (
-                  <div key={s.id} className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/30 overflow-hidden hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] cursor-pointer group">
+                  <div key={s.id} className="bg-[#242526] backdrop-blur-xl rounded-2xl border border-white/30 overflow-hidden hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] cursor-pointer group">
                     {/* Image avec bouton "Voir plus" au survol */}
                     {s.images && s.images[0] && (
                       <div className="relative h-48 overflow-hidden" onClick={() => openDetailModal(s)}>
                         <img src={s.images[0].url} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" alt={s.titre} />
                         {/* Overlay et bouton Voir plus au survol */}
-                        <div className="absolute inset-0 bg-white/10 border border-white/20 rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-center gap-2">
-                          <span className="text-white text-sm font-medium opacity-0 group-hover:opacity-100 transition-all duration-300 delay-100">
+                        <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-center gap-2">
+                          <span className="text-black bg-white/60 border border-white rounder-xl px-4 py-3 text-sm font-medium opacity-0 group-hover:opacity-100 transition-all duration-300 delay-100">
                             Voir plus
                           </span>
                         </div>
@@ -868,12 +960,10 @@ export default function Signaler() {
                           </div>
                           <span className="text-xs text-emerald-300">{category?.name.split(' ')[0] || s.type}</span>
                         </div>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${
-                          s.statut === 'EN_ATTENTE' 
-                            ? 'bg-amber-500/20 text-amber-300' 
-                            : 'bg-green-500/20 text-green-300'
-                        }`}>
-                          {s.statut === 'EN_ATTENTE' ? '⏳ En attente' : '✅ Traité'}
+                        {/* Statut avec icône */}
+                        <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${getStatusBadgeStyle(s.statut)}`}>
+                          <StatusIcon size={10} />
+                          {getStatusText(s.statut)}
                         </span>
                       </div>
                       
@@ -904,8 +994,8 @@ export default function Signaler() {
         </div>
       </div>
 
-      {/* Styles personnalisés pour le scroll */}
-      <style jsx>{`
+      {/* Styles personnalisés */}
+      <style>{`
         @keyframes fade-in {
           from { opacity: 0; }
           to { opacity: 1; }
@@ -917,42 +1007,34 @@ export default function Signaler() {
         .animate-fade-in { animation: fade-in 0.2s ease-out; }
         .animate-modal-pop { animation: modal-pop 0.3s ease-out; }
         
-        /* Custom scrollbar moderne */
         .custom-scrollbar::-webkit-scrollbar {
           width: 6px;
           height: 6px;
         }
-        
         .custom-scrollbar::-webkit-scrollbar-track {
           background: rgba(255, 255, 255, 0.05);
           border-radius: 10px;
         }
-        
         .custom-scrollbar::-webkit-scrollbar-thumb {
           background: rgba(16, 185, 129, 0.4);
           border-radius: 10px;
         }
-        
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
           background: rgba(16, 185, 129, 0.6);
         }
         
-        /* Appliquer le scroll personnalisé à toute la page */
         *::-webkit-scrollbar {
           width: 8px;
           height: 8px;
         }
-        
         *::-webkit-scrollbar-track {
           background: rgba(255, 255, 255, 0.05);
           border-radius: 10px;
         }
-        
         *::-webkit-scrollbar-thumb {
           background: rgba(16, 185, 129, 0.4);
           border-radius: 10px;
         }
-        
         *::-webkit-scrollbar-thumb:hover {
           background: rgba(16, 185, 129, 0.6);
         }

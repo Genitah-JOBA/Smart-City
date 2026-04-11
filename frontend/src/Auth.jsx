@@ -35,21 +35,35 @@ export default function Auth() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Vérifier si l'utilisateur est déjà connecté au chargement
+  // REMPLACEZ TOUT le useEffect de vérification par celui-ci :
   useEffect(() => {
+    const justLoggedIn = localStorage.getItem("justLoggedIn");
     const token = localStorage.getItem("token");
     const userRole = localStorage.getItem("userRole");
-    if (token && userRole && !isRedirecting) {
-      // Redirection automatique si déjà connecté
-      if (userRole === "ADMIN") {
-        navigate("/admin/dashboard");
-      } else if (userRole === "AGENT") {
-        navigate("/agent/signalements-resolus");
-      } else {
-        navigate("/signalements");
-      }
+    
+    // Si on vient de se connecter, on laisse handleLogin gérer la redirection
+    if (justLoggedIn === "true") {
+      return;
     }
-  }, []);
+    
+    // Si l'utilisateur est déjà connecté et qu'on n'est PAS en train de rediriger
+    if (token && userRole && !isRedirecting) {
+      const timeoutId = setTimeout(() => {
+        // Vérification supplémentaire pour éviter les redirections multiples
+        if (!isRedirecting) {
+          if (userRole === "ADMIN") {
+            navigate("/admin/dashboard", { replace: true });
+          } else if (userRole === "AGENT") {
+            navigate("/agent/signalements-resolus", { replace: true });
+          } else {
+            navigate("/signalements", { replace: true });
+          }
+        }
+      }, 50);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [navigate, isRedirecting]);
 
   // Fonction pour basculer entre login et register avec animation spectaculaire
   const toggleMode = () => {
@@ -123,21 +137,29 @@ export default function Auth() {
 
   // Fonction de redirection après connexion
   const redirectToDashboard = (role) => {
+    if (isRedirecting) return;
+    
     setIsRedirecting(true);
     setShowModal(false);
     
-    if (role === "ADMIN") {
-      navigate("/admin/dashboard");
-    } else if (role === "AGENT") {
-      navigate("/agent/signalements-resolus");
-    } else {
-      navigate("/signalements");
-    }
+    setTimeout(() => {
+      if (role === "ADMIN") {
+        navigate("/admin/dashboard", { replace: true });
+      } else if (role === "AGENT") {
+        navigate("/agent/signalements-resolus", { replace: true });
+      } else {
+        navigate("/signalements", { replace: true });
+      }
+    }, 100);
   };
 
   // Gestion de la connexion
   const handleLogin = async (e) => {
     e.preventDefault();
+    
+    // Empêcher les soumissions multiples
+    if (isRedirecting) return;
+    
     setMessage("");
     let newErrors = {};
 
@@ -167,6 +189,9 @@ export default function Auth() {
       }
 
       const token = await response.text();
+      
+      // IMPORTANT : Définir le flag AVANT de stocker le token
+      localStorage.setItem("justLoggedIn", "true");
       localStorage.setItem("token", token);
       
       const userRole = await fetchUserRole(token, email);
@@ -181,10 +206,14 @@ export default function Auth() {
 
       // Redirection après 2 secondes
       setTimeout(() => {
+        // Nettoyer le flag juste avant la redirection
+        localStorage.removeItem("justLoggedIn");
         redirectToDashboard(normalizedRole);
       }, 2000);
       
     } catch (error) {
+      // En cas d'erreur, nettoyer le flag
+      localStorage.removeItem("justLoggedIn");
       setIsSuccess(false);
       setMessage(error.message);
       setShowModal(true);

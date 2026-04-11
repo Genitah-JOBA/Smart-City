@@ -338,7 +338,7 @@ export default function Navbar() {
       <div className="h-16 sm:h-20"></div>
 
       {/* Styles CSS pour les animations */}
-      <style jsx>{`
+      <style>{`
         @keyframes fade-in {
           from { opacity: 0; }
           to { opacity: 1; }
