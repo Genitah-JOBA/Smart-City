@@ -13,4 +13,8 @@ public class UtilisateurService {
 
     public Utilisateur save(Utilisateur user) { return repository.save(user); }
     public List<Utilisateur> findAll() { return repository.findAll(); }
+    
+    public List<Utilisateur> findByRole(String role) {
+        return repository.findByRole(role);
+    }
 }

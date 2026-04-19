@@ -135,7 +135,7 @@ export default function AgentDashboard() {
               </div>
             </div>
             <button 
-              onClick={() => navigate("/agent/signalements-en-attente")}
+              onClick={() => navigate("/agent/signalements-assignes")}
               className="bg-amber-500 hover:bg-amber-400 text-white font-semibold px-6 py-3 rounded-xl transition flex items-center gap-2"
             >
               Voir tout
@@ -206,7 +206,7 @@ export default function AgentDashboard() {
             </div>
             <div className="space-y-3">
               <button 
-                onClick={() => navigate("/agent/signalements-en-attente")}
+                onClick={() => navigate("/agent/signalements-assignes")}
                 className="w-full bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-medium py-3 px-4 rounded-xl transition flex items-center justify-between border border-amber-500/30"
               >
                 <span className="flex items-center gap-2">
@@ -251,8 +251,7 @@ export default function AgentDashboard() {
                 return (
                   <div 
                     key={s.id} 
-                    className="bg-white/5 hover:bg-white/10 rounded-xl p-4 transition-colors cursor-pointer border border-white/10"
-                    onClick={() => navigate(`/agent/signalement/${s.id}`)}
+                    className="bg-white/5 hover:bg-white/10 rounded-xl p-4 transition-colors border border-white/10"
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-3 flex-1">
@@ -281,9 +280,6 @@ export default function AgentDashboard() {
                           </div>
                         </div>
                       </div>
-                      <button className="text-white/40 hover:text-white p-2">
-                        <Eye size={18} />
-                      </button>
                     </div>
                   </div>
                 );

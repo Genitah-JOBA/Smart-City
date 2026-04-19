@@ -4,6 +4,7 @@ import com.smartcity.backend.model.Utilisateur;
 import com.smartcity.backend.service.UtilisateurService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/users")
@@ -21,5 +22,10 @@ public class UtilisateurController {
     @GetMapping
     public java.util.List<Utilisateur> getAll() {
         return service.findAll();
+    }
+
+    @GetMapping("/role/{role}")
+    public List<Utilisateur> getByRole(@PathVariable String role) {
+        return service.findByRole(role.toUpperCase());
     }
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { MapPin, Smartphone, Building2, Shield, ArrowRight, Eye, EyeOff, UserPlus, LogIn, Sparkles, Rocket, Zap, Award } from "lucide-react";
+import { MapPin, Smartphone, Building2, Shield, ArrowRight, Eye, EyeOff, UserPlus, LogIn, Sparkles, Rocket, Zap, Award, Loader2 } from "lucide-react";
 
 export default function Auth() {
   // État pour basculer entre login et register
@@ -18,6 +18,7 @@ export default function Auth() {
   const [message, setMessage] = useState("");
   const [isMobile, setIsMobile] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   
   // États spécifiques à l'inscription
@@ -35,37 +36,23 @@ export default function Auth() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // REMPLACEZ TOUT le useEffect de vérification par celui-ci :
+  // 🔥 OPTIMISÉ : Vérification de connexion au chargement
   useEffect(() => {
-    const justLoggedIn = localStorage.getItem("justLoggedIn");
     const token = localStorage.getItem("token");
     const userRole = localStorage.getItem("userRole");
     
-    // Si on vient de se connecter, on laisse handleLogin gérer la redirection
-    if (justLoggedIn === "true") {
-      return;
-    }
-    
-    // Si l'utilisateur est déjà connecté et qu'on n'est PAS en train de rediriger
+    // Si déjà connecté, rediriger immédiatement
     if (token && userRole && !isRedirecting) {
-      const timeoutId = setTimeout(() => {
-        // Vérification supplémentaire pour éviter les redirections multiples
-        if (!isRedirecting) {
-          if (userRole === "ADMIN") {
-            navigate("/admin/dashboard", { replace: true });
-          } else if (userRole === "AGENT") {
-            navigate("/agent/signalements-resolus", { replace: true });
-          } else {
-            navigate("/signalements", { replace: true });
-          }
-        }
-      }, 50);
-      
-      return () => clearTimeout(timeoutId);
+      if (userRole === "ADMIN") {
+        navigate("/admin/dashboard", { replace: true });
+      } else if (userRole === "AGENT") {
+        navigate("/agent/signalements-assignes", { replace: true });
+      } else {
+        navigate("/signalements", { replace: true });
+      }
     }
-  }, [navigate, isRedirecting]);
+  }, []);
 
-  // Fonction pour basculer entre login et register avec animation spectaculaire
   const toggleMode = () => {
     setAnimationDirection(isLogin ? "left" : "right");
     setIsAnimating(true);
@@ -81,19 +68,8 @@ export default function Auth() {
     }, 500);
   };
 
-  // Fonction pour décoder le token JWT
-  const decodeToken = (token) => {
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      return payload;
-    } catch (error) {
-      console.error("Erreur décodage token:", error);
-      return null;
-    }
-  };
-
-  // Fonction pour récupérer le rôle de l'utilisateur depuis le backend
-  const fetchUserRole = async (token, email) => {
+  // 🔥 PLUS FIABLE : Récupérer le rôle depuis l'API
+  const fetchUserRole = async (token) => {
     try {
       const response = await fetch("http://localhost:8081/api/auth/me", {
         method: "GET",
@@ -105,60 +81,42 @@ export default function Auth() {
       
       if (response.ok) {
         const userData = await response.json();
+        console.log("📦 Données utilisateur:", userData);
         return userData.role || userData.role?.toUpperCase() || "CITIZEN";
       }
     } catch (error) {
       console.error("Erreur récupération rôle:", error);
     }
     
-    const decoded = decodeToken(token);
-    return decoded?.role || decoded?.roles?.[0] || "CITIZEN";
-  };
-
-  // Validation email
-  const validateEmail = (e) => {
-    if (email !== "" && !email.toLowerCase().endsWith("@gmail.com")) {
-      setErrors(prev => ({ ...prev, email: "L'email doit se terminer par @gmail.com" }));
-      setTimeout(() => e.target.focus(), 0);
-    } else {
-      setErrors(prev => ({ ...prev, email: null }));
+    // Fallback : essayer de décoder le token
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.role || payload.roles?.[0] || "CITIZEN";
+    } catch {
+      return "CITIZEN";
     }
   };
 
-  // Validation mot de passe
-  const validatePassword = (e) => {
-    if (motDePasse !== "" && motDePasse.length < 6) {
-      setErrors(prev => ({ ...prev, motDePasse: "Le mot de passe doit contenir plus de 6 caractères." }));
-      setTimeout(() => e.target.focus(), 0);
-    } else {
-      setErrors(prev => ({ ...prev, motDePasse: null }));
-    }
-  };
-
-  // Fonction de redirection après connexion
   const redirectToDashboard = (role) => {
     if (isRedirecting) return;
     
     setIsRedirecting(true);
     setShowModal(false);
     
-    setTimeout(() => {
-      if (role === "ADMIN") {
-        navigate("/admin/dashboard", { replace: true });
-      } else if (role === "AGENT") {
-        navigate("/agent/signalements-resolus", { replace: true });
-      } else {
-        navigate("/signalements", { replace: true });
-      }
-    }, 100);
+    // Redirection immédiate sans délai
+    if (role === "ADMIN") {
+      navigate("/admin/dashboard", { replace: true });
+    } else if (role === "AGENT") {
+      navigate("/agent/signalements-assignes", { replace: true });
+    } else {
+      navigate("/signalements", { replace: true });
+    }
   };
 
-  // Gestion de la connexion
   const handleLogin = async (e) => {
     e.preventDefault();
     
-    // Empêcher les soumissions multiples
-    if (isRedirecting) return;
+    if (isRedirecting || isLoading) return;
     
     setMessage("");
     let newErrors = {};
@@ -176,6 +134,7 @@ export default function Auth() {
     }
 
     setErrors({});
+    setIsLoading(true);
 
     try {
       const response = await fetch("http://localhost:8081/api/auth/login", {
@@ -190,39 +149,34 @@ export default function Auth() {
 
       const token = await response.text();
       
-      // IMPORTANT : Définir le flag AVANT de stocker le token
-      localStorage.setItem("justLoggedIn", "true");
-      localStorage.setItem("token", token);
-      
-      const userRole = await fetchUserRole(token, email);
+      // 🔥 Utiliser l'API pour récupérer le rôle
+      const userRole = await fetchUserRole(token);
       const normalizedRole = userRole.toUpperCase();
+      
+      console.log("✅ Rôle récupéré:", normalizedRole);
+      
+      localStorage.setItem("token", token);
       localStorage.setItem("userRole", normalizedRole);
 
       setIsSuccess(true);
       setMessage(`Connexion réussie ! Bienvenue ${email.split('@')[0]}`);
       setShowModal(true);
-      setEmail(""); 
-      setMotDePasse("");
-
-      // Redirection après 2 secondes
-      setTimeout(() => {
-        // Nettoyer le flag juste avant la redirection
-        localStorage.removeItem("justLoggedIn");
-        redirectToDashboard(normalizedRole);
-      }, 2000);
       
     } catch (error) {
-      // En cas d'erreur, nettoyer le flag
-      localStorage.removeItem("justLoggedIn");
       setIsSuccess(false);
       setMessage(error.message);
       setShowModal(true);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Gestion de l'inscription
+  // Gestion de l'inscription OPTIMISÉE
   const handleRegister = async (e) => {
     e.preventDefault();
+    
+    if (isLoading) return;
+    
     setMessage("");
     let newErrors = {};
 
@@ -246,6 +200,7 @@ export default function Auth() {
     }
 
     setErrors({});
+    setIsLoading(true);
 
     try {
       const response = await fetch("http://localhost:8081/api/auth/register", {
@@ -259,34 +214,43 @@ export default function Auth() {
         throw new Error(errorMsg);
       }
 
-      const serverResponseText = await response.text();
-
       if (!response.ok) {
-        throw new Error(serverResponseText || "Une erreur est survenue");
+        const errorMsg = await response.text();
+        throw new Error(errorMsg || "Une erreur est survenue");
       }
 
       setIsSuccess(true);
-      setMessage("Votre compte a été créé avec succès ! Redirection vers la page de connexion...");
+      setMessage("Votre compte a été créé avec succès ! Vous pouvez maintenant vous connecter.");
       setShowModal(true);
       setNom(""); 
       setEmail(""); 
       setMotDePasse("");
       
-      setTimeout(() => {
-        setShowModal(false);
-        // Basculer vers le formulaire de connexion
-        setAnimationDirection("right");
-        setIsAnimating(true);
-        setTimeout(() => {
-          setIsLogin(true);
-          setIsAnimating(false);
-        }, 500);
-      }, 2000);
-      
     } catch (error) {
       setIsSuccess(false);
       setMessage(error.message);
       setShowModal(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const validateEmail = (e) => {
+    if (email !== "" && !email.toLowerCase().endsWith("@gmail.com")) {
+      setErrors(prev => ({ ...prev, email: "L'email doit se terminer par @gmail.com" }));
+      setTimeout(() => e.target.focus(), 0);
+    } else {
+      setErrors(prev => ({ ...prev, email: null }));
+    }
+  };
+
+  // Validation mot de passe
+  const validatePassword = (e) => {
+    if (motDePasse !== "" && motDePasse.length < 6) {
+      setErrors(prev => ({ ...prev, motDePasse: "Le mot de passe doit contenir plus de 6 caractères." }));
+      setTimeout(() => e.target.focus(), 0);
+    } else {
+      setErrors(prev => ({ ...prev, motDePasse: null }));
     }
   };
 
@@ -295,7 +259,6 @@ export default function Auth() {
     { id: "AGENT", label: "Agent Municipal", icon: Building2, color: "from-green-600 to-green-400", description: "Gérez et résolvez les signalements" },
   ];
 
-  // Classes d'animation spectaculaires
   const getFormAnimationClass = () => {
     if (!isAnimating) return "animate-form-enter";
     return animationDirection === "right" ? "animate-form-exit-right" : "animate-form-exit-left";
@@ -342,7 +305,7 @@ export default function Auth() {
       <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full bg-emerald-500/5 blur-3xl animate-pulse-slow" />
       <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-emerald-400/5 blur-2xl animate-pulse-slow animation-delay-1000" />
 
-      {/* Message Box - MODIFIÉ : Pas de fermeture automatique pour le succès */}
+      {/* Message Box */}
       {showModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
           <div className="bg-white rounded-2xl p-6 sm:p-8 max-w-[90%] sm:max-w-sm w-full shadow-2xl transform animate-modal-pop">
@@ -356,13 +319,26 @@ export default function Auth() {
               <p className="text-slate-600 text-xs sm:text-sm mb-6 break-words">{message}</p>
               <button
                 onClick={() => {
-                  if (isSuccess && !isRedirecting) {
-                    // Pour le succès de connexion, on redirige
+                  if (isSuccess) {
                     const userRole = localStorage.getItem("userRole");
                     if (userRole) {
-                      redirectToDashboard(userRole);
+                      // Redirection immédiate
+                      if (userRole === "ADMIN") {
+                        navigate("/admin/dashboard", { replace: true });
+                      } else if (userRole === "AGENT") {
+                        navigate("/agent/signalements-assignes", { replace: true });
+                      } else {
+                        navigate("/signalements", { replace: true });
+                      }
                     } else {
+                      // Pour l'inscription, basculer vers connexion
                       setShowModal(false);
+                      setAnimationDirection("right");
+                      setIsAnimating(true);
+                      setTimeout(() => {
+                        setIsLogin(true);
+                        setIsAnimating(false);
+                      }, 500);
                     }
                   } else {
                     setShowModal(false);
@@ -374,7 +350,7 @@ export default function Auth() {
                     : 'bg-slate-800 hover:bg-slate-900 shadow-slate-950/20'
                 }`}
               >
-                {isSuccess ? (isRedirecting ? "Redirection..." : "Continuer") : "Réessayer"}
+                {isSuccess ? "Continuer" : "Fermer"}
               </button>
             </div>
           </div>
@@ -389,7 +365,7 @@ export default function Auth() {
         }} />
       </div>
 
-      {/* Container principal avec effet 3D */}
+      {/* Container principal */}
       <div className="relative w-full max-w-full sm:max-w-xl md:max-w-4xl lg:max-w-5xl bg-white/10 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-2xl border border-white/30 overflow-hidden mx-2 sm:mx-4 perspective-1000">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-600 to-teal-500 animate-shimmer" />
         
@@ -439,7 +415,7 @@ export default function Auth() {
             </div>
           </div>
 
-          {/* Right Side - Formulaire avec transition 3D spectaculaire */}
+          {/* Right Side - Formulaire */}
           <div className="relative p-6 sm:p-8 md:p-10 flex items-center justify-center ring-1 ring-emerald-500/50 min-h-[600px]">
             <div className="absolute inset-0 z-0" style={{ backgroundImage: `url('/Image/Smart.jpg')`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
               <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-[2px]" />
@@ -471,6 +447,7 @@ export default function Auth() {
                         onFocus={() => setFocusedField('email')}
                         className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/50 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all text-sm backdrop-blur-md"
                         required
+                        disabled={isLoading}
                       />
                       {errors.email && <p className="text-red-400 text-xs mt-1 animate-shake">{errors.email}</p>}
                     </div>
@@ -488,12 +465,14 @@ export default function Auth() {
                         onFocus={() => setFocusedField('password')}
                         className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/50 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all pr-10 text-sm backdrop-blur-md"
                         required
+                        disabled={isLoading}
                       />
                       {errors.motDePasse && <p className="text-red-400 text-xs mt-1 animate-shake">{errors.motDePasse}</p>}
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60 transition-all"
+                        disabled={isLoading}
                       >
                         {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
@@ -502,10 +481,20 @@ export default function Auth() {
 
                   <button
                     type="submit"
-                    className="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-semibold py-3 rounded-xl shadow-lg transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 text-base group"
+                    disabled={isLoading}
+                    className="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-semibold py-3 rounded-xl shadow-lg transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 text-base group disabled:opacity-70 disabled:cursor-not-allowed"
                   >
-                    <span>Se connecter</span>
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <span>Connexion en cours...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Se connecter</span>
+                        <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
+                      </>
+                    )}
                   </button>
 
                   <p className="text-center text-white/60 text-xs">
@@ -537,6 +526,7 @@ export default function Auth() {
                       onChange={(e) => setNom(e.target.value.replace(/[0-9]/g, ""))}
                       className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/50 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all text-sm backdrop-blur-md"
                       required
+                      disabled={isLoading}
                     />
                     {errors.nom && <p className="text-red-400 text-xs mt-1 animate-shake">{errors.nom}</p>}
                   </div>
@@ -551,6 +541,7 @@ export default function Auth() {
                       onBlur={validateEmail}
                       className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/50 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all text-sm backdrop-blur-md"
                       required
+                      disabled={isLoading}
                     />
                     {errors.email && <p className="text-red-400 text-xs mt-1 animate-shake">{errors.email}</p>}
                   </div>
@@ -566,12 +557,14 @@ export default function Auth() {
                         onBlur={validatePassword}
                         className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/50 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all pr-10 text-sm backdrop-blur-md"
                         required
+                        disabled={isLoading}
                       />
                       {errors.motDePasse && <p className="text-red-400 text-xs mt-1 animate-shake">{errors.motDePasse}</p>}
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60 transition-all"
+                        disabled={isLoading}
                       >
                         {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
@@ -589,12 +582,13 @@ export default function Auth() {
                           <button
                             key={r.id}
                             type="button"
-                            onClick={() => setRole(r.id)}
+                            onClick={() => !isLoading && setRole(r.id)}
+                            disabled={isLoading}
                             className={`relative py-2 px-4 rounded-xl transition-all duration-300 flex-1 transform hover:scale-105 ${
                               isSelected 
                                 ? `bg-gradient-to-r ${r.color} shadow-lg text-white font-bold` 
                                 : `bg-white/5 hover:bg-white/10 border border-white/20 text-white/70`
-                            }`}
+                            } disabled:opacity-50 disabled:cursor-not-allowed`}
                           >
                             <Icon className={`w-5 h-5 mx-auto mb-1 transition-all ${isSelected ? 'scale-110' : ''}`} />
                             <span className="text-xs font-medium">{r.label}</span>
@@ -612,10 +606,20 @@ export default function Auth() {
 
                   <button
                     type="submit"
-                    className="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-semibold py-3 rounded-xl shadow-lg transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 text-base group"
+                    disabled={isLoading}
+                    className="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-semibold py-3 rounded-xl shadow-lg transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 text-base group disabled:opacity-70 disabled:cursor-not-allowed"
                   >
-                    <span>Créer mon compte</span>
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <span>Inscription en cours...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Créer mon compte</span>
+                        <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
+                      </>
+                    )}
                   </button>
 
                   <p className="text-center text-white/60 text-xs">
@@ -632,8 +636,7 @@ export default function Auth() {
         </div>
       </div>
 
-      {/* Styles CSS pour les animations spectaculaires */}
-      <style jsx>{`
+      <style>{`
         @keyframes slideInLeft {
           from { opacity: 0; transform: translateX(-50px); }
           to { opacity: 1; transform: translateX(0); }
