@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import { useEffect, useState } from "react";
 import Navbar from "./Navbar";
 import Auth from "./Auth";
+import FloatingChat from "./FloatingChat"; // 👈 AJOUTEZ CETTE LIGNE
 
 // Pages Citoyen
 import Signalements from "./Signalements";
@@ -18,6 +19,8 @@ import AgentProfil from "./AgentProfil";
 
 // Pages Admin
 import AdminDashboard from "./AdminDashboard";
+import AdminSignalement from "./AdminSignalement";
+import AdminProfil from "./AdminProfil";
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem("token"));
@@ -63,6 +66,7 @@ function App() {
       <>
         <Navbar />
         {children}
+        <FloatingChat /> {/* 👈 AJOUTEZ CETTE LIGNE - Le chat flottant apparaît sur toutes les pages protégées */}
       </>
     );
   };
@@ -74,7 +78,7 @@ function App() {
     
     if (!currentToken) return "/auth";
     if (currentRole === "ADMIN") return "/admin/dashboard";
-    if (currentRole === "AGENT") return "/agent/signalements-assignes"; // ✅ Changé de /agent/dashboard vers une route qui existe
+    if (currentRole === "AGENT") return "/agent/signalements-assignes";
     return "/signalements";
   };
 
@@ -92,7 +96,7 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Routes publiques (sans navbar) */}
+        {/* Routes publiques (sans navbar et sans chat flottant) */}
         <Route path="/auth" element={<Auth />} />
         
         {/* ========== ROUTES CITOYEN ========== */}
@@ -193,6 +197,24 @@ function App() {
           element={
             <ProtectedLayout>
               <AdminDashboard />
+            </ProtectedLayout>
+          } 
+        />
+
+        <Route 
+          path="/admin/signalement" 
+          element={
+            <ProtectedLayout>
+              <AdminSignalement />
+            </ProtectedLayout>
+          } 
+        />
+        
+        <Route 
+          path="/admin/profil" 
+          element={
+            <ProtectedLayout>
+              <AdminProfil />
             </ProtectedLayout>
           } 
         />

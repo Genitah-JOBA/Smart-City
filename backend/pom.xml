@@ -21,6 +21,13 @@
 	</properties>
 
 	<dependencies>
+
+		<!-- Java Mail Sender -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-mail</artifactId>
+		</dependency>
+		
 		<!-- Web standard (remplace webmvc) -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

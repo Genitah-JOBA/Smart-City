@@ -142,16 +142,14 @@ export default function Navbar() {
     const role = userRole;
     if (role === "ADMIN") {
       return [
-        { path: "/admin/problemes", name: "Dashboard", icon: LayoutDashboard },
-        { path: "/admin/signalements", name: "Signalements", icon: ClipboardList },
-        { path: "/admin/utilisateurs", name: "Utilisateurs", icon: Users },
-        { path: "/admin/statistiques", name: "Statistiques", icon: BarChart3 },
+        { path: "/admin/dashboard", name: "Dashboard", icon: LayoutDashboard },
+        { path: "/admin/signalement", name: "Signalements", icon: ClipboardList },
         { path: "/admin/profil", name: "Profil", icon: User },
       ];
     } else if (role === "AGENT") {
       return [
         { path: "/agent/dashboard", name: "Dashboard", icon: LayoutDashboard },
-        { path: "/agent/signalements-assignes", name: "Mes signalements", icon: AlertTriangle },
+        { path: "/agent/signalements-assignes", name: "Les signalements", icon: AlertTriangle },
         { path: "/agent/interventions", name: "Interventions", icon: Wrench },
         { path: "/agent/profil", name: "Profil", icon: User },
       ];
@@ -318,7 +316,6 @@ export default function Navbar() {
                       <User className="w-5 h-5 text-white" />
                     </div>
                   </div>
-                  <ChevronDown size={16} className="text-white/50" />
                 </button>
 
                 {showUserMenu && (
@@ -329,17 +326,13 @@ export default function Navbar() {
                         {userRole === "ADMIN" ? "Administrateur" : userRole === "AGENT" ? "Agent terrain" : "Citoyen"}
                       </p>
                     </div>
-                    <div className="py-1">
-                      <Link to={userRole === "ADMIN" ? "/admin/profil" : userRole === "AGENT" ? "/agent/profil" : "/profil"} onClick={() => setShowUserMenu(false)} className="flex items-center gap-2 px-3 py-2 text-sm text-white/70 hover:text-white hover:bg-white/10 transition-colors">
-                        <User size={16} /> Mon profil
-                      </Link>
-                      <button onClick={openLogoutModal} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors">
-                        <LogOut size={16} /> Déconnexion
-                      </button>
-                    </div>
                   </div>
                 )}
               </div>
+              
+              <button onClick={openLogoutModal} className="bg-amber-500/10 rounded-full w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors">
+                <LogOut size={16} /> Déconnexion
+              </button>
             </div>
 
             {/* Mobile Menu Button */}

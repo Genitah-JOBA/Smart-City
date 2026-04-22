@@ -30,12 +30,11 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable()) 
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                // OPTIONS requests pour CORS
                 .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
-                .requestMatchers("/api/notifications/**").authenticated()
-                .requestMatchers("/api/signalements/**/statut").hasAnyRole("AGENT", "ADMIN")
-                .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/auth/me").authenticated()
-                .requestMatchers("/api/signalements/**").authenticated()
+                // Endpoints publics (login et register uniquement)
+                .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
+                // Tous les autres endpoints nécessitent authentification
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);

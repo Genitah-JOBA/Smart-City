@@ -176,17 +176,4 @@ public class SignalementController {
             return ResponseEntity.status(500).body("Erreur: " + e.getMessage());
         }
     }
-
-    @Autowired
-    private NotificationService notificationService;
-
-    // Dans la méthode create (création de signalement), après avoir sauvegardé :
-    Signalement saved = signalementRepository.save(signalement);
-    notificationService.notifierNouveauSignalement(saved);
-    return ResponseEntity.ok(saved);
-
-    // Dans la méthode updateStatut (changement de statut), quand on passe à RESOLU :
-    if ("RESOLU".equals(nouveauStatut)) {
-        notificationService.notifierSignalementTraite(signalement, currentUser);
-    }
 }
