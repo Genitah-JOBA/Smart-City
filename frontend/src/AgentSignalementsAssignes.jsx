@@ -2,7 +2,12 @@ import { useEffect, useState } from "react";
 import { 
   MapPin, CheckCircle, Clock, PlayCircle, AlertTriangle,
   Image as ImageIcon, ChevronLeft, ChevronRight, X, Eye,
-  Upload, Camera, Loader2, AlertCircle, Info
+  Upload, Camera, Loader2, AlertCircle, Info, ClipboardList,
+  Users, FolderCheck, ListTodo, Award, FileText,
+  Send, Calendar, User, Phone, Mail, Star, Heart,
+  Share, Download, Trash2, Edit, Save, Plus, Minus,
+  Settings, LogOut, Menu, Bell, MessageSquare, Home,
+  Shield, Zap, Rocket, Sparkles, Globe, Lock, Unlock
 } from "lucide-react";
 
 export default function AgentSignalementsAssignes() {
@@ -52,7 +57,7 @@ export default function AgentSignalementsAssignes() {
         });
         if (res.ok) {
           const data = await res.json();
-          // 🔥 Garder seulement les signalements EN_ATTENTE et EN_COURS
+          // Garder seulement les signalements EN_ATTENTE et EN_COURS
           const signalementsActifs = data.filter(s => s.statut === "EN_ATTENTE" || s.statut === "EN_COURS");
           setSignalements(signalementsActifs);
         } else {
@@ -67,7 +72,7 @@ export default function AgentSignalementsAssignes() {
     fetchSignalements();
   }, [token]);
 
-  // 🔥 Filtrer selon le bouton sélectionné
+  // Filtrer selon le bouton sélectionné
   const filteredSignalements = signalements.filter(s => {
     if (filter === "TOUS") return true;
     if (filter === "EN_ATTENTE") return s.statut === "EN_ATTENTE";
@@ -75,12 +80,12 @@ export default function AgentSignalementsAssignes() {
     return true;
   });
 
-  // 🔥 Statistiques uniquement sur les signalements actifs
+  // Statistiques uniquement sur les signalements actifs
   const stats = {
     total: signalements.length,
     enAttente: signalements.filter(s => s.statut === "EN_ATTENTE").length,
     enCours: signalements.filter(s => s.statut === "EN_COURS").length,
-    resolus: 0 // Pas de résolus dans cette vue
+    resolus: 0
   };
 
   const handlePrendreEnCharge = async (id) => {
@@ -177,7 +182,7 @@ export default function AgentSignalementsAssignes() {
       });
 
       if (res.ok) {
-        // 🔥 Supprimer le signalement résolu de la liste
+        // Supprimer le signalement résolu de la liste
         setSignalements(prev => prev.filter(s => s.id !== currentSignalementId));
         setShowProofModal(false);
         setProofDescription("");
@@ -252,7 +257,7 @@ export default function AgentSignalementsAssignes() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-10 h-10 border-3 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <Loader2 className="w-10 h-10 text-blue-500 animate-spin mx-auto mb-4" />
           <p className="text-gray-400">Chargement des signalements...</p>
         </div>
       </div>
@@ -264,14 +269,18 @@ export default function AgentSignalementsAssignes() {
       <div className="container mx-auto max-w-6xl pt-8">
         {/* En-tête */}
         <div className="text-center mb-6">
-          <h1 className="text-3xl font-bold text-white">📋 SIGNALEMENTS ACTIFS</h1>
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <ClipboardList className="w-8 h-8 text-emerald-400" />
+            <h1 className="text-3xl font-bold text-white">SIGNALEMENTS ACTIFS</h1>
+          </div>
           <p className="text-white/50 text-sm mt-2">Signalements en attente de traitement</p>
         </div>
 
-        {/* 🔥 CARTES STATISTIQUES AVEC NOMBRES */}
+        {/* CARTES STATISTIQUES AVEC NOMBRES */}
         <div className="grid grid-cols-3 gap-4 mb-6">
           {/* Total */}
           <div className="bg-white/10 rounded-xl p-4 text-center hover:bg-white/20 transition cursor-pointer">
+            <FolderCheck className="w-6 h-6 text-emerald-400 mx-auto mb-2" />
             <div className="text-3xl font-bold text-white">{stats.total}</div>
             <div className="text-white/50 text-xs mt-1">Total actifs</div>
           </div>
@@ -285,6 +294,7 @@ export default function AgentSignalementsAssignes() {
             }`}
             onClick={() => setFilter("EN_ATTENTE")}
           >
+            <Clock className="w-6 h-6 text-amber-300 mx-auto mb-2" />
             <div className="text-3xl font-bold text-amber-300">{stats.enAttente}</div>
             <div className="text-amber-300/70 text-xs mt-1">En attente</div>
           </div>
@@ -298,41 +308,45 @@ export default function AgentSignalementsAssignes() {
             }`}
             onClick={() => setFilter("EN_COURS")}
           >
+            <PlayCircle className="w-6 h-6 text-blue-300 mx-auto mb-2" />
             <div className="text-3xl font-bold text-blue-300">{stats.enCours}</div>
             <div className="text-blue-300/70 text-xs mt-1">En cours</div>
           </div>
         </div>
 
-        {/* 🔥 FILTRES RAPIDES */}
+        {/* FILTRES RAPIDES */}
         <div className="flex gap-2 mb-6 justify-center">
           <button
             onClick={() => setFilter("TOUS")}
-            className={`px-4 py-2 rounded-xl font-medium transition ${
+            className={`px-4 py-2 rounded-xl font-medium transition flex items-center gap-2 ${
               filter === "TOUS"
                 ? 'bg-emerald-500 text-white'
                 : 'bg-white/10 text-white/70 hover:bg-white/20'
             }`}
           >
+            <ListTodo size={16} />
             Tous ({stats.total})
           </button>
           <button
             onClick={() => setFilter("EN_ATTENTE")}
-            className={`px-4 py-2 rounded-xl font-medium transition ${
+            className={`px-4 py-2 rounded-xl font-medium transition flex items-center gap-2 ${
               filter === "EN_ATTENTE"
                 ? 'bg-amber-500 text-white'
                 : 'bg-white/10 text-white/70 hover:bg-white/20'
             }`}
           >
+            <Clock size={16} />
             En attente ({stats.enAttente})
           </button>
           <button
             onClick={() => setFilter("EN_COURS")}
-            className={`px-4 py-2 rounded-xl font-medium transition ${
+            className={`px-4 py-2 rounded-xl font-medium transition flex items-center gap-2 ${
               filter === "EN_COURS"
                 ? 'bg-blue-500 text-white'
                 : 'bg-white/10 text-white/70 hover:bg-white/20'
             }`}
           >
+            <PlayCircle size={16} />
             En cours ({stats.enCours})
           </button>
         </div>
@@ -485,7 +499,10 @@ export default function AgentSignalementsAssignes() {
           <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-slate-900">Preuve de résolution</h2>
+                <div className="flex items-center gap-2">
+                  <FileText className="w-6 h-6 text-emerald-600" />
+                  <h2 className="text-xl font-bold text-slate-900">Preuve de résolution</h2>
+                </div>
                 <button
                   onClick={() => setShowProofModal(false)}
                   className="text-slate-400 hover:text-slate-600"
@@ -578,7 +595,7 @@ export default function AgentSignalementsAssignes() {
                     </>
                   ) : (
                     <>
-                      <CheckCircle size={20} />
+                      <Send size={20} />
                       Confirmer
                     </>
                   )}

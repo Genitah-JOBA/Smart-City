@@ -1,5 +1,79 @@
 import { useState, useEffect } from "react";
-import { User, Mail, Shield, Save, Lock, Eye, EyeOff, Edit2, X, Check } from "lucide-react";
+import { User, Mail, Shield, Save, Lock, Eye, EyeOff, Edit2, X, Check, AlertCircle, CheckCircle, Info } from "lucide-react";
+
+// ✅ COMPOSANT MESSAGEBOX MODERNE
+const MessageBox = ({ type, message, onClose, autoClose = 5000 }) => {
+  const [isVisible, setIsVisible] = useState(true);
+
+  useEffect(() => {
+    if (autoClose > 0 && type !== 'error') {
+      const timer = setTimeout(() => {
+        setIsVisible(false);
+        setTimeout(onClose, 300);
+      }, autoClose);
+      return () => clearTimeout(timer);
+    }
+  }, [autoClose, type, onClose]);
+
+  const config = {
+    success: {
+      icon: CheckCircle,
+      bgColor: 'bg-emerald-500/90',
+      borderColor: 'border-emerald-400',
+      textColor: 'text-white',
+      shadow: 'shadow-emerald-500/30'
+    },
+    error: {
+      icon: AlertCircle,
+      bgColor: 'bg-red-500/90',
+      borderColor: 'border-red-400',
+      textColor: 'text-white',
+      shadow: 'shadow-red-500/30'
+    },
+    info: {
+      icon: Info,
+      bgColor: 'bg-blue-500/90',
+      borderColor: 'border-blue-400',
+      textColor: 'text-white',
+      shadow: 'shadow-blue-500/30'
+    }
+  };
+
+  const Icon = config[type]?.icon || Info;
+  const currentConfig = config[type] || config.info;
+
+  return (
+    <div className={`fixed top-20 left-1/2 transform -translate-x-1/2 z-50 animate-modal-pop ${isVisible ? 'opacity-100' : 'opacity-0 transition-opacity duration-300'}`}>
+      <div className={`${currentConfig.bgColor} backdrop-blur-md ${currentConfig.shadow} border ${currentConfig.borderColor} rounded-xl shadow-2xl max-w-md w-[90vw] sm:w-full`}>
+        <div className="flex items-start gap-3 p-4">
+          <div className="flex-shrink-0">
+            <Icon className={`w-5 h-5 ${currentConfig.textColor} animate-scale`} />
+          </div>
+          <div className="flex-1">
+            <p className={`${currentConfig.textColor} text-sm font-medium`}>{message}</p>
+          </div>
+          <button
+            onClick={() => {
+              setIsVisible(false);
+              setTimeout(onClose, 300);
+            }}
+            className="flex-shrink-0 text-white/70 hover:text-white transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        {type !== 'error' && autoClose > 0 && (
+          <div className="h-1 bg-white/30 rounded-b-xl overflow-hidden">
+            <div 
+              className="h-full bg-white animate-progress-bar"
+              style={{ animationDuration: `${autoClose}ms` }}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 export default function Profil() {
   const [userInfo, setUserInfo] = useState({ 
@@ -21,10 +95,19 @@ export default function Profil() {
     newPassword: "",
     confirmPassword: ""
   });
-  const [message, setMessage] = useState({ type: "", text: "" });
+  const [messageBox, setMessageBox] = useState({ show: false, type: "", text: "" });
   const [isLoading, setIsLoading] = useState(false);
   
   const token = localStorage.getItem("token");
+
+  // Helper pour afficher les messages
+  const showMessage = (type, text) => {
+    setMessageBox({ show: true, type, text });
+  };
+
+  const hideMessage = () => {
+    setMessageBox({ show: false, type: "", text: "" });
+  };
 
   useEffect(() => {
     fetchUserProfile();
@@ -52,8 +135,10 @@ export default function Profil() {
           nom: data.nom || data.name || "Utilisateur",
           email: data.email || data.sub || "",
         });
+      } else if (response.status === 403) {
+        showMessage("error", "Session expirée. Redirection vers la connexion...");
+        setTimeout(() => handleLogout(), 2000);
       } else {
-        // Fallback au décodage du token
         try {
           const payload = JSON.parse(atob(token.split('.')[1]));
           setUserInfo({
@@ -76,7 +161,9 @@ export default function Profil() {
 
   const handleUpdateProfile = async () => {
     setIsLoading(true);
-    setMessage({ type: "", text: "" });
+    hideMessage();
+
+    const emailChanged = formData.email !== userInfo.email;
 
     try {
       const response = await fetch("http://localhost:8081/api/auth/update-profile", {
@@ -92,19 +179,44 @@ export default function Profil() {
       });
 
       if (response.ok) {
-        setUserInfo({
-          ...userInfo,
-          nom: formData.nom,
-          email: formData.email
-        });
-        setMessage({ type: "success", text: "Profil mis à jour avec succès !" });
-        setIsEditing(false);
+        const data = await response.json();
+        
+        if (emailChanged && data.token) {
+          localStorage.setItem("token", data.token);
+          localStorage.setItem("userEmail", formData.email);
+          localStorage.setItem("userNom", formData.nom);
+          
+          setUserInfo({
+            ...userInfo,
+            nom: formData.nom,
+            email: formData.email
+          });
+          
+          showMessage("success", "✅ Profil mis à jour avec succès ! Votre session a été actualisée.");
+          setIsEditing(false);
+          
+          setTimeout(() => {
+            fetchUserProfile();
+          }, 500);
+          
+        } else if (!emailChanged) {
+          setUserInfo({
+            ...userInfo,
+            nom: formData.nom
+          });
+          localStorage.setItem("userNom", formData.nom);
+          showMessage("success", "✅ Profil mis à jour avec succès !");
+          setIsEditing(false);
+        }
+      } else if (response.status === 403) {
+        showMessage("error", "Session expirée. Veuillez vous reconnecter.");
+        setTimeout(() => handleLogout(), 2000);
       } else {
         const error = await response.text();
-        setMessage({ type: "error", text: error || "Erreur lors de la mise à jour" });
+        showMessage("error", error || "Erreur lors de la mise à jour");
       }
     } catch (error) {
-      setMessage({ type: "error", text: "Erreur réseau, veuillez réessayer" });
+      showMessage("error", "Erreur réseau, veuillez réessayer");
     } finally {
       setIsLoading(false);
     }
@@ -112,17 +224,17 @@ export default function Profil() {
 
   const handleChangePassword = async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setMessage({ type: "error", text: "Les mots de passe ne correspondent pas" });
+      showMessage("error", "Les mots de passe ne correspondent pas");
       return;
     }
 
     if (passwordData.newPassword.length < 6) {
-      setMessage({ type: "error", text: "Le mot de passe doit contenir au moins 6 caractères" });
+      showMessage("error", "Le mot de passe doit contenir au moins 6 caractères");
       return;
     }
 
     setIsLoading(true);
-    setMessage({ type: "", text: "" });
+    hideMessage();
 
     try {
       const response = await fetch("http://localhost:8081/api/auth/change-password", {
@@ -138,18 +250,26 @@ export default function Profil() {
       });
 
       if (response.ok) {
-        setMessage({ type: "success", text: "Mot de passe changé avec succès !" });
+        showMessage("success", "🔒 Mot de passe changé avec succès !");
         setShowPasswordForm(false);
         setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      } else if (response.status === 403) {
+        showMessage("error", "Session expirée. Veuillez vous reconnecter.");
+        setTimeout(() => handleLogout(), 2000);
       } else {
         const error = await response.text();
-        setMessage({ type: "error", text: error || "Erreur lors du changement de mot de passe" });
+        showMessage("error", error || "Erreur lors du changement de mot de passe");
       }
     } catch (error) {
-      setMessage({ type: "error", text: "Erreur réseau, veuillez réessayer" });
+      showMessage("error", "Erreur réseau, veuillez réessayer");
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleLogout = () => {
+    localStorage.clear();
+    window.location.href = "/login";
   };
 
   const getRoleLabel = (role) => {
@@ -164,25 +284,24 @@ export default function Profil() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
+      {/* MessageBox Moderne */}
+      {messageBox.show && (
+        <MessageBox
+          type={messageBox.type}
+          message={messageBox.text}
+          onClose={hideMessage}
+          autoClose={messageBox.type === 'error' ? 0 : 4000}
+        />
+      )}
+
       <div className="container mx-auto max-w-3xl pt-8">
         <h1 className="text-3xl font-bold text-white mb-6 flex items-center gap-2">
           <User className="w-8 h-8 text-emerald-400" />
           Mon profil
         </h1>
-        
-        {/* Message de succès/erreur */}
-        {message.text && (
-          <div className={`mb-4 p-4 rounded-xl ${
-            message.type === 'success' 
-              ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-300' 
-              : 'bg-red-500/20 border border-red-500/30 text-red-300'
-          }`}>
-            {message.text}
-          </div>
-        )}
 
         <div className="space-y-6">
-          {/* Informations du profil */}
+          {/* Informations du profil - identique à avant */}
           <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold text-white">Informations personnelles</h2>
@@ -209,7 +328,6 @@ export default function Profil() {
             </div>
 
             <div className="space-y-4">
-              {/* Champ Nom */}
               <div className="p-4 bg-white/5 rounded-xl">
                 <p className="text-white/50 text-xs mb-1">Nom complet</p>
                 {isEditing ? (
@@ -225,7 +343,6 @@ export default function Profil() {
                 )}
               </div>
 
-              {/* Champ Email */}
               <div className="p-4 bg-white/5 rounded-xl">
                 <p className="text-white/50 text-xs mb-1">Adresse email</p>
                 {isEditing ? (
@@ -241,7 +358,6 @@ export default function Profil() {
                 )}
               </div>
 
-              {/* Champ Rôle (non modifiable) */}
               <div className="p-4 bg-white/5 rounded-xl">
                 <p className="text-white/50 text-xs mb-1">Rôle non modifiable</p>
                 <p className="text-white text-lg">{getRoleLabel(userInfo.role)}</p>
@@ -278,7 +394,7 @@ export default function Profil() {
             )}
           </div>
 
-          {/* Section Changement de mot de passe */}
+          {/* Section Changement de mot de passe - identique à avant */}
           <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold text-white flex items-center gap-2">
@@ -297,7 +413,6 @@ export default function Profil() {
 
             {showPasswordForm ? (
               <div className="space-y-4">
-                {/* Mot de passe actuel */}
                 <div>
                   <label className="text-white/70 text-sm mb-1 block">Mot de passe actuel</label>
                   <div className="relative">
@@ -318,7 +433,6 @@ export default function Profil() {
                   </div>
                 </div>
 
-                {/* Nouveau mot de passe */}
                 <div>
                   <label className="text-white/70 text-sm mb-1 block">Nouveau mot de passe</label>
                   <div className="relative">
@@ -339,7 +453,6 @@ export default function Profil() {
                   </div>
                 </div>
 
-                {/* Confirmation mot de passe */}
                 <div>
                   <label className="text-white/70 text-sm mb-1 block">Confirmer le mot de passe</label>
                   <div className="relative">
@@ -397,6 +510,46 @@ export default function Profil() {
           </div>
         </div>
       </div>
+
+      <style>{`
+        @keyframes modal-pop {
+          0% {
+            transform: translate(-50%, -20px) scale(0.9);
+            opacity: 0;
+          }
+          100% {
+            transform: translate(-50%, 0) scale(1);
+            opacity: 1;
+          }
+        }
+        @keyframes progress-bar {
+          0% {
+            width: 100%;
+          }
+          100% {
+            width: 0%;
+          }
+        }
+        @keyframes scale {
+          0% {
+            transform: scale(0.8);
+            opacity: 0;
+          }
+          100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+        .animate-modal-pop {
+          animation: modal-pop 0.3s ease-out;
+        }
+        .animate-progress-bar {
+          animation: progress-bar linear forwards;
+        }
+        .animate-scale {
+          animation: scale 0.2s ease-out;
+        }
+      `}</style>
     </div>
   );
 }

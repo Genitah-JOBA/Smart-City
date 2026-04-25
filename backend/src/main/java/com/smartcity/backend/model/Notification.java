@@ -11,56 +11,26 @@ public class Notification {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @Column(name = "user_id")
-    private Long userId;
-    
-    @Column(name = "user_role")
-    private String userRole;
-    
-    @Column(name = "title")
+    private String userEmail;
     private String title;
-    
-    @Column(name = "message")
     private String message;
-    
-    @Column(name = "type")
-    private String type; // "NOUVEAU_SIGNALEMENT", "SIGNALEMENT_TRAITE", "ASSIGNATION"
-    
-    @Column(name = "signalement_id")
-    private Long signalementId;
-    
-    @Column(name = "agent_id")
-    private Long agentId;
-    
-    @Column(name = "est_lu")
-    private boolean estLu = false;
-    
-    @Column(name = "date_creation")
+    private String type;
+    private boolean lu;
     private LocalDateTime dateCreation;
+    private String lien;
     
-    // Constructeurs
-    public Notification() {}
-    
-    public Notification(Long userId, String userRole, String title, String message, String type, Long signalementId) {
-        this.userId = userId;
-        this.userRole = userRole;
-        this.title = title;
-        this.message = message;
-        this.type = type;
-        this.signalementId = signalementId;
-        this.dateCreation = LocalDateTime.now();
-        this.estLu = false;
+    @PrePersist
+    protected void onCreate() {
+        dateCreation = LocalDateTime.now();
+        lu = false;
     }
     
     // Getters et Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     
-    public Long getUserId() { return userId; }
-    public void setUserId(Long userId) { this.userId = userId; }
-    
-    public String getUserRole() { return userRole; }
-    public void setUserRole(String userRole) { this.userRole = userRole; }
+    public String getUserEmail() { return userEmail; }
+    public void setUserEmail(String userEmail) { this.userEmail = userEmail; }
     
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
@@ -71,15 +41,12 @@ public class Notification {
     public String getType() { return type; }
     public void setType(String type) { this.type = type; }
     
-    public Long getSignalementId() { return signalementId; }
-    public void setSignalementId(Long signalementId) { this.signalementId = signalementId; }
-    
-    public Long getAgentId() { return agentId; }
-    public void setAgentId(Long agentId) { this.agentId = agentId; }
-    
-    public boolean isEstLu() { return estLu; }
-    public void setEstLu(boolean estLu) { this.estLu = estLu; }
+    public boolean isLu() { return lu; }
+    public void setLu(boolean lu) { this.lu = lu; }
     
     public LocalDateTime getDateCreation() { return dateCreation; }
     public void setDateCreation(LocalDateTime dateCreation) { this.dateCreation = dateCreation; }
+    
+    public String getLien() { return lien; }
+    public void setLien(String lien) { this.lien = lien; }
 }

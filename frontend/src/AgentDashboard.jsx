@@ -211,7 +211,7 @@ export default function AgentDashboard() {
               >
                 <span className="flex items-center gap-2">
                   <AlertTriangle size={18} />
-                  Traiter les signalements en attente
+                  Traiter les signalements en attente ou en cours
                 </span>
                 <ArrowRight size={18} />
               </button>

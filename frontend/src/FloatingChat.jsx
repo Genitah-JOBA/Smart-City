@@ -398,12 +398,11 @@ export default function FloatingChat() {
       {isOpen && (
         <div className={`w-96 bg-white/10 backdrop-blur-2xl rounded-2xl border border-white/20 shadow-2xl overflow-hidden transition-all duration-300 ${isMinimized ? 'h-14' : 'h-[500px]'}`}>
           <div 
-            className="bg-gradient-to-r from-indigo-500/20 to-purple-500/20 p-3 border-b border-white/20 select-none cursor-move"
+            className="bg-gradient-to-r from-indigo-500/20 to-purple-500/20 p-3 border-b border-white/20 select-none"
             onMouseDown={handleMouseDown}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Move className="w-4 h-4 text-white/50" />
                 <MessageCircle className="w-5 h-5 text-indigo-400" />
                 <h3 className="text-white font-semibold">Messages</h3>
                 {nonLuCount > 0 && (
@@ -525,7 +524,9 @@ export default function FloatingChat() {
                             </div>
                           </div>
                           <p className="text-white/60 text-xs mb-1">
-                            De: {message.expediteurNom} ({message.expediteurRole === "ADMIN" ? "Admin" : message.expediteurRole === "AGENT" ? "Agent" : "Citoyen"})
+                              De: {message.expediteurNom} (
+                              {message.expediteurRole === "ADMIN" ? "Admin" : 
+                              message.expediteurRole === "AGENT" ? "Agent" : "Citoyen"})
                           </p>
                           <p className="text-white/70 text-sm mb-2">
                             {message.contenu.length > 100

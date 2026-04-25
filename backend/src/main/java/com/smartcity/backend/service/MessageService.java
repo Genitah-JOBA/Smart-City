@@ -1,9 +1,15 @@
+// MessageService.java
 package com.smartcity.backend.service;
 
+import com.smartcity.backend.dto.MessageDTO;
+import com.smartcity.backend.model.Message;
+import com.smartcity.backend.model.Utilisateur;
+import com.smartcity.backend.repository.MessageRepository;
+import com.smartcity.backend.repository.UtilisateurRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
 
 @Service
 public class MessageService {
@@ -12,40 +18,35 @@ public class MessageService {
     private MessageRepository messageRepository;
     
     @Autowired
-    private UserRepository userRepository;
+    private UtilisateurRepository utilisateurRepository;
     
-    // MODIFIER CETTE MÉTHODE
     public Message envoyerMessage(MessageDTO messageDTO, String expediteurEmail) {
-        User expediteur = userRepository.findByEmail(expediteurEmail)
+        Utilisateur expediteur = utilisateurRepository.findByEmail(expediteurEmail)
             .orElseThrow(() -> new RuntimeException("Expéditeur non trouvé"));
         
-        User destinataire = userRepository.findByEmail(messageDTO.getDestinataireEmail())
+        Utilisateur destinataire = utilisateurRepository.findByEmail(messageDTO.getDestinataireEmail())
             .orElseThrow(() -> new RuntimeException("Destinataire non trouvé"));
         
-        // ✅ NOUVELLE RÈGLE : Vérifier les droits d'envoi
+        // ✅ Vérifier les droits d'envoi
         boolean peutEnvoyer = false;
         
-        if (expediteur.getRole() == Role.ADMIN) {
-            // Admin peut envoyer à tout le monde
+        if ("ADMIN".equals(expediteur.getRole())) {
             peutEnvoyer = true;
         } 
-        else if (expediteur.getRole() == Role.AGENT && destinataire.getRole() == Role.ADMIN) {
-            // Agent peut envoyer uniquement aux admins
-            peutEnvoyer = true;
-        }
-        else if (expediteur.getRole() == Role.CITIZEN && destinataire.getRole() == Role.ADMIN) {
-            // Citoyen peut envoyer uniquement aux admins
+        else if (("AGENT".equals(expediteur.getRole()) || "CITIZEN".equals(expediteur.getRole())) 
+                    && "ADMIN".equals(destinataire.getRole())) {
             peutEnvoyer = true;
         }
         
         if (!peutEnvoyer) {
-            throw new RuntimeException("Vous n'êtes pas autorisé à envoyer un message à cet utilisateur. Les citoyens et agents ne peuvent envoyer qu'aux administrateurs.");
+            throw new RuntimeException("Les citoyens et agents ne peuvent envoyer des messages qu'aux administrateurs.");
         }
         
-        // Créer et sauvegarder le message
         Message message = new Message();
-        message.setExpediteur(expediteur);
-        message.setDestinataire(destinataire);
+        message.setExpediteurEmail(expediteurEmail);
+        message.setExpediteurNom(expediteur.getNom());
+        message.setDestinataireEmail(destinataire.getEmail());
+        message.setDestinataireNom(destinataire.getNom());
         message.setSujet(messageDTO.getSujet());
         message.setContenu(messageDTO.getContenu());
         message.setType(messageDTO.getType());

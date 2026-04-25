@@ -1,15 +1,15 @@
 package com.smartcity.backend.model;
 
-import java.util.List;
-import java.util.ArrayList;
-import java.time.LocalDateTime;
-import org.hibernate.annotations.CreationTimestamp;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
-@Getter
-@Setter
+@Data  // Cette annotation génère tous les getters et setters
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "signalements")
@@ -30,8 +30,17 @@ public class Signalement {
     private String address;
     
     private String ville;
-    
     private String commune;
+    
+    // Champs pour l'assignation des agents
+    @Column(name = "agent_id")
+    private Long agentId;
+    
+    @Column(name = "agent_email")
+    private String agentEmail;
+    
+    @Column(name = "agent_nom")
+    private String agentNom;
     
     @OneToMany(mappedBy = "signalement", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Image> images = new ArrayList<>();
@@ -40,7 +49,14 @@ public class Signalement {
     @JoinColumn(name = "utilisateur_id")
     private Utilisateur utilisateur;
     
-    @CreationTimestamp
-    @Column(name = "date_creation", updatable = false)
+    @Column(name = "date_creation")
     private LocalDateTime dateCreation;
+    
+    @Column(name = "date_modification")
+    private LocalDateTime dateModification;
+    
+    @PrePersist
+    protected void onCreate() {
+        dateCreation = LocalDateTime.now();
+    }
 }

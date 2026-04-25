@@ -149,17 +149,46 @@ export default function Auth() {
 
       const token = await response.text();
       
-      // 🔥 Utiliser l'API pour récupérer le rôle
-      const userRole = await fetchUserRole(token);
+      // 🔥 Récupérer les informations utilisateur depuis l'API
+      const userResponse = await fetch("http://localhost:8081/api/auth/me", {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      });
+      
+      let userNom = email.split('@')[0]; // Valeur par défaut
+      let userRole = "CITIZEN";
+      
+      if (userResponse.ok) {
+        const userData = await userResponse.json();
+        userNom = userData.nom || email.split('@')[0];
+        userRole = userData.role || userData.role?.toUpperCase() || "CITIZEN";
+        console.log("📦 Données utilisateur:", userData);
+      } else {
+        // Fallback : essayer de décoder le token
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          userRole = payload.role || payload.roles?.[0] || "CITIZEN";
+        } catch {
+          userRole = "CITIZEN";
+        }
+      }
+      
       const normalizedRole = userRole.toUpperCase();
       
       console.log("✅ Rôle récupéré:", normalizedRole);
+      console.log("✅ Nom utilisateur:", userNom);
       
+      // 🔥 STOCKER TOUTES LES INFORMATIONS DANS LOCALSTORAGE
       localStorage.setItem("token", token);
       localStorage.setItem("userRole", normalizedRole);
+      localStorage.setItem("userEmail", email);      // ✅ AJOUTÉ
+      localStorage.setItem("userNom", userNom);      // ✅ AJOUTÉ
 
       setIsSuccess(true);
-      setMessage(`Connexion réussie ! Bienvenue ${email.split('@')[0]}`);
+      setMessage(`Connexion réussie ! Bienvenue ${userNom}`);
       setShowModal(true);
       
     } catch (error) {

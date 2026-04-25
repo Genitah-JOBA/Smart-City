@@ -1,4 +1,4 @@
-// MessageController.java
+// MessageController.java (version complète)
 package com.smartcity.backend.controller;
 
 import com.smartcity.backend.dto.EnvoiMessageRequest;
@@ -8,12 +8,8 @@ import com.smartcity.backend.model.Utilisateur;
 import com.smartcity.backend.repository.MessageRepository;
 import com.smartcity.backend.repository.UtilisateurRepository;
 import com.smartcity.backend.service.EmailService;
-import com.smartcity.backend.service.MessageService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
@@ -36,13 +32,7 @@ public class MessageController {
     
     @Autowired
     private EmailService emailService;
-
-    @Autowired
-    private MessageService messageService;
     
-    // ✅ SUPPRIME CETTE DOUBLE MÉTHODE - Garde une seule version
-    
-    // ✅ VERSION CORRIGÉE : Envoyer un message (avec les bonnes permissions)
     @PostMapping("/envoyer")
     public ResponseEntity<?> envoyerMessage(
             Principal principal,
@@ -56,54 +46,40 @@ public class MessageController {
             Utilisateur expediteur = utilisateurRepository.findByEmail(expediteurEmail)
                     .orElseThrow(() -> new RuntimeException("Expéditeur non trouvé"));
             
-            // ✅ NOUVELLE RÈGLE : Vérifier les permissions selon le rôle
-            String expediteurRole = expediteur.getRole();
             Utilisateur destinataire = utilisateurRepository.findByEmail(request.getDestinataireEmail())
                     .orElseThrow(() -> new RuntimeException("Destinataire non trouvé"));
+            
+            String expediteurRole = expediteur.getRole();
             String destinataireRole = destinataire.getRole();
             
+            // Vérifier les permissions
             boolean peutEnvoyer = false;
             
-            // Admin peut envoyer à tout le monde
             if ("ADMIN".equals(expediteurRole)) {
                 peutEnvoyer = true;
-            }
-            // Agent peut envoyer uniquement aux admins
-            else if ("AGENT".equals(expediteurRole) && "ADMIN".equals(destinataireRole)) {
-                peutEnvoyer = true;
-            }
-            // Citoyen peut envoyer uniquement aux admins
-            else if ("CITIZEN".equals(expediteurRole) && "ADMIN".equals(destinataireRole)) {
+            } else if (("AGENT".equals(expediteurRole) || "CITIZEN".equals(expediteurRole)) 
+                    && "ADMIN".equals(destinataireRole)) {
                 peutEnvoyer = true;
             }
             
             if (!peutEnvoyer) {
-                String messageErreur;
-                if ("AGENT".equals(expediteurRole) || "CITIZEN".equals(expediteurRole)) {
-                    messageErreur = "Vous ne pouvez envoyer des messages qu'aux administrateurs uniquement.";
-                } else {
-                    messageErreur = "Vous n'êtes pas autorisé à envoyer un message à cet utilisateur.";
-                }
-                return ResponseEntity.status(403).body(Map.of("error", messageErreur));
+                return ResponseEntity.status(403).body(Map.of("error", 
+                    "Vous ne pouvez envoyer des messages qu'aux administrateurs uniquement."));
             }
             
-            // Créer le message
             Message message = new Message();
             message.setExpediteurEmail(expediteurEmail);
             message.setExpediteurNom(expediteur.getNom());
-            message.setExpediteurRole(expediteurRole); // Ajouter cette propriété si nécessaire
             message.setDestinataireEmail(request.getDestinataireEmail());
             message.setDestinataireNom(destinataire.getNom());
-            message.setDestinataireRole(destinataireRole); // Ajouter cette propriété si nécessaire
             message.setSujet(request.getSujet());
             message.setContenu(request.getContenu());
             message.setDateEnvoi(LocalDateTime.now());
             message.setLu(false);
-            message.setType(request.getType());
+            message.setType(request.getType() != null ? request.getType() : "MESSAGE");
             
             messageRepository.save(message);
             
-            // Envoyer l'email si demandé
             if ("EMAIL".equals(request.getType())) {
                 emailService.envoyerEmail(
                     request.getDestinataireEmail(),
@@ -115,11 +91,11 @@ public class MessageController {
             return ResponseEntity.ok(Map.of("message", "Message envoyé avec succès"));
             
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
         }
     }
     
-    // Récupérer tous les messages de l'utilisateur connecté
     @GetMapping
     public ResponseEntity<?> getMesMessages(Principal principal) {
         try {
@@ -130,7 +106,26 @@ public class MessageController {
             String email = principal.getName();
             List<Message> messages = messageRepository.findByDestinataireEmailOrderByDateEnvoiDesc(email);
             
-            List<MessageDTO> messageDTOs = messages.stream().map(this::convertToDTO).collect(Collectors.toList());
+            List<MessageDTO> messageDTOs = messages.stream().map(msg -> {
+                MessageDTO dto = new MessageDTO();
+                dto.setId(msg.getId());
+                dto.setExpediteurEmail(msg.getExpediteurEmail());
+                dto.setExpediteurNom(msg.getExpediteurNom());
+                dto.setDestinataireEmail(msg.getDestinataireEmail());
+                dto.setDestinataireNom(msg.getDestinataireNom());
+                dto.setSujet(msg.getSujet());
+                dto.setContenu(msg.getContenu());
+                dto.setLu(msg.isLu());
+                dto.setDateEnvoi(msg.getDateEnvoi());
+                dto.setType(msg.getType());
+                
+                // ✅ Récupérer le rôle de l'expéditeur depuis la base
+                utilisateurRepository.findByEmail(msg.getExpediteurEmail()).ifPresent(exp -> {
+                    dto.setExpediteurRole(exp.getRole());
+                });
+                
+                return dto;
+            }).collect(Collectors.toList());
             
             return ResponseEntity.ok(messageDTOs);
             
@@ -139,7 +134,6 @@ public class MessageController {
         }
     }
     
-    // Récupérer les messages non lus
     @GetMapping("/non-lus")
     public ResponseEntity<?> getMessagesNonLus(Principal principal) {
         try {
@@ -148,11 +142,9 @@ public class MessageController {
             }
             
             String email = principal.getName();
-            List<Message> messages = messageRepository.findNonLusByDestinataireEmail(email);
             long count = messageRepository.countByDestinataireEmailAndLuFalse(email);
             
             Map<String, Object> response = new HashMap<>();
-            response.put("messages", messages.stream().map(this::convertToDTO).collect(Collectors.toList()));
             response.put("nonLuCount", count);
             
             return ResponseEntity.ok(response);
@@ -162,7 +154,6 @@ public class MessageController {
         }
     }
     
-    // Marquer un message comme lu
     @PutMapping("/{id}/lu")
     public ResponseEntity<?> marquerCommeLu(@PathVariable Long id, Principal principal) {
         try {
@@ -183,7 +174,6 @@ public class MessageController {
         }
     }
     
-    // Supprimer un message
     @DeleteMapping("/{id}")
     public ResponseEntity<?> supprimerMessage(@PathVariable Long id, Principal principal) {
         try {
@@ -203,7 +193,6 @@ public class MessageController {
         }
     }
     
-    // Récupérer la liste des utilisateurs (accessible à tous avec filtrage)
     @GetMapping("/utilisateurs")
     public ResponseEntity<?> getUtilisateurs(Principal principal) {
         try {
@@ -217,19 +206,14 @@ public class MessageController {
             
             List<Utilisateur> tousUtilisateurs = utilisateurRepository.findAll();
             
-            // ✅ Filtrer selon le rôle de l'utilisateur connecté
             List<Map<String, String>> userList = tousUtilisateurs.stream()
-                    .filter(u -> !u.getEmail().equals(currentUserEmail)) // Exclure l'utilisateur courant
+                    .filter(u -> !u.getEmail().equals(currentUserEmail))
                     .filter(u -> {
-                        // Admin voit tous les utilisateurs
                         if ("ADMIN".equals(currentUser.getRole())) {
                             return true;
-                        }
-                        // Agent et Citoyen ne voient que les admins
-                        else if ("AGENT".equals(currentUser.getRole()) || "CITIZEN".equals(currentUser.getRole())) {
+                        } else {
                             return "ADMIN".equals(u.getRole());
                         }
-                        return false;
                     })
                     .map(u -> {
                         Map<String, String> userMap = new HashMap<>();
@@ -245,24 +229,5 @@ public class MessageController {
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
         }
-    }
-    
-    private MessageDTO convertToDTO(Message message) {
-        MessageDTO dto = new MessageDTO();
-        dto.setId(message.getId());
-        dto.setExpediteurEmail(message.getExpediteurEmail());
-        dto.setExpediteurNom(message.getExpediteurNom());
-        dto.setDestinataireEmail(message.getDestinataireEmail());
-        dto.setDestinataireNom(message.getDestinataireNom());
-        dto.setSujet(message.getSujet());
-        dto.setContenu(message.getContenu());
-        dto.setLu(message.isLu());
-        dto.setDateEnvoi(message.getDateEnvoi());
-        dto.setType(message.getType());
-        // Ajouter le rôle de l'expéditeur si nécessaire
-        if (message.getExpediteurRole() != null) {
-            dto.setExpediteurRole(message.getExpediteurRole());
-        }
-        return dto;
     }
 }

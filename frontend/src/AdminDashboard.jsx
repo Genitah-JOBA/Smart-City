@@ -21,6 +21,7 @@ export default function AdminDashboard() {
   const [signalements, setSignalements] = useState([]);
   const [derniersSignalements, setDerniersSignalements] = useState([]);
   const [agents, setAgents] = useState([]);
+  const [agentsWithStats, setAgentsWithStats] = useState([]); // ✅ AJOUTER CETTE LIGNE
   const [signalementsParType, setSignalementsParType] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [periode, setPeriode] = useState("semaine");
@@ -36,62 +37,131 @@ export default function AdminDashboard() {
     fetchDashboardData();
   }, [periode]);
 
+  // ✅ VERSION AMÉLIORÉE - Calcul des stats des agents
+useEffect(() => {
+  if (signalements.length > 0 && agents.length > 0) {
+    // Compter les signalements par agent
+    const agentStats = {};
+    
+    signalements.forEach(signalement => {
+      // 🔥 Vérifier plusieurs possibilités pour l'agent
+      const agentEmail = signalement.agentEmail || 
+                        signalement.assignedTo || 
+                        signalement.agent?.email ||
+                        signalement.assignedAgent?.email;
+      
+      // Afficher pour déboguer
+      if (signalement.statut === "EN_COURS" || signalement.statut === "RESOLU") {
+        console.log(`Signalement ${signalement.id} - Statut: ${signalement.statut} - Agent: ${agentEmail}`);
+      }
+      
+      if (agentEmail) {
+        if (!agentStats[agentEmail]) {
+          agentStats[agentEmail] = {
+            traites: 0,
+            enCours: 0,
+            resolus: 0,
+            enAttente: 0
+          };
+        }
+        
+        // Compter selon le statut
+        if (signalement.statut === "RESOLU") {
+          agentStats[agentEmail].resolus++;
+          agentStats[agentEmail].traites++;
+        } else if (signalement.statut === "EN_COURS") {
+          agentStats[agentEmail].enCours++;
+          agentStats[agentEmail].traites++;
+        } else if (signalement.statut === "EN_ATTENTE") {
+          agentStats[agentEmail].enAttente++;
+        }
+      } else {
+        // 🔥 Si pas d'agent assigné, afficher un avertissement
+        if (signalement.statut !== "EN_ATTENTE") {
+          console.warn(`⚠️ Signalement ${signalement.id} (${signalement.statut}) n'a pas d'agent assigné!`);
+        }
+      }
+    });
+    
+    console.log("📊 Agent stats calculées:", agentStats);
+    
+    // Fusionner avec la liste des agents
+    const agentsAvecStats = agents.map(agent => ({
+      ...agent,
+      signalementsTraites: agentStats[agent.email]?.traites || 0,
+      signalementsEnCours: agentStats[agent.email]?.enCours || 0,
+      signalementsResolus: agentStats[agent.email]?.resolus || 0,
+      signalementsEnAttente: agentStats[agent.email]?.enAttente || 0
+    }));
+    
+    console.log("👥 Agents avec stats:", agentsAvecStats);
+    setAgentsWithStats(agentsAvecStats);
+    
+    // Mettre à jour le nombre d'agents actifs
+    const agentsActifsCount = agentsAvecStats.filter(a => a.signalementsTraites > 0).length;
+    setStats(prev => ({ ...prev, agentsActifs: agentsActifsCount || agents.length }));
+  }
+}, [signalements, agents]);
+
   const fetchDashboardData = async () => {
-    setIsLoading(true);
-    try {
-      const signalementsRes = await fetch("http://localhost:8081/api/signalements", {
-        headers: { "Authorization": `Bearer ${token}` }
+  setIsLoading(true);
+  try {
+    const signalementsRes = await fetch("http://localhost:8081/api/signalements", {
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+    
+    if (signalementsRes.ok) {
+      const data = await signalementsRes.json();
+      
+      // ✅ Déplacer les console.log ICI après la définition de data
+      console.log("🔍 Signalements reçus:", data);
+      console.log("🔍 Premier signalement:", data[0]);
+      
+      setSignalements(data);
+      
+      const total = data.length;
+      const enAttente = data.filter(s => s.statut === "EN_ATTENTE").length;
+      const enCours = data.filter(s => s.statut === "EN_COURS").length;
+      const resolus = data.filter(s => s.statut === "RESOLU").length;
+      const tauxResolution = total > 0 ? Math.round((resolus / total) * 100) : 0;
+      
+      setStats(prev => ({
+        ...prev,
+        total,
+        enAttente,
+        enCours,
+        resolus,
+        tauxResolution,
+        tempsMoyen: 2.5
+      }));
+      
+      setDerniersSignalements(data.slice(0, 5));
+      
+      const typesCount = {};
+      data.forEach(s => {
+        const type = s.type || "Autre";
+        typesCount[type] = (typesCount[type] || 0) + 1;
       });
-      
-      if (signalementsRes.ok) {
-        const data = await signalementsRes.json();
-        setSignalements(data);
-        
-        const total = data.length;
-        const enAttente = data.filter(s => s.statut === "EN_ATTENTE").length;
-        const enCours = data.filter(s => s.statut === "EN_COURS").length;
-        const resolus = data.filter(s => s.statut === "RESOLU").length;
-        const tauxResolution = total > 0 ? Math.round((resolus / total) * 100) : 0;
-        
-        setStats({
-          total,
-          enAttente,
-          enCours,
-          resolus,
-          tauxResolution,
-          agentsActifs: 4,
-          tempsMoyen: 2.5
-        });
-        
-        setDerniersSignalements(data.slice(0, 5));
-        
-        const typesCount = {};
-        data.forEach(s => {
-          const type = s.type || "Autre";
-          typesCount[type] = (typesCount[type] || 0) + 1;
-        });
-        setSignalementsParType(Object.entries(typesCount).map(([name, value]) => ({ name, value })));
-      }
-      
-      const agentsRes = await fetch("http://localhost:8081/api/users", {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      if (agentsRes.ok) {
-        const allUsers = await agentsRes.json();
-        const agents = allUsers.filter(user => user.role === "AGENT");
-        setAgents(agents);
-        setStats(prev => ({ ...prev, agentsActifs: agents.length }));
-      }
-      
-    } catch (error) {
-      console.error("Erreur chargement dashboard:", error);
-    } finally {
-      setIsLoading(false);
+      setSignalementsParType(Object.entries(typesCount).map(([name, value]) => ({ name, value })));
     }
-  };
-
-  // 🔥 FONCTIONS D'EXPORTATION
-
+    
+    const agentsRes = await fetch("http://localhost:8081/api/users", {
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (agentsRes.ok) {
+      const allUsers = await agentsRes.json();
+      const agentsList = allUsers.filter(user => user.role === "AGENT");
+      setAgents(agentsList);
+    }
+    
+  } catch (error) {
+    console.error("Erreur chargement dashboard:", error);
+  } finally {
+    setIsLoading(false);
+  }
+};
+  
+// 🔥 FONCTIONS D'EXPORTATION
   const exportToCSV = () => {
     const headers = ["ID", "Titre", "Description", "Type", "Statut", "Localisation", "Date création"];
     const rows = signalements.map(s => [
@@ -310,8 +380,6 @@ export default function AdminDashboard() {
             <p className="text-white/50 mt-1">Vue d'ensemble de la plateforme SmartCity</p>
           </div>
           <div className="flex gap-3">
-            
-            {/* 🔥 Bouton Exporter avec modal */}
             <button 
               onClick={() => setShowExportModal(true)}
               className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"
@@ -322,7 +390,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* MODAL D'EXPORTATION */}
+        {/* MODAL D'EXPORTATION - Garde ton code existant */}
         {showExportModal && (
           <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
             <div className="bg-[#1e1f22] rounded-2xl max-w-md w-full p-6 border border-white/20">
@@ -374,7 +442,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Cartes KPI (suite) */}
+        {/* Cartes KPI */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20">
             <div className="flex justify-between items-start">
@@ -384,10 +452,6 @@ export default function AdminDashboard() {
               </div>
               <div className="bg-blue-500/20 p-3 rounded-xl"><MapPin className="text-blue-400" size={24} /></div>
             </div>
-            <div className="mt-3 flex items-center gap-1 text-xs text-emerald-400">
-              <TrendingUp size={12} />
-              <span>+12% ce mois</span>
-            </div>
           </div>
 
           <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20">
@@ -395,10 +459,6 @@ export default function AdminDashboard() {
               <div>
                 <p className="text-white/50 text-sm">En attente</p>
                 <p className="text-3xl font-bold text-amber-300 mt-1">{stats.enAttente}</p>
-                <div className="mt-3 flex items-center gap-1 text-xs text-red-400">
-                  <TrendingUp size={12} />
-                  <span>À traiter urgemment</span>
-                </div>
               </div>
               <div className="bg-amber-500/20 p-3 rounded-xl"><Clock className="text-amber-400" size={24} /></div>
             </div>
@@ -420,16 +480,13 @@ export default function AdminDashboard() {
               <div>
                 <p className="text-white/50 text-sm">Agents actifs</p>
                 <p className="text-3xl font-bold text-white mt-1">{stats.agentsActifs}</p>
-                <div className="mt-3 flex items-center gap-1 text-xs text-white/50">
-                  <span>👥 2 agents disponibles</span>
-                </div>
               </div>
               <div className="bg-purple-500/20 p-3 rounded-xl"><Users className="text-purple-400" size={24} /></div>
             </div>
           </div>
         </div>
 
-        {/* Graphiques et tableaux (suite) */}
+        {/* Graphiques et tableaux */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           
           <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 lg:col-span-1">
@@ -444,19 +501,60 @@ export default function AdminDashboard() {
             </div>
           </div>
 
+          {/* ✅ SECTION TOP AGENTS CORRIGÉE */}
           <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 lg:col-span-1">
             <h3 className="text-white font-semibold mb-4">🏆 Top agents</h3>
             <div className="space-y-3">
-              {agents.slice(0, 3).map((agent, index) => (
-                <div key={agent.id} className="flex items-center gap-3 p-2 bg-white/5 rounded-xl">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 flex items-center justify-center text-white font-bold text-sm">{index + 1}</div>
-                  <div className="flex-1"><p className="text-white font-medium text-sm">{agent.nom}</p><p className="text-white/40 text-xs">{agent.email}</p></div>
-                  <div className="text-right"><p className="text-white font-bold">{agent.signalementsTraites || 0}</p><p className="text-white/40 text-xs">traités</p></div>
-                </div>
-              ))}
-              {agents.length === 0 && <p className="text-white/40 text-center py-4">Aucun agent</p>}
+              {agentsWithStats.length > 0 ? (
+                agentsWithStats
+                  .sort((a, b) => b.signalementsTraites - a.signalementsTraites)
+                  .slice(0, 5)
+                  .map((agent, index) => (
+                    <div key={agent.id} className="flex items-center gap-3 p-2 bg-white/5 rounded-xl hover:bg-white/10 transition">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 flex items-center justify-center text-white font-bold text-sm">
+                        {index + 1}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-white font-medium text-sm">{agent.nom}</p>
+                        <p className="text-white/40 text-xs">{agent.email}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-white font-bold text-lg">{agent.signalementsTraites}</p>
+                        <p className="text-white/40 text-xs">traités</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-emerald-400 text-sm font-semibold">{agent.signalementsResolus}</p>
+                        <p className="text-white/40 text-xs">résolus</p>
+                      </div>
+                    </div>
+                  ))
+              ) : (
+                <p className="text-white/40 text-center py-4">Aucun agent pour le moment</p>
+              )}
             </div>
-            <button className="w-full mt-4 bg-white/10 hover:bg-white/20 text-white py-2 rounded-xl text-sm flex items-center justify-center gap-2"><UserPlus size={16} /> Ajouter un agent</button>
+            
+            {/* Détail des signalements par agent */}
+            {agentsWithStats.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-white/10">
+                <h4 className="text-white/60 text-xs font-medium mb-2">📊 Détail par agent</h4>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {agentsWithStats.map(agent => (
+                    <div key={agent.id} className="flex justify-between items-center text-xs">
+                      <span className="text-white/50">{agent.nom}</span>
+                      <div className="flex gap-3">
+                        <span className="text-amber-400">{agent.signalementsEnAttente || 0} en attente</span>
+                        <span className="text-blue-400">{agent.signalementsEnCours || 0} en cours</span>
+                        <span className="text-emerald-400">{agent.signalementsResolus || 0} résolus</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            <button className="w-full mt-4 bg-white/10 hover:bg-white/20 text-white py-2 rounded-xl text-sm flex items-center justify-center gap-2 transition">
+              <UserPlus size={16} /> Ajouter un agent
+            </button>
           </div>
 
           <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 lg:col-span-1">

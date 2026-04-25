@@ -8,4 +8,6 @@ import java.util.List;
 @Repository
 public interface HistoriqueStatutRepository extends JpaRepository<HistoriqueStatut, Integer> {
     List<HistoriqueStatut> findBySignalementIdOrderByDateModificationDesc(Integer signalementId);
+    List<HistoriqueStatut> findBySignalementId(Integer signalementId);
+    void deleteBySignalementId(Integer signalementId);
 }
