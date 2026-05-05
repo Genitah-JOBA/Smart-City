@@ -1,19 +1,15 @@
-// MessageController.java (version complète)
 package com.smartcity.backend.controller;
 
-import com.smartcity.backend.dto.EnvoiMessageRequest;
 import com.smartcity.backend.dto.MessageDTO;
 import com.smartcity.backend.model.Message;
 import com.smartcity.backend.model.Utilisateur;
-import com.smartcity.backend.repository.MessageRepository;
 import com.smartcity.backend.repository.UtilisateurRepository;
-import com.smartcity.backend.service.EmailService;
+import com.smartcity.backend.service.MessageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,74 +21,60 @@ import java.util.stream.Collectors;
 public class MessageController {
     
     @Autowired
-    private MessageRepository messageRepository;
+    private MessageService messageService;
     
     @Autowired
     private UtilisateurRepository utilisateurRepository;
     
-    @Autowired
-    private EmailService emailService;
-    
     @PostMapping("/envoyer")
     public ResponseEntity<?> envoyerMessage(
             Principal principal,
-            @RequestBody EnvoiMessageRequest request) {
+            @RequestBody MessageDTO messageDTO) {
         try {
             if (principal == null) {
                 return ResponseEntity.status(401).body(Map.of("error", "Non authentifié"));
             }
             
             String expediteurEmail = principal.getName();
-            Utilisateur expediteur = utilisateurRepository.findByEmail(expediteurEmail)
-                    .orElseThrow(() -> new RuntimeException("Expéditeur non trouvé"));
             
-            Utilisateur destinataire = utilisateurRepository.findByEmail(request.getDestinataireEmail())
-                    .orElseThrow(() -> new RuntimeException("Destinataire non trouvé"));
-            
-            String expediteurRole = expediteur.getRole();
-            String destinataireRole = destinataire.getRole();
-            
-            // Vérifier les permissions
-            boolean peutEnvoyer = false;
-            
-            if ("ADMIN".equals(expediteurRole)) {
-                peutEnvoyer = true;
-            } else if (("AGENT".equals(expediteurRole) || "CITIZEN".equals(expediteurRole)) 
-                    && "ADMIN".equals(destinataireRole)) {
-                peutEnvoyer = true;
+            // Validation des champs obligatoires
+            if (messageDTO.getDestinataireEmail() == null || messageDTO.getDestinataireEmail().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Destinataire requis"));
+            }
+            if (messageDTO.getSujet() == null || messageDTO.getSujet().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Sujet requis"));
+            }
+            if (messageDTO.getContenu() == null || messageDTO.getContenu().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Contenu requis"));
             }
             
-            if (!peutEnvoyer) {
-                return ResponseEntity.status(403).body(Map.of("error", 
-                    "Vous ne pouvez envoyer des messages qu'aux administrateurs uniquement."));
+            // Définir le type par défaut si non spécifié
+            if (messageDTO.getType() == null || messageDTO.getType().isEmpty()) {
+                messageDTO.setType("INTERNAL");
+            }
+            messageDTO.setType(messageDTO.getType().toUpperCase());
+            
+            // Appeler le service pour envoyer le message
+            Message savedMessage = messageService.envoyerMessage(messageDTO, expediteurEmail);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Message envoyé avec succès");
+            response.put("type", messageDTO.getType());
+            response.put("messageId", savedMessage.getId());
+            
+            if ("EMAIL".equals(messageDTO.getType())) {
+                response.put("info", "✅ Email envoyé ! Le destinataire recevra une notification dans son espace ET un email réel dans sa boîte email.");
+            } else {
+                response.put("info", "✅ Message envoyé ! Le destinataire recevra une notification dans son espace.");
             }
             
-            Message message = new Message();
-            message.setExpediteurEmail(expediteurEmail);
-            message.setExpediteurNom(expediteur.getNom());
-            message.setDestinataireEmail(request.getDestinataireEmail());
-            message.setDestinataireNom(destinataire.getNom());
-            message.setSujet(request.getSujet());
-            message.setContenu(request.getContenu());
-            message.setDateEnvoi(LocalDateTime.now());
-            message.setLu(false);
-            message.setType(request.getType() != null ? request.getType() : "MESSAGE");
+            return ResponseEntity.ok(response);
             
-            messageRepository.save(message);
-            
-            if ("EMAIL".equals(request.getType())) {
-                emailService.envoyerEmail(
-                    request.getDestinataireEmail(),
-                    "[SmartCity] " + request.getSujet(),
-                    "Message de " + expediteur.getNom() + ":\n\n" + request.getContenu()
-                );
-            }
-            
-            return ResponseEntity.ok(Map.of("message", "Message envoyé avec succès"));
-            
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+            return ResponseEntity.status(500).body(Map.of("error", "Erreur lors de l'envoi: " + e.getMessage()));
         }
     }
     
@@ -104,8 +86,9 @@ public class MessageController {
             }
             
             String email = principal.getName();
-            List<Message> messages = messageRepository.findByDestinataireEmailOrderByDateEnvoiDesc(email);
+            List<Message> messages = messageService.getMessagesForUser(email);
             
+            // Transformer les messages en DTO pour l'affichage
             List<MessageDTO> messageDTOs = messages.stream().map(msg -> {
                 MessageDTO dto = new MessageDTO();
                 dto.setId(msg.getId());
@@ -119,7 +102,7 @@ public class MessageController {
                 dto.setDateEnvoi(msg.getDateEnvoi());
                 dto.setType(msg.getType());
                 
-                // ✅ Récupérer le rôle de l'expéditeur depuis la base
+                // Ajouter le rôle de l'expéditeur
                 utilisateurRepository.findByEmail(msg.getExpediteurEmail()).ifPresent(exp -> {
                     dto.setExpediteurRole(exp.getRole());
                 });
@@ -127,7 +110,14 @@ public class MessageController {
                 return dto;
             }).collect(Collectors.toList());
             
-            return ResponseEntity.ok(messageDTOs);
+            long nonLuCount = messageService.countNonLu(email);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("messages", messageDTOs);
+            response.put("count", messageDTOs.size());
+            response.put("nonLuCount", nonLuCount);
+            
+            return ResponseEntity.ok(response);
             
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
@@ -142,7 +132,7 @@ public class MessageController {
             }
             
             String email = principal.getName();
-            long count = messageRepository.countByDestinataireEmailAndLuFalse(email);
+            long count = messageService.countNonLu(email);
             
             Map<String, Object> response = new HashMap<>();
             response.put("nonLuCount", count);
@@ -157,18 +147,16 @@ public class MessageController {
     @PutMapping("/{id}/lu")
     public ResponseEntity<?> marquerCommeLu(@PathVariable Long id, Principal principal) {
         try {
-            Message message = messageRepository.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Message non trouvé"));
-            
-            if (!message.getDestinataireEmail().equals(principal.getName())) {
-                return ResponseEntity.status(403).body(Map.of("error", "Non autorisé"));
+            if (principal == null) {
+                return ResponseEntity.status(401).body(Map.of("error", "Non authentifié"));
             }
             
-            message.setLu(true);
-            messageRepository.save(message);
+            messageService.marquerCommeLu(id);
             
             return ResponseEntity.ok(Map.of("message", "Message marqué comme lu"));
             
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
         }
@@ -177,17 +165,17 @@ public class MessageController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> supprimerMessage(@PathVariable Long id, Principal principal) {
         try {
-            Message message = messageRepository.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Message non trouvé"));
-            
-            if (!message.getDestinataireEmail().equals(principal.getName())) {
-                return ResponseEntity.status(403).body(Map.of("error", "Non autorisé"));
+            if (principal == null) {
+                return ResponseEntity.status(401).body(Map.of("error", "Non authentifié"));
             }
             
-            messageRepository.delete(message);
+            String userEmail = principal.getName();
+            messageService.supprimerMessage(id, userEmail);
             
-            return ResponseEntity.ok(Map.of("message", "Message supprimé"));
+            return ResponseEntity.ok(Map.of("message", "Message supprimé avec succès"));
             
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
         }
@@ -224,7 +212,11 @@ public class MessageController {
                     })
                     .collect(Collectors.toList());
             
-            return ResponseEntity.ok(userList);
+            Map<String, Object> response = new HashMap<>();
+            response.put("utilisateurs", userList);
+            response.put("count", userList.size());
+            
+            return ResponseEntity.ok(response);
             
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));

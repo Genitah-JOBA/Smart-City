@@ -19,6 +19,9 @@ public class Notification {
     private LocalDateTime dateCreation;
     private String lien;
     
+    @Column(name = "signalement_id", nullable = true)  // ← AJOUTEZ CE CHAMP
+    private Long signalementId;
+    
     @PrePersist
     protected void onCreate() {
         dateCreation = LocalDateTime.now();
@@ -49,4 +52,7 @@ public class Notification {
     
     public String getLien() { return lien; }
     public void setLien(String lien) { this.lien = lien; }
+    
+    public Long getSignalementId() { return signalementId; }  // ← AJOUTEZ
+    public void setSignalementId(Long signalementId) { this.signalementId = signalementId; }  // ← AJOUTEZ
 }

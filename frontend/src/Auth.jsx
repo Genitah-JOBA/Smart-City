@@ -114,91 +114,107 @@ export default function Auth() {
   };
 
   const handleLogin = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
+  
+  if (isRedirecting || isLoading) return;
+  
+  setMessage("");
+  let newErrors = {};
+
+  if (!email.toLowerCase().endsWith("@gmail.com")) {
+    newErrors.email = "L'email doit impérativement être une adresse @gmail.com";
+  }
+  if (motDePasse.length < 6) {
+    newErrors.motDePasse = "Le mot de passe doit contenir plus de 6 caractères.";
+  }
+
+  if (Object.keys(newErrors).length > 0) {
+    setErrors(newErrors);
+    return;
+  }
+
+  setErrors({});
+  setIsLoading(true);
+
+  try {
+    const response = await fetch("http://localhost:8081/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, motDePasse }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Email ou mot de passe incorrect");
+    }
+
+    const token = await response.text();
     
-    if (isRedirecting || isLoading) return;
+    // 🔥 Récupérer les informations utilisateur depuis l'API
+    const userResponse = await fetch("http://localhost:8081/api/auth/me", {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json"
+      }
+    });
     
-    setMessage("");
-    let newErrors = {};
-
-    if (!email.toLowerCase().endsWith("@gmail.com")) {
-      newErrors.email = "L'email doit impérativement être une adresse @gmail.com";
-    }
-    if (motDePasse.length < 6) {
-      newErrors.motDePasse = "Le mot de passe doit contenir plus de 6 caractères.";
-    }
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-
-    setErrors({});
-    setIsLoading(true);
-
-    try {
-      const response = await fetch("http://localhost:8081/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, motDePasse }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Email ou mot de passe incorrect");
+    let userData = {};
+    let userId = null;
+    let userNom = email.split('@')[0];
+    let userRole = "CITIZEN";
+    
+    if (userResponse.ok) {
+      userData = await userResponse.json();
+      userId = userData.id || userData.userId;
+      userNom = userData.nom || userData.prenom || email.split('@')[0];
+      userRole = userData.role || userData.role?.toUpperCase() || "CITIZEN";
+      console.log("📦 Données utilisateur:", userData);
+      console.log("🆔 User ID récupéré:", userId);
+    } else {
+      // Fallback : essayer de décoder le token
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        userId = payload.userId || payload.id || payload.sub;
+        userRole = payload.role || payload.roles?.[0] || "CITIZEN";
+        console.log("🆔 User ID depuis token:", userId);
+      } catch {
+        userRole = "CITIZEN";
       }
-
-      const token = await response.text();
-      
-      // 🔥 Récupérer les informations utilisateur depuis l'API
-      const userResponse = await fetch("http://localhost:8081/api/auth/me", {
-        method: "GET",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json"
-        }
-      });
-      
-      let userNom = email.split('@')[0]; // Valeur par défaut
-      let userRole = "CITIZEN";
-      
-      if (userResponse.ok) {
-        const userData = await userResponse.json();
-        userNom = userData.nom || email.split('@')[0];
-        userRole = userData.role || userData.role?.toUpperCase() || "CITIZEN";
-        console.log("📦 Données utilisateur:", userData);
-      } else {
-        // Fallback : essayer de décoder le token
-        try {
-          const payload = JSON.parse(atob(token.split('.')[1]));
-          userRole = payload.role || payload.roles?.[0] || "CITIZEN";
-        } catch {
-          userRole = "CITIZEN";
-        }
-      }
-      
-      const normalizedRole = userRole.toUpperCase();
-      
-      console.log("✅ Rôle récupéré:", normalizedRole);
-      console.log("✅ Nom utilisateur:", userNom);
-      
-      // 🔥 STOCKER TOUTES LES INFORMATIONS DANS LOCALSTORAGE
-      localStorage.setItem("token", token);
-      localStorage.setItem("userRole", normalizedRole);
-      localStorage.setItem("userEmail", email);      // ✅ AJOUTÉ
-      localStorage.setItem("userNom", userNom);      // ✅ AJOUTÉ
-
-      setIsSuccess(true);
-      setMessage(`Connexion réussie ! Bienvenue ${userNom}`);
-      setShowModal(true);
-      
-    } catch (error) {
-      setIsSuccess(false);
-      setMessage(error.message);
-      setShowModal(true);
-    } finally {
-      setIsLoading(false);
     }
-  };
+    
+    const normalizedRole = userRole.toUpperCase();
+    
+    console.log("✅ Rôle récupéré:", normalizedRole);
+    console.log("✅ Nom utilisateur:", userNom);
+    console.log("✅ ID utilisateur:", userId);
+    
+    // 🔥 STOCKER TOUTES LES INFORMATIONS DANS LOCALSTORAGE
+    localStorage.setItem("token", token);
+    localStorage.setItem("userRole", normalizedRole);
+    localStorage.setItem("userEmail", email);
+    localStorage.setItem("userNom", userNom);
+    
+    // 🔥 CRITIQUE : Stocker l'objet user COMPLET avec l'ID
+    localStorage.setItem("user", JSON.stringify({
+      id: userId,
+      nom: userNom,
+      prenom: userData.prenom || "",
+      email: email,
+      role: normalizedRole
+    }));
+
+    setIsSuccess(true);
+    setMessage(`Connexion réussie ! Bienvenue ${userNom}`);
+    setShowModal(true);
+    
+  } catch (error) {
+    setIsSuccess(false);
+    setMessage(error.message);
+    setShowModal(true);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   // Gestion de l'inscription OPTIMISÉE
   const handleRegister = async (e) => {

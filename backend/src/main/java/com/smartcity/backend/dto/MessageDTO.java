@@ -1,4 +1,3 @@
-// MessageDTO.java
 package com.smartcity.backend.dto;
 
 import java.time.LocalDateTime;
@@ -7,14 +6,15 @@ public class MessageDTO {
     private Long id;
     private String expediteurEmail;
     private String expediteurNom;
-    private String expediteurRole;  // ✅ AJOUTER CE CHAMP
+    private String expediteurRole;
     private String destinataireEmail;
     private String destinataireNom;
+    private String destinataireRole;
     private String sujet;
     private String contenu;
     private boolean lu;
     private LocalDateTime dateEnvoi;
-    private String type;
+    private String type; // "INTERNAL" ou "EMAIL"
     
     // Getters et Setters
     public Long getId() { return id; }
@@ -26,14 +26,17 @@ public class MessageDTO {
     public String getExpediteurNom() { return expediteurNom; }
     public void setExpediteurNom(String expediteurNom) { this.expediteurNom = expediteurNom; }
     
-    public String getExpediteurRole() { return expediteurRole; }  // ✅ AJOUTER
-    public void setExpediteurRole(String expediteurRole) { this.expediteurRole = expediteurRole; }  // ✅ AJOUTER
+    public String getExpediteurRole() { return expediteurRole; }
+    public void setExpediteurRole(String expediteurRole) { this.expediteurRole = expediteurRole; }
     
     public String getDestinataireEmail() { return destinataireEmail; }
     public void setDestinataireEmail(String destinataireEmail) { this.destinataireEmail = destinataireEmail; }
     
     public String getDestinataireNom() { return destinataireNom; }
     public void setDestinataireNom(String destinataireNom) { this.destinataireNom = destinataireNom; }
+    
+    public String getDestinataireRole() { return destinataireRole; }
+    public void setDestinataireRole(String destinataireRole) { this.destinataireRole = destinataireRole; }
     
     public String getSujet() { return sujet; }
     public void setSujet(String sujet) { this.sujet = sujet; }

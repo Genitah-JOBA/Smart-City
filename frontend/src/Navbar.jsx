@@ -4,7 +4,8 @@ import {
   MapPin, Home, AlertTriangle, User, LogOut, Menu, X, 
   Shield, Bell, Settings, PlusCircle, LayoutDashboard, 
   ClipboardList, Wrench, Users, BarChart3, ChevronDown,
-  CheckCircle, Clock, MessageSquare, Loader2, UserCheck
+  CheckCircle, Clock, MessageSquare, Loader2, UserCheck,
+  Share2  // ← AJOUTEZ CETTE LIGNE
 } from "lucide-react";
 
 export default function Navbar() {
@@ -51,68 +52,121 @@ export default function Navbar() {
     }
   }, [token]);
 
-  // 🔥 Récupérer les notifications depuis le backend
+  // 🔥 FONCTION PRINCIPALE : Récupérer les notifications depuis le BACKEND UNIQUEMENT
   const fetchNotifications = async () => {
-    if (!token) return;
+    if (!token) {
+      console.log("⏭️ Pas de token");
+      return;
+    }
     
+    console.log("🔔 Récupération des notifications depuis l'API...");
     setIsLoadingNotifications(true);
+    
     try {
       const response = await fetch("http://localhost:8081/api/notifications", {
         headers: { "Authorization": `Bearer ${token}` }
       });
       
+      console.log("📡 Réponse API:", response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log(`📬 ${data.notifications?.length || 0} notifications trouvées`);
+        console.log("📋 Détails:", data.notifications);
+        
         setNotifications(data.notifications || []);
         setUnreadCount(data.unreadCount || 0);
+      } else {
+        console.error("❌ Erreur API:", response.status);
+        setNotifications([]);
+        setUnreadCount(0);
       }
     } catch (error) {
-      console.error("Erreur récupération notifications:", error);
+      console.error("❌ Erreur réseau:", error);
+      setNotifications([]);
+      setUnreadCount(0);
     } finally {
       setIsLoadingNotifications(false);
     }
   };
 
-  // 🔥 Marquer une notification comme lue
+  // 🔥 Marquer une notification comme lue (UNIQUEMENT BACKEND)
   const markAsRead = async (notificationId) => {
     try {
-      await fetch(`http://localhost:8081/api/notifications/${notificationId}/read`, {
+      const response = await fetch(`http://localhost:8081/api/notifications/${notificationId}/read`, {
         method: "PUT",
         headers: { "Authorization": `Bearer ${token}` }
       });
       
-      // Mettre à jour l'état local
-      setNotifications(prev => 
-        prev.map(n => n.id === notificationId ? { ...n, estLu: true } : n)
-      );
-      setUnreadCount(prev => Math.max(0, prev - 1));
+      if (response.ok) {
+        // Mettre à jour l'état local
+        setNotifications(prev => prev.map(n => 
+          n.id === notificationId ? { ...n, lu: true } : n
+        ));
+        setUnreadCount(prev => Math.max(0, prev - 1));
+        console.log(`✅ Notification ${notificationId} marquée comme lue`);
+      } else {
+        console.error("❌ Erreur API markAsRead:", response.status);
+      }
     } catch (error) {
-      console.error("Erreur marquage lecture:", error);
+      console.error("❌ Erreur réseau markAsRead:", error);
     }
   };
 
-  // 🔥 Marquer toutes les notifications comme lues
+  // 🔥 Marquer toutes comme lues
   const markAllAsRead = async () => {
     try {
-      await fetch("http://localhost:8081/api/notifications/read-all", {
+      const response = await fetch("http://localhost:8081/api/notifications/read-all", {
         method: "PUT",
         headers: { "Authorization": `Bearer ${token}` }
       });
       
-      setNotifications(prev => prev.map(n => ({ ...n, estLu: true })));
-      setUnreadCount(0);
+      if (response.ok) {
+        setNotifications(prev => prev.map(n => ({ ...n, lu: true })));
+        setUnreadCount(0);
+        console.log("✅ Toutes les notifications marquées comme lues");
+      } else {
+        console.error("❌ Erreur API markAllAsRead:", response.status);
+      }
     } catch (error) {
-      console.error("Erreur:", error);
+      console.error("❌ Erreur réseau markAllAsRead:", error);
     }
   };
 
-  // 🔥 Recharger les notifications périodiquement
+  // Obtenir l'icône selon le type de notification
+  const getNotificationIcon = (type) => {
+    switch(type) {
+      case "NOUVEAU_SIGNALEMENT": return <AlertTriangle size={16} className="text-amber-400" />;
+      case "SIGNALEMENT_TRAITE": return <CheckCircle size={16} className="text-emerald-400" />;
+      case "ASSIGNATION": return <UserCheck size={16} className="text-blue-400" />;
+      case "PARTAGE_SIGNALEMENT": return <Share2 size={16} className="text-purple-400" />;
+      default: return <Bell size={16} className="text-emerald-400" />;
+    }
+  };
+
+  // 🔥 Rafraîchir les notifications périodiquement (toutes les 5 secondes)
   useEffect(() => {
     if (token) {
       fetchNotifications();
-      const interval = setInterval(fetchNotifications, 30000); // toutes les 30s
+      const interval = setInterval(() => {
+        console.log("🔄 Rafraîchissement automatique des notifications");
+        fetchNotifications();
+      }, 5000);
       return () => clearInterval(interval);
     }
+  }, [token]);
+
+  // 🔥 Rafraîchir quand la fenêtre devient visible (onglet réactivé)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && token) {
+        console.log("👁️ Onglet réactivé, rafraîchissement des notifications");
+        fetchNotifications();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [token]);
 
   const handleLogout = () => {
@@ -125,16 +179,6 @@ export default function Navbar() {
   const openLogoutModal = () => {
     setShowLogoutModal(true);
     setShowUserMenu(false);
-  };
-
-  // Obtenir l'icône selon le type de notification
-  const getNotificationIcon = (type) => {
-    switch(type) {
-      case "NOUVEAU_SIGNALEMENT": return <AlertTriangle size={16} className="text-amber-400" />;
-      case "SIGNALEMENT_TRAITE": return <CheckCircle size={16} className="text-emerald-400" />;
-      case "ASSIGNATION": return <UserCheck size={16} className="text-blue-400" />;
-      default: return <Bell size={16} className="text-emerald-400" />;
-    }
   };
 
   // Navigation selon le rôle
@@ -240,10 +284,15 @@ export default function Navbar() {
             {/* User Info & Actions */}
             <div className="hidden md:flex items-center gap-4">
               
-              {/* 🔥 NOTIFICATIONS AVEC BACKEND */}
+              {/* NOTIFICATIONS */}
               <div className="relative notifications-menu">
                 <button
-                  onClick={() => setShowNotifications(!showNotifications)}
+                  onClick={() => {
+                    setShowNotifications(!showNotifications);
+                    if (!showNotifications) {
+                      fetchNotifications(); // Rafraîchir quand on ouvre
+                    }
+                  }}
                   className="relative p-2 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-all duration-300"
                 >
                   <Bell size={20} />
@@ -259,11 +308,19 @@ export default function Navbar() {
                   <div className="absolute right-0 mt-2 w-80 bg-slate-800/95 backdrop-blur-xl rounded-2xl border border-white/20 shadow-2xl overflow-hidden z-50">
                     <div className="p-3 border-b border-white/10 flex justify-between items-center">
                       <h3 className="text-white font-semibold">Notifications</h3>
-                      {notifications.length > 0 && (
-                        <button onClick={markAllAsRead} className="text-xs text-emerald-400 hover:text-emerald-300">
-                          Tout marquer lu
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={fetchNotifications} 
+                          className="text-xs text-emerald-400 hover:text-emerald-300"
+                        >
+                          🔄 Rafraîchir
                         </button>
-                      )}
+                        {notifications.length > 0 && (
+                          <button onClick={markAllAsRead} className="text-xs text-emerald-400 hover:text-emerald-300">
+                            Tout marquer lu
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <div className="max-h-96 overflow-y-auto">
                       {isLoadingNotifications ? (
@@ -282,21 +339,22 @@ export default function Navbar() {
                             onClick={() => {
                               markAsRead(notif.id);
                               if (notif.signalementId) {
-                                // Rediriger selon le rôle
-                                if (userRole === "AGENT") navigate("/agent/signalements-assignes");
-                                else if (userRole === "ADMIN") navigate("/admin/signalements");
-                                else navigate("/mes-signalements");
+                                navigate(`/signalement/${notif.signalementId}`);
+                              } else if (notif.lien) {
+                                navigate(notif.lien);
                               }
                               setShowNotifications(false);
                             }}
-                            className={`p-3 border-b border-white/5 hover:bg-white/5 transition cursor-pointer ${!notif.estLu ? 'bg-emerald-500/5 border-l-2 border-l-emerald-500' : ''}`}
+                            className={`p-3 border-b border-white/5 hover:bg-white/5 transition cursor-pointer ${!notif.lu ? 'bg-emerald-500/5 border-l-2 border-l-emerald-500' : ''}`}
                           >
                             <div className="flex items-start gap-2">
                               {getNotificationIcon(notif.type)}
                               <div className="flex-1">
                                 <p className="text-white/80 text-sm font-medium">{notif.title}</p>
                                 <p className="text-white/60 text-xs mt-0.5">{notif.message}</p>
-                                <p className="text-white/30 text-[10px] mt-1">{new Date(notif.dateCreation).toLocaleString()}</p>
+                                <p className="text-white/30 text-[10px] mt-1">
+                                  {new Date(notif.dateCreation).toLocaleString()}
+                                </p>
                               </div>
                             </div>
                           </div>
@@ -307,7 +365,7 @@ export default function Navbar() {
                 )}
               </div>
 
-              {/* User Profile */}
+              {/* User Profile - reste identique */}
               <div className="relative user-menu">
                 <button onClick={() => setShowUserMenu(!showUserMenu)} className="flex items-center gap-3 pl-3 border-l border-white/20 hover:opacity-80 transition">
                   <div className="relative group">
@@ -335,14 +393,14 @@ export default function Navbar() {
               </button>
             </div>
 
-            {/* Mobile Menu Button */}
+            {/* Mobile Menu Button - reste identique */}
             <button onClick={() => setIsOpen(!isOpen)} className="md:hidden relative w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center hover:bg-white/20 transition">
               {isOpen ? <X size={20} className="text-white" /> : <Menu size={20} className="text-white" />}
             </button>
           </div>
         </div>
 
-        {/* Mobile Navigation */}
+        {/* Mobile Navigation - reste identique */}
         <div className={`md:hidden fixed inset-x-0 top-16 bg-slate-900/95 backdrop-blur-2xl border-b border-white/10 transition-all duration-400 overflow-hidden shadow-2xl ${isOpen ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"}`}>
           <div className="p-4 space-y-2">
             {navLinks.map((link) => {

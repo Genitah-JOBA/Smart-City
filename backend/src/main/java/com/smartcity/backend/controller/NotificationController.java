@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.security.Principal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
@@ -57,6 +58,73 @@ public class NotificationController {
             
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
+    }
+    
+    @PutMapping("/read-all")
+    public ResponseEntity<?> markAllAsRead(Principal principal) {
+        try {
+            String userEmail = principal.getName();
+            List<Notification> notifications = notificationRepository.findByUserEmailAndLuFalse(userEmail);
+            for (Notification notif : notifications) {
+                notif.setLu(true);
+                notificationRepository.save(notif);
+            }
+            return ResponseEntity.ok(Map.of("message", "Toutes les notifications ont été marquées comme lues"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
+    }
+    
+    // 🔥 NOUVEAU : Partager un signalement (crée une notification)
+    @PostMapping("/share")
+    public ResponseEntity<?> shareSignalement(
+            @RequestBody Map<String, Object> shareData,
+            Principal principal) {
+        try {
+            if (principal == null) {
+                return ResponseEntity.status(401).body(Map.of("error", "Non authentifié"));
+            }
+            
+            String senderEmail = principal.getName();
+            String senderName = (String) shareData.get("senderName");
+            Long signalementId = shareData.get("signalementId") instanceof Integer ? 
+                ((Integer) shareData.get("signalementId")).longValue() : 
+                (Long) shareData.get("signalementId");
+            Long recipientUserId = shareData.get("recipientUserId") instanceof Integer ?
+                ((Integer) shareData.get("recipientUserId")).longValue() :
+                (Long) shareData.get("recipientUserId");
+            String recipientEmail = (String) shareData.get("recipientEmail");
+            String signalementTitle = (String) shareData.get("signalementTitle");
+            
+            if (recipientEmail == null || recipientUserId == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Destinataire invalide"));
+            }
+            
+            // Créer une notification pour le destinataire
+            Notification notification = new Notification();
+            notification.setUserEmail(recipientEmail);
+            notification.setTitle("📢 Signalement partagé");
+            notification.setMessage(senderName + " a partagé le signalement \"" + signalementTitle + "\" avec vous");
+            notification.setType("PARTAGE_SIGNALEMENT");
+            notification.setLu(false);
+            notification.setLien("/signalement/" + signalementId);
+            notification.setSignalementId(signalementId);
+            notification.setDateCreation(LocalDateTime.now());
+            
+            notificationRepository.save(notification);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Signalement partagé avec succès");
+            response.put("notification", notification);
+            
+            System.out.println("✅ Notification créée pour " + recipientEmail + " (ID: " + recipientUserId + ")");
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", "Erreur lors du partage: " + e.getMessage()));
         }
     }
     

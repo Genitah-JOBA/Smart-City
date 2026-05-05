@@ -2,7 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import { useEffect, useState } from "react";
 import Navbar from "./Navbar";
 import Auth from "./Auth";
-import FloatingChat from "./FloatingChat"; // 👈 AJOUTEZ CETTE LIGNE
+import FloatingChat from "./FloatingChat";
 
 // Pages Citoyen
 import Signalements from "./Signalements";
@@ -21,6 +21,9 @@ import AgentProfil from "./AgentProfil";
 import AdminDashboard from "./AdminDashboard";
 import AdminSignalement from "./AdminSignalement";
 import AdminProfil from "./AdminProfil";
+
+// Page détail signalement (pour les notifications)
+import SignalementDetail from "./SignalementDetail";
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem("token"));
@@ -66,7 +69,7 @@ function App() {
       <>
         <Navbar />
         {children}
-        <FloatingChat /> {/* 👈 AJOUTEZ CETTE LIGNE - Le chat flottant apparaît sur toutes les pages protégées */}
+        <FloatingChat />
       </>
     );
   };
@@ -98,6 +101,16 @@ function App() {
       <Routes>
         {/* Routes publiques (sans navbar et sans chat flottant) */}
         <Route path="/auth" element={<Auth />} />
+        
+        {/* ========== ROUTES COMMUNES (accessible à tous les rôles) ========== */}
+        <Route 
+          path="/signalement/:id" 
+          element={
+            <ProtectedLayout>
+              <SignalementDetail />
+            </ProtectedLayout>
+          } 
+        />
         
         {/* ========== ROUTES CITOYEN ========== */}
         <Route 

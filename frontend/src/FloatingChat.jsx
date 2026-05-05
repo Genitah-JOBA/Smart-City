@@ -1,18 +1,17 @@
-// FloatingChat.jsx
 import { useState, useEffect, useRef } from "react";
 import { MessageCircle, Mail, Send, X, Bell, Check, Trash2, Eye, Move, Reply } from "lucide-react";
 
 export default function FloatingChat() {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("messages");
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState([]); // ← toujours initialisé à []
   const [nonLuCount, setNonLuCount] = useState(0);
   const [utilisateurs, setUtilisateurs] = useState([]);
   const [messageForm, setMessageForm] = useState({
     destinataireEmail: "",
     sujet: "",
     contenu: "",
-    type: "MESSAGE"
+    type: "EMAIL"
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -124,10 +123,24 @@ export default function FloatingChat() {
       
       if (response.ok) {
         const data = await response.json();
-        setMessages(data);
+        console.log("📩 Messages reçus:", data);
+        
+        // ✅ CORRECTION CRITIQUE: S'assurer que messages est toujours un tableau
+        if (Array.isArray(data)) {
+          setMessages(data);
+        } else if (data && Array.isArray(data.messages)) {
+          setMessages(data.messages);
+        } else if (data && data.length !== undefined) {
+          setMessages(data);
+        } else {
+          setMessages([]);
+        }
+      } else {
+        setMessages([]);
       }
     } catch (error) {
       console.error("Erreur chargement messages:", error);
+      setMessages([]);
     }
   };
 
@@ -148,8 +161,8 @@ export default function FloatingChat() {
 
   const fetchUtilisateurs = async () => {
     try {
-      console.log("🔍 Récupération des utilisateurs depuis /api/users...");
-      const response = await fetch("http://localhost:8081/api/users", {
+      console.log("🔍 Récupération des utilisateurs...");
+      const response = await fetch("http://localhost:8081/api/messages/utilisateurs", {
         headers: { 
           "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json"
@@ -160,32 +173,25 @@ export default function FloatingChat() {
         const data = await response.json();
         console.log("📋 Utilisateurs récupérés:", data);
         
-        let utilisateursFiltres = [];
-        
-        if (isAdmin) {
-          // ✅ Admin peut envoyer à TOUS les utilisateurs
-          utilisateursFiltres = data.filter(user => user.email !== userEmail);
-          console.log("👑 Admin - Peut envoyer à tous:", utilisateursFiltres);
-        } else if (isAgent) {
-          // ✅ Agent ne peut envoyer qu'aux ADMINS uniquement
-          utilisateursFiltres = data.filter(user => 
-            user.email !== userEmail && user.role === "ADMIN"
-          );
-          console.log("👔 Agent - Destinataires autorisés (admins uniquement):", utilisateursFiltres);
-        } else if (isCitizen) {
-          // ✅ Citoyen ne peut envoyer qu'aux ADMINS uniquement
-          utilisateursFiltres = data.filter(user => 
-            user.email !== userEmail && user.role === "ADMIN"
-          );
-          console.log("👤 Citoyen - Destinataires autorisés (admins uniquement):", utilisateursFiltres);
+        let usersList = [];
+        if (Array.isArray(data)) {
+          usersList = data;
+        } else if (data && Array.isArray(data.utilisateurs)) {
+          usersList = data.utilisateurs;
+        } else if (data && data.length !== undefined) {
+          usersList = data;
+        } else {
+          usersList = [];
         }
         
-        setUtilisateurs(utilisateursFiltres);
+        setUtilisateurs(usersList);
       } else {
-        console.error("Erreur API /api/users:", response.status);
+        console.error("Erreur API /api/messages/utilisateurs:", response.status);
+        setUtilisateurs([]);
       }
     } catch (error) {
       console.error("Erreur chargement utilisateurs:", error);
+      setUtilisateurs([]);
     }
   };
 
@@ -223,27 +229,22 @@ export default function FloatingChat() {
     }
   };
 
-  // ✅ Vérifier si l'utilisateur peut envoyer un message à un destinataire spécifique
   const peutEnvoyerA = (destinataireEmail) => {
     const destinataire = utilisateurs.find(u => u.email === destinataireEmail);
     if (!destinataire) return false;
     
     if (isAdmin) {
-      // Admin peut envoyer à tout le monde
       return true;
     } else if (isAgent || isCitizen) {
-      // Agents et citoyens ne peuvent envoyer qu'aux admins
       return destinataire.role === "ADMIN";
     }
     return false;
   };
 
   const repondreMessage = (message) => {
-    // ✅ Vérifier si l'utilisateur peut répondre à ce message
     const peutRepondre = () => {
       if (isAdmin) return true;
       if (isAgent || isCitizen) {
-        // Les agents et citoyens ne peuvent répondre qu'aux admins
         return message.expediteurRole === "ADMIN";
       }
       return false;
@@ -254,18 +255,16 @@ export default function FloatingChat() {
       return;
     }
 
-    // Préparer le sujet avec "Re: " si ce n'est pas déjà le cas
     let sujetReponse = message.sujet;
     if (!sujetReponse.startsWith("Re: ")) {
       sujetReponse = `Re: ${sujetReponse}`;
     }
 
-    // Remplir le formulaire avec les infos de l'expéditeur original
     setMessageForm({
       destinataireEmail: message.expediteurEmail,
       sujet: sujetReponse,
       contenu: `\n\n--- Message original de ${message.expediteurNom} (${new Date(message.dateEnvoi).toLocaleString()}) :\n${message.contenu}`,
-      type: "MESSAGE"
+      type: "EMAIL"
     });
 
     setReplyTo({
@@ -287,7 +286,6 @@ export default function FloatingChat() {
       return;
     }
 
-    // ✅ Vérification finale avant envoi
     if (!peutEnvoyerA(messageForm.destinataireEmail)) {
       if (isAdmin) {
         alert("❌ Destinataire invalide.");
@@ -309,21 +307,22 @@ export default function FloatingChat() {
           destinataireEmail: messageForm.destinataireEmail,
           sujet: messageForm.sujet,
           contenu: messageForm.contenu,
-          type: messageForm.type
+          type: messageForm.type === "EMAIL" ? "EMAIL" : "INTERNAL"
         })
       });
       
       if (response.ok) {
-        const notification = messageForm.type === "MESSAGE" 
-          ? "✅ Message envoyé avec succès !" 
-          : "✅ Email envoyé avec succès !";
+        const result = await response.json();
+        const notification = messageForm.type === "EMAIL" 
+          ? "✅ Email envoyé avec succès ! Le destinataire recevra une notification ET un email réel." 
+          : "✅ Message envoyé avec succès !";
         alert(notification);
         
         setMessageForm({ 
           destinataireEmail: "", 
           sujet: "", 
           contenu: "", 
-          type: "MESSAGE" 
+          type: "EMAIL"
         });
         setReplyTo(null);
         setActiveTab("messages");
@@ -347,7 +346,7 @@ export default function FloatingChat() {
       destinataireEmail: "", 
       sujet: "", 
       contenu: "", 
-      type: "MESSAGE" 
+      type: "EMAIL"
     });
   };
 
@@ -474,7 +473,7 @@ export default function FloatingChat() {
               <div className="h-[400px] overflow-y-auto p-3 space-y-3">
                 {activeTab === "messages" && (
                   <>
-                    {messages.length === 0 ? (
+                    {!messages || messages.length === 0 ? (
                       <div className="text-center text-white/50 py-8">
                         <Mail className="w-12 h-12 mx-auto mb-2 opacity-50" />
                         <p>Aucun message</p>
@@ -524,17 +523,15 @@ export default function FloatingChat() {
                             </div>
                           </div>
                           <p className="text-white/60 text-xs mb-1">
-                              De: {message.expediteurNom} (
-                              {message.expediteurRole === "ADMIN" ? "Admin" : 
-                              message.expediteurRole === "AGENT" ? "Agent" : "Citoyen"})
+                            De: {message.expediteurNom} 
                           </p>
                           <p className="text-white/70 text-sm mb-2">
-                            {message.contenu.length > 100
+                            {message.contenu && message.contenu.length > 100
                               ? message.contenu.substring(0, 100) + "..."
                               : message.contenu}
                           </p>
                           <p className="text-white/30 text-xs">
-                            {new Date(message.dateEnvoi).toLocaleString()}
+                            {message.dateEnvoi ? new Date(message.dateEnvoi).toLocaleString() : "Date inconnue"}
                           </p>
                         </div>
                       ))
