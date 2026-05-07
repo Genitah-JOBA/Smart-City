@@ -21,7 +21,7 @@ export default function AdminDashboard() {
   const [signalements, setSignalements] = useState([]);
   const [derniersSignalements, setDerniersSignalements] = useState([]);
   const [agents, setAgents] = useState([]);
-  const [agentsWithStats, setAgentsWithStats] = useState([]); // ✅ AJOUTER CETTE LIGNE
+  const [agentsWithStats, setAgentsWithStats] = useState([]);
   const [signalementsParType, setSignalementsParType] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [periode, setPeriode] = useState("semaine");
@@ -30,6 +30,8 @@ export default function AdminDashboard() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportFormat, setExportFormat] = useState("csv");
   const [isExporting, setIsExporting] = useState(false);
+  const [selectedAgent, setSelectedAgent] = useState("");
+  const [isAssigning, setIsAssigning] = useState(false);
   
   const token = localStorage.getItem("token");
 
@@ -38,70 +40,70 @@ export default function AdminDashboard() {
   }, [periode]);
 
   // ✅ VERSION AMÉLIORÉE - Calcul des stats des agents
-useEffect(() => {
-  if (signalements.length > 0 && agents.length > 0) {
-    // Compter les signalements par agent
-    const agentStats = {};
-    
-    signalements.forEach(signalement => {
-      // 🔥 Vérifier plusieurs possibilités pour l'agent
-      const agentEmail = signalement.agentEmail || 
-                        signalement.assignedTo || 
-                        signalement.agent?.email ||
-                        signalement.assignedAgent?.email;
+  useEffect(() => {
+    if (signalements.length > 0 && agents.length > 0) {
+      // Compter les signalements par agent
+      const agentStats = {};
       
-      // Afficher pour déboguer
-      if (signalement.statut === "EN_COURS" || signalement.statut === "RESOLU") {
-        console.log(`Signalement ${signalement.id} - Statut: ${signalement.statut} - Agent: ${agentEmail}`);
-      }
-      
-      if (agentEmail) {
-        if (!agentStats[agentEmail]) {
-          agentStats[agentEmail] = {
-            traites: 0,
-            enCours: 0,
-            resolus: 0,
-            enAttente: 0
-          };
+      signalements.forEach(signalement => {
+        // 🔥 Vérifier plusieurs possibilités pour l'agent
+        const agentEmail = signalement.agentEmail || 
+                          signalement.assignedTo || 
+                          signalement.agent?.email ||
+                          signalement.assignedAgent?.email;
+        
+        // Afficher pour déboguer
+        if (signalement.statut === "EN_COURS" || signalement.statut === "RESOLU") {
+          console.log(`Signalement ${signalement.id} - Statut: ${signalement.statut} - Agent: ${agentEmail}`);
         }
         
-        // Compter selon le statut
-        if (signalement.statut === "RESOLU") {
-          agentStats[agentEmail].resolus++;
-          agentStats[agentEmail].traites++;
-        } else if (signalement.statut === "EN_COURS") {
-          agentStats[agentEmail].enCours++;
-          agentStats[agentEmail].traites++;
-        } else if (signalement.statut === "EN_ATTENTE") {
-          agentStats[agentEmail].enAttente++;
+        if (agentEmail) {
+          if (!agentStats[agentEmail]) {
+            agentStats[agentEmail] = {
+              traites: 0,
+              enCours: 0,
+              resolus: 0,
+              enAttente: 0
+            };
+          }
+          
+          // Compter selon le statut
+          if (signalement.statut === "RESOLU") {
+            agentStats[agentEmail].resolus++;
+            agentStats[agentEmail].traites++;
+          } else if (signalement.statut === "EN_COURS") {
+            agentStats[agentEmail].enCours++;
+            agentStats[agentEmail].traites++;
+          } else if (signalement.statut === "EN_ATTENTE") {
+            agentStats[agentEmail].enAttente++;
+          }
+        } else {
+          // 🔥 Si pas d'agent assigné, afficher un avertissement
+          if (signalement.statut !== "EN_ATTENTE") {
+            console.warn(`⚠️ Signalement ${signalement.id} (${signalement.statut}) n'a pas d'agent assigné!`);
+          }
         }
-      } else {
-        // 🔥 Si pas d'agent assigné, afficher un avertissement
-        if (signalement.statut !== "EN_ATTENTE") {
-          console.warn(`⚠️ Signalement ${signalement.id} (${signalement.statut}) n'a pas d'agent assigné!`);
-        }
-      }
-    });
-    
-    console.log("📊 Agent stats calculées:", agentStats);
-    
-    // Fusionner avec la liste des agents
-    const agentsAvecStats = agents.map(agent => ({
-      ...agent,
-      signalementsTraites: agentStats[agent.email]?.traites || 0,
-      signalementsEnCours: agentStats[agent.email]?.enCours || 0,
-      signalementsResolus: agentStats[agent.email]?.resolus || 0,
-      signalementsEnAttente: agentStats[agent.email]?.enAttente || 0
-    }));
-    
-    console.log("👥 Agents avec stats:", agentsAvecStats);
-    setAgentsWithStats(agentsAvecStats);
-    
-    // Mettre à jour le nombre d'agents actifs
-    const agentsActifsCount = agentsAvecStats.filter(a => a.signalementsTraites > 0).length;
-    setStats(prev => ({ ...prev, agentsActifs: agentsActifsCount || agents.length }));
-  }
-}, [signalements, agents]);
+      });
+      
+      console.log("📊 Agent stats calculées:", agentStats);
+      
+      // Fusionner avec la liste des agents
+      const agentsAvecStats = agents.map(agent => ({
+        ...agent,
+        signalementsTraites: agentStats[agent.email]?.traites || 0,
+        signalementsEnCours: agentStats[agent.email]?.enCours || 0,
+        signalementsResolus: agentStats[agent.email]?.resolus || 0,
+        signalementsEnAttente: agentStats[agent.email]?.enAttente || 0
+      }));
+      
+      console.log("👥 Agents avec stats:", agentsAvecStats);
+      setAgentsWithStats(agentsAvecStats);
+      
+      // Mettre à jour le nombre d'agents actifs
+      const agentsActifsCount = agentsAvecStats.filter(a => a.signalementsTraites > 0).length;
+      setStats(prev => ({ ...prev, agentsActifs: agentsActifsCount || agents.length }));
+    }
+  }, [signalements, agents]);
 
   const fetchDashboardData = async () => {
   setIsLoading(true);
@@ -361,6 +363,50 @@ useEffect(() => {
     return labels[statut] || statut;
   };
 
+  // Ouvrir le modal d'assignation
+  const openAssignModal = (signalement) => {
+    setSelectedSignalement(signalement);
+    setSelectedAgent("");
+    setShowAssignModal(true);
+  };
+
+  // Assigner un signalement à un agent
+  const assignerSignalement = async () => {
+    if (!selectedAgent) {
+      alert("Veuillez sélectionner un agent");
+      return;
+    }
+
+    setIsAssigning(true);
+    try {
+      const response = await fetch(`http://localhost:8081/api/signalements/${selectedSignalement.id}/assigner`, {
+        method: "PUT",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          agentEmail: selectedAgent,
+          agentId: agents.find(a => a.email === selectedAgent)?.id
+        })
+      });
+
+      if (response.ok) {
+        alert(`✅ Signalement assigné à ${agents.find(a => a.email === selectedAgent)?.nom}`);
+        setShowAssignModal(false);
+        fetchDashboardData(); // Rafraîchir les données
+      } else {
+        const error = await response.json();
+        alert("❌ Erreur: " + (error.error || "Impossible d'assigner"));
+      }
+    } catch (error) {
+      console.error("Erreur assignation:", error);
+      alert("❌ Erreur réseau");
+    } finally {
+      setIsAssigning(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
@@ -564,7 +610,15 @@ useEffect(() => {
                 <div key={signalement.id} className="p-3 bg-red-500/10 rounded-xl border border-red-500/30">
                   <p className="text-white font-medium text-sm">{signalement.titre || "Sans titre"}</p>
                   <p className="text-white/50 text-xs mt-1 line-clamp-2">{signalement.description}</p>
-                  <div className="flex justify-between items-center mt-2"><span className="text-red-400 text-xs">⚠️ En attente</span><button className="text-white/50 hover:text-white text-xs">Assigner →</button></div>
+                  <div className="flex justify-between items-center mt-2">
+                    <span className="text-red-400 text-xs">⚠️ En attente</span>
+                    <button 
+                      onClick={() => openAssignModal(signalement)}
+                      className="text-white/50 hover:text-white text-xs"
+                    >
+                      Assigner →
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -596,6 +650,66 @@ useEffect(() => {
           </div>
         </div>
       </div>
+
+      {/* MODAL D'ASSIGNATION DES SIGNALEMENTS */}
+      {showAssignModal && selectedSignalement && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#1e1f22] rounded-2xl w-full max-w-md p-6 border border-white/20">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-white">👤 Assigner un agent</h3>
+              <button 
+                onClick={() => setShowAssignModal(false)} 
+                className="text-white/50 hover:text-white transition"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="mb-4 p-3 bg-white/5 rounded-xl">
+              <p className="text-white/60 text-sm mb-1">Signalement :</p>
+              <p className="text-white font-medium">{selectedSignalement.titre || "Sans titre"}</p>
+              <p className="text-white/40 text-sm mt-1 line-clamp-2">{selectedSignalement.description}</p>
+            </div>
+
+            <div className="mb-6">
+              <label className="text-white/70 text-sm block mb-2">Choisir un agent :</label>
+              <select
+                value={selectedAgent}
+                onChange={(e) => setSelectedAgent(e.target.value)}
+                className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500 transition"
+              >
+                <option value="" className="bg-slate-800">-- Sélectionner un agent --</option>
+                {agents.filter(a => a.role === "AGENT").map((agent) => (
+                  <option key={agent.id} value={agent.email} className="bg-slate-800">
+                    {agent.nom} ({agent.email}) - {agent.signalementsTraites || 0} signalements traités
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowAssignModal(false)}
+                className="flex-1 bg-white/10 hover:bg-white/20 text-white py-2.5 rounded-xl transition"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={assignerSignalement}
+                disabled={isAssigning || !selectedAgent}
+                className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white py-2.5 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 transition"
+              >
+                {isAssigning ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <UserPlus size={16} />
+                )}
+                {isAssigning ? "Assignation..." : "Assigner"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

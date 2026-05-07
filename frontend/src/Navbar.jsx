@@ -333,32 +333,38 @@ export default function Navbar() {
                           <p className="text-white/40 text-sm">Aucune notification</p>
                         </div>
                       ) : (
-                        notifications.map(notif => (
-                          <div 
-                            key={notif.id} 
-                            onClick={() => {
-                              markAsRead(notif.id);
-                              if (notif.signalementId) {
-                                navigate(`/signalement/${notif.signalementId}`);
-                              } else if (notif.lien) {
-                                navigate(notif.lien);
-                              }
-                              setShowNotifications(false);
-                            }}
-                            className={`p-3 border-b border-white/5 hover:bg-white/5 transition cursor-pointer ${!notif.lu ? 'bg-emerald-500/5 border-l-2 border-l-emerald-500' : ''}`}
-                          >
-                            <div className="flex items-start gap-2">
-                              {getNotificationIcon(notif.type)}
-                              <div className="flex-1">
-                                <p className="text-white/80 text-sm font-medium">{notif.title}</p>
-                                <p className="text-white/60 text-xs mt-0.5">{notif.message}</p>
-                                <p className="text-white/30 text-[10px] mt-1">
-                                  {new Date(notif.dateCreation).toLocaleString()}
-                                </p>
-                              </div>
+                      notifications.map(notif => (
+                        <div 
+                          key={notif.id} 
+                          onClick={() => {
+                            markAsRead(notif.id);
+                            if (notif.signalementId) {
+                              navigate(`/signalement/${notif.signalementId}`);
+                            } else if (notif.lien) {
+                              navigate(notif.lien);
+                            }
+                            setShowNotifications(false);
+                          }}
+                          className={`p-3 border-b border-white/5 hover:bg-white/5 transition cursor-pointer ${!notif.lu ? 'bg-emerald-500/5 border-l-2 border-l-emerald-500' : ''}`}
+                        >
+                          <div className="flex items-start gap-2">
+                            {getNotificationIcon(notif.type)}
+                            <div className="flex-1">
+                              <p className="text-white/80 text-sm font-medium">{notif.title}</p>
+                              <p className="text-white/60 text-xs mt-0.5">{notif.message}</p>
+                              <p className="text-white/30 text-[10px] mt-1">
+                                {new Date(notif.dateCreation).toLocaleString()}
+                              </p>
                             </div>
+                            {/* 👇 AJOUTEZ CETTE PARTIE - Icône "vrai" pour les lues */}
+                            {notif.lu && (
+                              <div className="flex-shrink-0">
+                                <CheckCircle size={16} className="text-emerald-500" />
+                              </div>
+                            )}
                           </div>
-                        ))
+                        </div>
+                      ))
                       )}
                     </div>
                   </div>

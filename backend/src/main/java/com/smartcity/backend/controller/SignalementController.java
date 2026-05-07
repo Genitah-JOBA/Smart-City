@@ -10,7 +10,7 @@ import com.smartcity.backend.repository.SignalementRepository;
 import com.smartcity.backend.repository.UtilisateurRepository;
 import com.smartcity.backend.repository.HistoriqueStatutRepository;
 import com.smartcity.backend.repository.AssignationRepository;
-import com.smartcity.backend.service.NotificationService;  // ✅ AJOUTER CET IMPORT
+import com.smartcity.backend.service.NotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -56,7 +56,6 @@ public class SignalementController {
 
         Signalement saved = signalementRepository.save(signalement);
         
-        // 🔔 ENVOYER DES NOTIFICATIONS
         try {
             // Notifier tous les agents
             List<Utilisateur> agents = utilisateurRepository.findByRole("AGENT");
@@ -170,6 +169,7 @@ public class SignalementController {
             String ancienStatut = signalement.getStatut();
             String ancienAgent = signalement.getAgentNom();
             
+            // Déterminer si on assigne un agent (Admin assigne un agent spécifique)
             if (("EN_COURS".equals(nouveauStatut) || "RESOLU".equals(nouveauStatut)) 
                     && !ancienStatut.equals(nouveauStatut)) {
                 
@@ -181,28 +181,31 @@ public class SignalementController {
                         signalement.setAgentEmail(agent.getEmail());
                         signalement.setAgentNom(agent.getNom());
                         
-                        // 🔔 NOTIFIER L'AGENT ASSIGNÉ
+                        // 🔔 NOTIFIER L'AGENT ASSIGNÉ (avec signalementId)
                         notificationService.createNotification(
                             agent.getEmail(),
                             "✅ Signalement assigné",
                             "Le signalement #" + id + " vous a été assigné: " + signalement.getTitre(),
                             "ASSIGNATION",
-                            "/agent/signalements-assignes"
+                            "/agent/signalements-assignes",
+                            id.longValue()
                         );
                     }
                 } 
                 else if ("AGENT".equals(role)) {
+                    // Un agent prend le signalement (auto-assignation)
                     signalement.setAgentId(currentUser.getId().longValue());
                     signalement.setAgentEmail(currentUser.getEmail());
                     signalement.setAgentNom(currentUser.getNom());
                     
-                    // 🔔 NOTIFIER L'AGENT (lui-même)
+                    // 🔔 NOTIFIER L'AGENT (lui-même - avec signalementId)
                     notificationService.createNotification(
                         currentUser.getEmail(),
                         "✅ Signalement assigné",
-                        "Le signalement #" + id + " vous a été assigné automatiquement.",
+                        "Le signalement #" + id + " vous a été assigné automatiquement: " + signalement.getTitre(),
                         "ASSIGNATION",
-                        "/agent/signalements-assignes"
+                        "/agent/signalements-assignes",
+                        id.longValue()
                     );
                 }
             }
@@ -226,7 +229,8 @@ public class SignalementController {
                     "🔄 Mise à jour de votre signalement",
                     "Votre signalement #" + id + " " + messageStatut,
                     "CHANGEMENT_STATUS",
-                    "/mes-signalements"
+                    "/mes-signalements",
+                    id.longValue()
                 );
             }
             
@@ -247,6 +251,7 @@ public class SignalementController {
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.status(500).body("Erreur: " + e.getMessage());
         }
     }
@@ -276,7 +281,10 @@ public class SignalementController {
                 return ResponseEntity.badRequest().body("L'utilisateur sélectionné n'est pas un agent");
             }
             
-            String ancienAgent = signalement.getAgentNom();
+            // Changer le statut en "EN_COURS" si nécessaire
+            if ("EN_ATTENTE".equals(signalement.getStatut())) {
+                signalement.setStatut("EN_COURS");
+            }
             
             signalement.setAgentId(agent.getId().longValue());
             signalement.setAgentEmail(agent.getEmail());
@@ -284,23 +292,27 @@ public class SignalementController {
             
             signalementRepository.save(signalement);
             
-            // 🔔 NOTIFIER LE NOUVEL AGENT
+            // 🔔 NOTIFIER LE NOUVEL AGENT (avec signalementId)
             notificationService.createNotification(
                 agent.getEmail(),
                 "✅ Nouvelle assignation",
                 "Le signalement #" + id + " vous a été assigné: " + signalement.getTitre(),
                 "ASSIGNATION",
-                "/agent/signalements-assignes"
+                "/agent/signalements-assignes",
+                id.longValue()
             );
             
-            // 🔔 NOTIFIER LE CITOYEN
-            notificationService.createNotification(
-                signalement.getUtilisateur().getEmail(),
-                "👤 Agent assigné",
-                "Un agent a été assigné à votre signalement #" + id + " : " + agent.getNom(),
-                "AGENT_ASSIGNE",
-                "/mes-signalements"
-            );
+            // 🔔 NOTIFIER LE CITOYEN (avec signalementId)
+            if (signalement.getUtilisateur() != null) {
+                notificationService.createNotification(
+                    signalement.getUtilisateur().getEmail(),
+                    "👤 Agent assigné",
+                    "Un agent a été assigné à votre signalement #" + id + " : " + agent.getNom(),
+                    "AGENT_ASSIGNE",
+                    "/mes-signalements",
+                    id.longValue()
+                );
+            }
             
             Map<String, Object> response = new HashMap<>();
             response.put("message", "Agent assigné avec succès");
@@ -310,6 +322,7 @@ public class SignalementController {
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.status(500).body("Erreur: " + e.getMessage());
         }
     }

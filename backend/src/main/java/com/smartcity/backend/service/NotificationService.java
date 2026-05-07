@@ -1,7 +1,7 @@
 package com.smartcity.backend.service;
 
 import com.smartcity.backend.model.Notification;
-import com.smartcity.backend.model.Signalement;  // ✅ Correction: un seul 's'
+import com.smartcity.backend.model.Signalement;
 import com.smartcity.backend.model.Utilisateur;
 import com.smartcity.backend.repository.NotificationRepository;
 import com.smartcity.backend.repository.UtilisateurRepository;
@@ -19,14 +19,20 @@ public class NotificationService {
     @Autowired
     private UtilisateurRepository utilisateurRepository;
 
-    // 🔔 Créer une notification pour un utilisateur spécifique
+    // ✅ VERSION 1 : Sans signalementId (pour compatibilité)
     public void createNotification(String userEmail, String title, String message, String type, String lien) {
+        createNotification(userEmail, title, message, type, lien, null);
+    }
+
+    // ✅ VERSION 2 : Avec signalementId (pour la redirection)
+    public void createNotification(String userEmail, String title, String message, String type, String lien, Long signalementId) {
         Notification notif = new Notification();
         notif.setUserEmail(userEmail);
         notif.setTitle(title);
         notif.setMessage(message);
         notif.setType(type);
         notif.setLien(lien);
+        notif.setSignalementId(signalementId);
         notif.setLu(false);
         notif.setDateCreation(LocalDateTime.now());
         
@@ -36,7 +42,6 @@ public class NotificationService {
 
     // 🔔 Notification quand un nouveau signalement est créé
     public void notifierNouveauSignalement(Signalement signalement) {
-        // Notifier tous les agents
         List<Utilisateur> agents = utilisateurRepository.findByRole("AGENT");
         for (Utilisateur agent : agents) {
             createNotification(
@@ -48,7 +53,6 @@ public class NotificationService {
             );
         }
         
-        // Notifier aussi l'admin
         List<Utilisateur> admins = utilisateurRepository.findByRole("ADMIN");
         for (Utilisateur admin : admins) {
             createNotification(
@@ -68,29 +72,30 @@ public class NotificationService {
             "✅ Signalement assigné",
             "Le signalement #" + signalement.getId() + " vous a été assigné: " + signalement.getTitre(),
             "ASSIGNATION",
-            "/agent/signalements-assignes"
+            "/agent/signalements-assignes",
+            signalement.getId().longValue()  // ✅ AVEC signalementId
         );
     }
 
     // 🔔 Notification quand le statut d'un signalement change
     public void notifierChangementStatus(Signalement signalement, String ancienStatut, String nouveauStatut) {
-        // Notifier le citoyen qui a créé le signalement
         createNotification(
             signalement.getUtilisateur().getEmail(),
             "🔄 Statut mis à jour",
             "Votre signalement #" + signalement.getId() + " est passé de " + ancienStatut + " à " + nouveauStatut,
             "CHANGEMENT_STATUS",
-            "/mes-signalements"
+            "/mes-signalements",
+            signalement.getId().longValue()
         );
         
-        // Notifier l'agent assigné si différent
         if (signalement.getAgentEmail() != null && !signalement.getAgentEmail().equals(signalement.getUtilisateur().getEmail())) {
             createNotification(
                 signalement.getAgentEmail(),
                 "🔄 Statut mis à jour",
                 "Le signalement #" + signalement.getId() + " a changé de statut: " + nouveauStatut,
                 "CHANGEMENT_STATUS",
-                "/agent/signalements-assignes"
+                "/agent/signalements-assignes",
+                signalement.getId().longValue()
             );
         }
     }
@@ -102,11 +107,12 @@ public class NotificationService {
             "🎉 Signalement résolu",
             "Votre signalement #" + signalement.getId() + " a été marqué comme résolu. Merci pour votre contribution !",
             "SIGNALEMENT_RESOLU",
-            "/mes-signalements"
+            "/mes-signalements",
+            signalement.getId().longValue()
         );
     }
 
-    // 🔔 Notification de bienvenue pour un nouvel utilisateur
+    // 🔔 Notification de bienvenue
     public void notifierBienvenue(Utilisateur user) {
         createNotification(
             user.getEmail(),
@@ -117,7 +123,7 @@ public class NotificationService {
         );
     }
 
-    // 🔔 Notification pour tous les utilisateurs (ex: alerte générale)
+    // 🔔 Notification pour tous
     public void notifierTous(String title, String message, String type) {
         List<Utilisateur> allUsers = utilisateurRepository.findAll();
         for (Utilisateur user : allUsers) {
@@ -125,12 +131,10 @@ public class NotificationService {
         }
     }
 
-    // 🔔 Récupérer les non lues d'un utilisateur
     public long getUnreadCount(String userEmail) {
         return notificationRepository.countByUserEmailAndLuFalse(userEmail);
     }
 
-    // 🔔 Récupérer toutes les notifications d'un utilisateur
     public List<Notification> getUserNotifications(String userEmail) {
         return notificationRepository.findByUserEmailOrderByDateCreationDesc(userEmail);
     }
