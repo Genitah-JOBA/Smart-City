@@ -5,7 +5,7 @@ import {
   Shield, Bell, Settings, PlusCircle, LayoutDashboard, 
   ClipboardList, Wrench, Users, BarChart3, ChevronDown,
   CheckCircle, Clock, MessageSquare, Loader2, UserCheck,
-  Share2  // ← AJOUTEZ CETTE LIGNE
+  Share2
 } from "lucide-react";
 
 export default function Navbar() {
@@ -18,7 +18,6 @@ export default function Navbar() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   
-  // États pour les notifications
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
@@ -27,14 +26,13 @@ export default function Navbar() {
   const location = useLocation();
   const token = localStorage.getItem("token");
 
-  // Détecter le scroll
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Récupérer les infos utilisateur
+  // Récupération des infos users
   useEffect(() => {
     if (token) {
       try {
@@ -52,7 +50,7 @@ export default function Navbar() {
     }
   }, [token]);
 
-  // 🔥 FONCTION PRINCIPALE : Récupérer les notifications depuis le BACKEND UNIQUEMENT
+  // Récupération des notifications
   const fetchNotifications = async () => {
     if (!token) {
       console.log("⏭️ Pas de token");
@@ -90,7 +88,7 @@ export default function Navbar() {
     }
   };
 
-  // 🔥 Marquer une notification comme lue (UNIQUEMENT BACKEND)
+  // Marquer une notification comme lue
   const markAsRead = async (notificationId) => {
     try {
       const response = await fetch(`http://localhost:8081/api/notifications/${notificationId}/read`, {
@@ -113,7 +111,7 @@ export default function Navbar() {
     }
   };
 
-  // 🔥 Marquer toutes comme lues
+  // Marquer toutes comme lues
   const markAllAsRead = async () => {
     try {
       const response = await fetch("http://localhost:8081/api/notifications/read-all", {
@@ -133,7 +131,6 @@ export default function Navbar() {
     }
   };
 
-  // Obtenir l'icône selon le type de notification
   const getNotificationIcon = (type) => {
     switch(type) {
       case "NOUVEAU_SIGNALEMENT": return <AlertTriangle size={16} className="text-amber-400" />;
@@ -144,23 +141,41 @@ export default function Navbar() {
     }
   };
 
-  // 🔥 Rafraîchir les notifications périodiquement (toutes les 5 secondes)
+  const formatNotificationMessage = (notif) => {
+    const isEmailNotification = notif.type === "EMAIL" || 
+                              notif.type === "EMAIL_RECU" || 
+                              notif.title === "📧 Nouvel email reçu";
+  
+    if (isEmailNotification) {
+      let expediteur = "Quelqu'un";
+      
+      const match = notif.message.match(/^(.+?) vous a envoyé un email/);
+      if (match) {
+        expediteur = match[1];
+      }
+      
+      return `${expediteur} vous a envoyé un email. Veuillez consulter votre boîte email.`;
+    }
+    
+    return notif.message;
+  };
+
+  // Actualisation à chaque 5s
   useEffect(() => {
     if (token) {
       fetchNotifications();
       const interval = setInterval(() => {
-        console.log("🔄 Rafraîchissement automatique des notifications");
+        console.log(" Rafraîchissement automatique des notifications");
         fetchNotifications();
       }, 5000);
       return () => clearInterval(interval);
     }
   }, [token]);
 
-  // 🔥 Rafraîchir quand la fenêtre devient visible (onglet réactivé)
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (!document.hidden && token) {
-        console.log("👁️ Onglet réactivé, rafraîchissement des notifications");
+        console.log(" Onglet réactivé, rafraîchissement des notifications");
         fetchNotifications();
       }
     };
@@ -216,7 +231,6 @@ export default function Navbar() {
     return "SmartCity";
   };
 
-  // Fermer les menus au clic en dehors
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (showUserMenu && !event.target.closest('.user-menu')) setShowUserMenu(false);
@@ -251,8 +265,6 @@ export default function Navbar() {
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled ? "bg-slate-900/80 backdrop-blur-2xl shadow-2xl border-b border-white/10" : "bg-slate-900/90"}`}>
         <div className="px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            
-            {/* Logo */}
             <Link to={userRole === "ADMIN" ? "/admin/problemes" : userRole === "AGENT" ? "/agent/dashboard" : "/signalements"} className="group relative flex items-center gap-3">
               <div className="relative">
                 <div className="absolute inset-0 bg-emerald-500 rounded-xl blur-lg opacity-50 group-hover:opacity-75 transition"></div>
@@ -290,7 +302,7 @@ export default function Navbar() {
                   onClick={() => {
                     setShowNotifications(!showNotifications);
                     if (!showNotifications) {
-                      fetchNotifications(); // Rafraîchir quand on ouvre
+                      fetchNotifications();
                     }
                   }}
                   className="relative p-2 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-all duration-300"
@@ -303,7 +315,6 @@ export default function Navbar() {
                   )}
                 </button>
                 
-                {/* Dropdown notifications */}
                 {showNotifications && (
                   <div className="absolute right-0 mt-2 w-80 bg-slate-800/95 backdrop-blur-xl rounded-2xl border border-white/20 shadow-2xl overflow-hidden z-50">
                     <div className="p-3 border-b border-white/10 flex justify-between items-center">
@@ -313,7 +324,7 @@ export default function Navbar() {
                           onClick={fetchNotifications} 
                           className="text-xs text-emerald-400 hover:text-emerald-300"
                         >
-                          🔄 Rafraîchir
+                          Rafraîchir
                         </button>
                         {notifications.length > 0 && (
                           <button onClick={markAllAsRead} className="text-xs text-emerald-400 hover:text-emerald-300">
@@ -338,11 +349,35 @@ export default function Navbar() {
                           key={notif.id} 
                           onClick={() => {
                             markAsRead(notif.id);
-                            if (notif.signalementId) {
+                            
+                            if (notif.type === "ASSIGNATION" && userRole === "AGENT") {
+                              if (notif.signalementId) {
+                                navigate(`/signalement/${notif.signalementId}`);
+                              } else {
+                                 navigate("/agent/signalements-assignes");
+                              }
+                            }
+                            
+                            else if (notif.type === "NOUVEAU_SIGNALEMENT" && userRole === "ADMIN") {
+                              navigate("/admin/signalement");
+                            }
+                            
+                            else if (notif.signalementId) {
                               navigate(`/signalement/${notif.signalementId}`);
-                            } else if (notif.lien) {
+                            }
+                            
+                            else if (notif.lien) {
                               navigate(notif.lien);
                             }
+                            
+                            else if (userRole === "AGENT") {
+                              navigate("/agent/signalements-assignes");
+                            } else if (userRole === "ADMIN") {
+                              navigate("/admin/signalement");
+                            } else {
+                              navigate("/signalements");
+                            }
+                            
                             setShowNotifications(false);
                           }}
                           className={`p-3 border-b border-white/5 hover:bg-white/5 transition cursor-pointer ${!notif.lu ? 'bg-emerald-500/5 border-l-2 border-l-emerald-500' : ''}`}
@@ -351,12 +386,11 @@ export default function Navbar() {
                             {getNotificationIcon(notif.type)}
                             <div className="flex-1">
                               <p className="text-white/80 text-sm font-medium">{notif.title}</p>
-                              <p className="text-white/60 text-xs mt-0.5">{notif.message}</p>
+                              <p className="text-white/60 text-xs mt-0.5">{formatNotificationMessage(notif)}</p>
                               <p className="text-white/30 text-[10px] mt-1">
                                 {new Date(notif.dateCreation).toLocaleString()}
                               </p>
                             </div>
-                            {/* 👇 AJOUTEZ CETTE PARTIE - Icône "vrai" pour les lues */}
                             {notif.lu && (
                               <div className="flex-shrink-0">
                                 <CheckCircle size={16} className="text-emerald-500" />
@@ -370,8 +404,7 @@ export default function Navbar() {
                   </div>
                 )}
               </div>
-
-              {/* User Profile - reste identique */}
+              
               <div className="relative user-menu">
                 <button onClick={() => setShowUserMenu(!showUserMenu)} className="flex items-center gap-3 pl-3 border-l border-white/20 hover:opacity-80 transition">
                   <div className="relative group">
@@ -399,14 +432,13 @@ export default function Navbar() {
               </button>
             </div>
 
-            {/* Mobile Menu Button - reste identique */}
             <button onClick={() => setIsOpen(!isOpen)} className="md:hidden relative w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center hover:bg-white/20 transition">
               {isOpen ? <X size={20} className="text-white" /> : <Menu size={20} className="text-white" />}
             </button>
           </div>
         </div>
 
-        {/* Mobile Navigation - reste identique */}
+        {/* Mobile Navigation */}
         <div className={`md:hidden fixed inset-x-0 top-16 bg-slate-900/95 backdrop-blur-2xl border-b border-white/10 transition-all duration-400 overflow-hidden shadow-2xl ${isOpen ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"}`}>
           <div className="p-4 space-y-2">
             {navLinks.map((link) => {

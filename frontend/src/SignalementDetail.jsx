@@ -4,7 +4,8 @@ import {
   MapPin, Clock, MessageCircle, Share2, 
   Construction, Lightbulb, Trash2, Droplets, TreePine, 
   Shield, HelpCircle, X, ChevronLeft, ChevronRight, Image,
-  AlertTriangle, PlayCircle, Send, CheckCircle2, ArrowLeft
+  AlertTriangle, PlayCircle, Send, CheckCircle2, ArrowLeft,
+  CheckCircle, Loader2, Edit2
 } from "lucide-react";
 
 export default function SignalementDetail() {
@@ -16,10 +17,48 @@ export default function SignalementDetail() {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
   const [shares, setShares] = useState([]);
+  const [isUpdatingStatut, setIsUpdatingStatut] = useState(false);
+  const [showStatutModal, setShowStatutModal] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: "", type: "success" });
   
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const userRole = localStorage.getItem("userRole");
+
+  const showToast = (message, type = "success") => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ show: false, message: "", type: "success" }), 3000);
+  };
+
+  const updateStatut = async (nouveauStatut) => {
+    setIsUpdatingStatut(true);
+    try {
+      const response = await fetch(`http://localhost:8081/api/signalements/${id}/statut`, {
+        method: "PUT",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ statut: nouveauStatut })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        showToast(`✅ Statut changé en ${getStatusText(nouveauStatut)} avec succès !`, "success");
+        fetchSignalementDetail();
+        setShowStatutModal(false);
+      } else {
+        const error = await response.json();
+        showToast(`❌ Erreur: ${error.error || "Impossible de changer le statut"}`, "error");
+      }
+    } catch (error) {
+      console.error("Erreur mise à jour statut:", error);
+      showToast("❌ Erreur réseau. Veuillez réessayer.", "error");
+    } finally {
+      setIsUpdatingStatut(false);
+    }
+  };
 
   useEffect(() => {
     if (!token) {
@@ -40,11 +79,12 @@ export default function SignalementDetail() {
         const data = await response.json();
         setSignalement(data);
       } else if (response.status === 404) {
-        console.error("Signalement non trouvé");
+        showToast("Signalement non trouvé", "error");
         navigate("/signalements");
       }
     } catch (error) {
       console.error("Erreur chargement signalement:", error);
+      showToast("Erreur de chargement", "error");
     } finally {
       setIsLoading(false);
     }
@@ -82,12 +122,12 @@ export default function SignalementDetail() {
     const updatedComments = [...comments, comment];
     setComments(updatedComments);
     
-    // Sauvegarder dans localStorage
     const savedComments = JSON.parse(localStorage.getItem("signalements_comments") || "{}");
     savedComments[id] = updatedComments;
     localStorage.setItem("signalements_comments", JSON.stringify(savedComments));
     
     setNewComment("");
+    showToast("💬 Commentaire ajouté !", "success");
   };
 
   const getRelativeTime = (dateString) => {
@@ -135,6 +175,15 @@ export default function SignalementDetail() {
     return texts[statut] || statut;
   };
 
+  const getStatusColor = (statut) => {
+    const colors = {
+      'EN_ATTENTE': { bg: 'rgba(245, 158, 11, 0.2)', border: 'rgba(245, 158, 11, 0.3)', text: '#fbbf24' },
+      'EN_COURS': { bg: 'rgba(59, 130, 246, 0.2)', border: 'rgba(59, 130, 246, 0.3)', text: '#60a5fa' },
+      'RESOLU': { bg: 'rgba(16, 185, 129, 0.2)', border: 'rgba(16, 185, 129, 0.3)', text: '#34d399' }
+    };
+    return colors[statut] || colors['EN_ATTENTE'];
+  };
+
   const openImageViewer = (images, startIndex = 0) => {
     setSelectedImages(images);
     setCurrentImageIndex(startIndex);
@@ -149,7 +198,7 @@ export default function SignalementDetail() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-10 h-10 border-3 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <Loader2 className="w-10 h-10 text-emerald-500 animate-spin mx-auto mb-4" />
           <p className="text-gray-400">Chargement du signalement...</p>
         </div>
       </div>
@@ -160,9 +209,10 @@ export default function SignalementDetail() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
         <div className="text-center">
+          <AlertTriangle size={48} className="text-amber-500 mx-auto mb-4" />
           <p className="text-gray-400">Signalement non trouvé</p>
-          <button onClick={() => navigate("/signalements")} className="mt-4 text-blue-400 hover:text-blue-300">
-            Retour aux signalements
+          <button onClick={() => navigate("/signalements")} className="mt-4 text-blue-400 hover:text-blue-300 flex items-center gap-2 mx-auto">
+            <ArrowLeft size={16} /> Retour aux signalements
           </button>
         </div>
       </div>
@@ -171,23 +221,36 @@ export default function SignalementDetail() {
 
   const TypeIcon = getTypeIcon(signalement.type);
   const StatusIcon = getStatusIcon(signalement.statut);
+  const statusColor = getStatusColor(signalement.statut);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className="fixed top-20 right-4 z-50 animate-slide-in">
+          <div className={`flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg ${
+            toast.type === "success" ? "bg-emerald-500/90" : "bg-red-500/90"
+          } text-white backdrop-blur-sm`}>
+            {toast.type === "success" ? <CheckCircle size={18} /> : <AlertTriangle size={18} />}
+            <span className="text-sm">{toast.message}</span>
+          </div>
+        </div>
+      )}
+
       <div className="container mx-auto max-w-3xl px-4 py-6">
         {/* Bouton retour */}
         <button 
           onClick={() => navigate("/signalements")}
-          className="mb-4 flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+          className="mb-4 flex items-center gap-2 text-gray-400 hover:text-white transition-colors group"
         >
-          <ArrowLeft size={20} />
+          <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
           Retour aux signalements
         </button>
 
         {/* Signalement détaillé */}
         <article className="bg-[#242526] rounded-xl shadow-lg overflow-hidden">
-          {/* En-tête */}
           <div className="p-5">
+            {/* En-tête */}
             <div className="flex items-center gap-3 mb-4">
               <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-emerald-500 flex items-center justify-center text-white font-bold text-lg">
                 {(signalement.citoyen?.nom?.[0] || signalement.utilisateur?.nom?.[0] || 'C').toUpperCase()}
@@ -204,7 +267,7 @@ export default function SignalementDetail() {
                 </div>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="text-xs text-gray-400 flex items-center gap-1">
-                    <MapPin size={12} /> {signalement.ville || signalement.commune || 'Localisation'}
+                    <MapPin size={12} /> {signalement.address || signalement.ville || signalement.commune || "Localisation non spécifiée"}
                   </span>
                 </div>
               </div>
@@ -215,9 +278,27 @@ export default function SignalementDetail() {
               <span className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-full border bg-blue-500/20 border-blue-500/30 text-blue-400">
                 <TypeIcon size={14} /> {signalement.type}
               </span>
-              <span className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-full border bg-amber-500/20 border-amber-500/30 text-amber-400">
-                <StatusIcon size={14} /> {getStatusText(signalement.statut)}
-              </span>
+              
+              {/* Badge statut cliquable pour les agents */}
+              {userRole === "AGENT" ? (
+                <button
+                  onClick={() => setShowStatutModal(true)}
+                  className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-full border transition-all hover:scale-105 cursor-pointer"
+                  style={{
+                    background: statusColor.bg,
+                    borderColor: statusColor.border,
+                    color: statusColor.text
+                  }}
+                >
+                  <StatusIcon size={14} />
+                  {getStatusText(signalement.statut)}
+                  <Edit2 size={10} className="ml-1" />
+                </button>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-full border bg-amber-500/20 border-amber-500/30 text-amber-400">
+                  <StatusIcon size={14} /> {getStatusText(signalement.statut)}
+                </span>
+              )}
             </div>
 
             {/* Titre et description */}
@@ -235,6 +316,9 @@ export default function SignalementDetail() {
                       alt={`${signalement.titre} - image ${index + 1}`} 
                       onError={(e) => { e.target.src = "https://via.placeholder.com/400x300/242526/808080?text=Image+non+disponible"; }}
                     />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all rounded-lg flex items-center justify-center">
+                      <Image className="text-white opacity-0 group-hover:opacity-100 transition" size={32} />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -243,8 +327,9 @@ export default function SignalementDetail() {
             {/* Statistiques de partage */}
             {shares.length > 0 && (
               <div className="mt-4 pt-3 border-t border-gray-700/50">
-                <p className="text-gray-400 text-sm">
-                  📤 Partagé avec {shares.length} personne{shares.length > 1 ? 's' : ''}
+                <p className="text-gray-400 text-sm flex items-center gap-1.5">
+                  <Share2 size={14} className="text-purple-400" />
+                  Partagé avec {shares.length} personne{shares.length > 1 ? 's' : ''}
                 </p>
               </div>
             )}
@@ -308,25 +393,144 @@ export default function SignalementDetail() {
       {/* Lightbox pour les images */}
       {selectedImages && (
         <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center" onClick={closeImageViewer}>
-          <button className="absolute top-4 right-4 text-white hover:text-gray-300 p-2 rounded-full bg-black/50 hover:bg-black/70" onClick={closeImageViewer}>
+          <button className="absolute top-4 right-4 text-white hover:text-gray-300 p-2 rounded-full bg-black/50 hover:bg-black/70 transition" onClick={closeImageViewer}>
             <X size={24} />
           </button>
           <div className="absolute top-4 left-4 text-white text-sm bg-black/50 px-3 py-1.5 rounded-full">
             {currentImageIndex + 1} / {selectedImages.length}
           </div>
           {currentImageIndex > 0 && (
-            <button className="absolute left-4 text-white hover:text-gray-300 p-3 rounded-full bg-black/50 hover:bg-black/70" onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(prev => prev - 1); }}>
+            <button className="absolute left-4 text-white hover:text-gray-300 p-3 rounded-full bg-black/50 hover:bg-black/70 transition" onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(prev => prev - 1); }}>
               <ChevronLeft size={32} />
             </button>
           )}
           {currentImageIndex < selectedImages.length - 1 && (
-            <button className="absolute right-4 text-white hover:text-gray-300 p-3 rounded-full bg-black/50 hover:bg-black/70" onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(prev => prev + 1); }}>
+            <button className="absolute right-4 text-white hover:text-gray-300 p-3 rounded-full bg-black/50 hover:bg-black/70 transition" onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(prev => prev + 1); }}>
               <ChevronRight size={32} />
             </button>
           )}
           <img src={selectedImages[currentImageIndex]?.url} className="max-w-[90vw] max-h-[90vh] object-contain" alt="Image" onClick={(e) => e.stopPropagation()} />
         </div>
       )}
+
+      {/* Modal de changement de statut */}
+      {showStatutModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-[#242526] rounded-2xl w-full max-w-md p-6 border border-white/20 animate-modal-pop">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-white">🔄 Changer le statut</h3>
+              <button 
+                onClick={() => setShowStatutModal(false)} 
+                className="text-white/50 hover:text-white transition"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="mb-4 p-3 bg-white/5 rounded-xl">
+              <p className="text-white/60 text-sm mb-1">Signalement :</p>
+              <p className="text-white font-medium">{signalement?.titre}</p>
+              <p className="text-white/40 text-sm mt-1">Statut actuel : 
+                <span className={`ml-1 ${statusColor.text}`}>{getStatusText(signalement?.statut)}</span>
+              </p>
+            </div>
+
+            <div className="space-y-3 mb-6">
+              <button
+                onClick={() => updateStatut("EN_ATTENTE")}
+                disabled={isUpdatingStatut}
+                className={`w-full flex items-center justify-between p-3 rounded-xl transition ${
+                  signalement?.statut === "EN_ATTENTE" 
+                    ? "bg-amber-500/20 border border-amber-500/50" 
+                    : "bg-white/5 hover:bg-white/10"
+                } disabled:opacity-50`}
+              >
+                <div className="flex items-center gap-3">
+                  <AlertTriangle size={20} className="text-amber-400" />
+                  <span className="text-white">En attente</span>
+                </div>
+                {signalement?.statut === "EN_ATTENTE" && <CheckCircle2 size={18} className="text-emerald-400" />}
+              </button>
+
+              <button
+                onClick={() => updateStatut("EN_COURS")}
+                disabled={isUpdatingStatut}
+                className={`w-full flex items-center justify-between p-3 rounded-xl transition ${
+                  signalement?.statut === "EN_COURS" 
+                    ? "bg-blue-500/20 border border-blue-500/50" 
+                    : "bg-white/5 hover:bg-white/10"
+                } disabled:opacity-50`}
+              >
+                <div className="flex items-center gap-3">
+                  <PlayCircle size={20} className="text-blue-400" />
+                  <span className="text-white">En cours</span>
+                </div>
+                {signalement?.statut === "EN_COURS" && <CheckCircle2 size={18} className="text-emerald-400" />}
+              </button>
+
+              <button
+                onClick={() => updateStatut("RESOLU")}
+                disabled={isUpdatingStatut}
+                className={`w-full flex items-center justify-between p-3 rounded-xl transition ${
+                  signalement?.statut === "RESOLU" 
+                    ? "bg-emerald-500/20 border border-emerald-500/50" 
+                    : "bg-white/5 hover:bg-white/10"
+                } disabled:opacity-50`}
+              >
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 size={20} className="text-emerald-400" />
+                  <span className="text-white">Résolu</span>
+                </div>
+                {signalement?.statut === "RESOLU" && <CheckCircle2 size={18} className="text-emerald-400" />}
+              </button>
+            </div>
+
+            {isUpdatingStatut ? (
+              <div className="w-full flex items-center justify-center py-2.5">
+                <Loader2 className="w-5 h-5 text-emerald-500 animate-spin" />
+                <span className="ml-2 text-white/60">Mise à jour...</span>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowStatutModal(false)}
+                className="w-full bg-white/10 hover:bg-white/20 text-white py-2.5 rounded-xl transition"
+              >
+                Annuler
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes slide-in {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+        @keyframes fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes modal-pop {
+          0% { transform: scale(0.8); opacity: 0; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-slide-in {
+          animation: slide-in 0.3s ease-out;
+        }
+        .animate-fade-in {
+          animation: fade-in 0.2s ease-out;
+        }
+        .animate-modal-pop {
+          animation: modal-pop 0.3s ease-out;
+        }
+      `}</style>
     </div>
   );
 }

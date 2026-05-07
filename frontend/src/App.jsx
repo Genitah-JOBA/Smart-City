@@ -16,6 +16,7 @@ import AgentDashboard from "./AgentDashboard";
 import AgentSignalementsAssignes from "./AgentSignalementsAssignes";
 import AgentInterventions from "./AgentInterventions";
 import AgentProfil from "./AgentProfil";
+import Problemes from "./Problemes";
 
 // Pages Admin
 import AdminDashboard from "./AdminDashboard";
@@ -102,7 +103,7 @@ function App() {
         {/* Routes publiques (sans navbar et sans chat flottant) */}
         <Route path="/auth" element={<Auth />} />
         
-        {/* ========== ROUTES COMMUNES (accessible à tous les rôles) ========== */}
+        {/* ========== ROUTES COMMUNES ========== */}
         <Route 
           path="/signalement/:id" 
           element={
@@ -200,6 +201,14 @@ function App() {
           element={
             <ProtectedLayout>
               <AgentSignalementsAssignes />
+            </ProtectedLayout>
+          } 
+        />
+        <Route
+          path="/agent/problemes" 
+          element={
+            <ProtectedLayout>
+              <Problemes />
             </ProtectedLayout>
           } 
         />

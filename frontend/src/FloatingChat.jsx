@@ -125,16 +125,24 @@ export default function FloatingChat() {
         const data = await response.json();
         console.log("📩 Messages reçus:", data);
         
-        // ✅ CORRECTION CRITIQUE: S'assurer que messages est toujours un tableau
+        let allMessages = [];
         if (Array.isArray(data)) {
-          setMessages(data);
+          allMessages = data;
         } else if (data && Array.isArray(data.messages)) {
-          setMessages(data.messages);
+          allMessages = data.messages;
         } else if (data && data.length !== undefined) {
-          setMessages(data);
+          allMessages = data;
         } else {
-          setMessages([]);
+          allMessages = [];
         }
+        
+        // 🔥 FILTRAGE : Garder uniquement les messages internes (type !== "EMAIL" et type !== "EMAIL_RECU")
+        const messagesInternes = allMessages.filter(msg => 
+          msg.type !== "EMAIL" && msg.type !== "EMAIL_RECU"
+        );
+        
+        console.log(`📬 ${messagesInternes.length} messages internes affichés (${allMessages.length - messagesInternes.length} emails masqués)`);
+        setMessages(messagesInternes);
       } else {
         setMessages([]);
       }

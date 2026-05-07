@@ -59,7 +59,13 @@ export default function AgentSignalementsAssignes() {
           const data = await res.json();
           // Garder seulement les signalements EN_ATTENTE et EN_COURS
           const signalementsActifs = data.filter(s => s.statut === "EN_ATTENTE" || s.statut === "EN_COURS");
-          setSignalements(signalementsActifs);
+          
+          const signalementsTries = signalementsActifs.sort((a, b) => {
+            const priority = { "EN_ATTENTE": 0, "EN_COURS": 1 };
+            return priority[a.statut] - priority[b.statut];
+          });
+          
+          setSignalements(signalementsTries);
         } else {
           showMessage("error", "Erreur", "Impossible de charger les signalements");
         }
@@ -415,6 +421,19 @@ export default function AgentSignalementsAssignes() {
                     <div className="flex items-center gap-2 text-white/40 text-xs mb-4">
                       <MapPin size={12} />
                       <span>{s.address || s.ville || s.commune || "Localisation non spécifiée"}</span>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-white/40 text-xs mb-4">
+                      <Calendar size={12} />
+                      <span>
+                        Créé le {s.dateCreation ? new Date(s.dateCreation).toLocaleDateString('fr-FR', {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        }) : 'Date inconnue'}
+                      </span>
                     </div>
 
                     <div className="flex gap-2">

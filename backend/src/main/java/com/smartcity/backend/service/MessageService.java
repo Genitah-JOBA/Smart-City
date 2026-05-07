@@ -39,7 +39,6 @@ public class MessageService {
         Utilisateur destinataire = utilisateurRepository.findByEmail(messageDTO.getDestinataireEmail())
             .orElseThrow(() -> new RuntimeException("Destinataire non trouvé"));
         
-        // ✅ Vérifier les droits d'envoi
         boolean peutEnvoyer = false;
         
         if ("ADMIN".equals(expediteur.getRole())) {
@@ -54,21 +53,18 @@ public class MessageService {
             throw new RuntimeException("Les citoyens et agents ne peuvent envoyer des messages qu'aux administrateurs.");
         }
         
-        // Déterminer le type de message
         String messageType = messageDTO.getType();
         if (messageType == null || messageType.isEmpty()) {
             messageType = "INTERNAL";
         }
         messageType = messageType.toUpperCase();
         
-        // Créer et sauvegarder le message (sans les champs de rôle)
+        // Créer et sauvegarder le message
         Message message = new Message();
         message.setExpediteurEmail(expediteurEmail);
         message.setExpediteurNom(expediteur.getNom());
-        // ⚠️ PAS de setExpediteurRole - votre modèle n'a pas ce champ
         message.setDestinataireEmail(destinataire.getEmail());
         message.setDestinataireNom(destinataire.getNom());
-        // ⚠️ PAS de setDestinataireRole - votre modèle n'a pas ce champ
         message.setSujet(messageDTO.getSujet());
         message.setContenu(messageDTO.getContenu());
         message.setType(messageType);
@@ -77,30 +73,30 @@ public class MessageService {
         
         Message savedMessage = messageRepository.save(message);
         
-        // 🔥 CRÉER UNE NOTIFICATION DANS L'APPLICATION
+        // Création d'une notification d'email
         Notification notification = new Notification();
         notification.setUserEmail(destinataire.getEmail());
-        
+
         if ("EMAIL".equals(messageType)) {
             notification.setType("EMAIL_RECU");
-            notification.setTitle("📧 Nouvel email reçu");
-            notification.setMessage(String.format("%s vous a envoyé un email : \"%s\"", 
-                expediteur.getNom(), messageDTO.getSujet()));
+            notification.setTitle(" Nouvel email reçu");
+            notification.setMessage(String.format("%s vous a envoyé un email. Veuillez consulter votre boîte email.", 
+                expediteur.getNom()));
         } else {
             notification.setType("MESSAGE_RECU");
             notification.setTitle("💬 Nouveau message reçu");
             notification.setMessage(String.format("%s vous a envoyé un message : \"%s\"", 
                 expediteur.getNom(), messageDTO.getSujet()));
         }
-        
+
         notification.setLien("/messages");
         notification.setLu(false);
         notification.setDateCreation(LocalDateTime.now());
-        
+
         notificationRepository.save(notification);
         System.out.println("🔔 Notification créée pour " + destinataire.getEmail());
         
-        // 🔥 ENVOYER L'EMAIL RÉEL SI LE TYPE EST "EMAIL"
+        // Envoie de l'email réel
         if ("EMAIL".equals(messageType)) {
             try {
                 emailService.envoyerEmail(
@@ -112,7 +108,6 @@ public class MessageService {
                 System.out.println("📧 Email réel envoyé à " + destinataire.getEmail());
             } catch (Exception e) {
                 System.err.println("⚠️ Erreur envoi email réel, mais message sauvegardé: " + e.getMessage());
-                // On ne bloque pas l'envoi du message si l'email échoue
             }
         }
         
