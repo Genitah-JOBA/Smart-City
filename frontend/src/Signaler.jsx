@@ -62,10 +62,10 @@ export default function Signaler() {
   const [originalImages, setOriginalImages] = useState([]);
 
   const categories = [
-    { id: "VOIRIE", name: "Voirie / Routes", icon: Road, color: "from-green-800 to-green-700", iconColor: "text-green-400" },
-    { id: "ECLAIRAGE", name: "Éclairage Public", icon: Lightbulb, color: "from-green-600 to-green-500", iconColor: "text-green-400" },
-    { id: "DECHETS", name: "Déchets / Propreté", icon: Trash, color: "from-teal-600 to-teal-500", iconColor: "text-teal-400" },
-    { id: "EAU", name: "Eau / Assainissement", icon: Droplets, color: "from-green-400 to-green-300", iconColor: "text-green-400" }
+    { id: "VOIRIE", name: "Voirie / Routes", icon: Road, color: "from-green-800 to-green-400", iconColor: "text-green-400" },
+    { id: "ECLAIRAGE", name: "Éclairage Public", icon: Lightbulb, color: "from-amber-400 to-amber-300", iconColor: "text-amber-400" },
+    { id: "DECHETS", name: "Déchets / Propreté", icon: Trash, color: "from-red-500 to-red-400", iconColor: "text-red-400" },
+    { id: "EAU", name: "Eau / Assainissement", icon: Droplets, color: "from-blue-500 to-blue-400", iconColor: "text-blue-400" }
   ];
 
   // Obtenir la couleur du statut

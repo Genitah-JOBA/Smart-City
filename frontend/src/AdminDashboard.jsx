@@ -4,10 +4,57 @@ import {
   CheckCircle, Clock, MapPin, Calendar, Download,
   PlusCircle, UserPlus, Eye, MoreVertical, Search,
   Filter, Loader2, X, ChevronRight, Award, Zap,
-  FileText, FileSpreadsheet, FileJson, Printer
+  FileText, FileSpreadsheet, FileJson, Printer,
+  BarChart3, Activity, UserCheck, Crown, Target,
+  Info, AlertCircle, MessageSquare
 } from "lucide-react";
 
+import { useNavigate } from "react-router-dom"; 
+
+const MessageBox = ({ message, type, onClose }) => {
+  useEffect(() => {
+    if (onClose) {
+      const timer = setTimeout(() => {
+        onClose();
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [onClose]);
+
+  const getIcon = () => {
+    switch(type) {
+      case 'success': return <CheckCircle size={18} />;
+      case 'error': return <AlertCircle size={18} />;
+      case 'warning': return <AlertTriangle size={18} />;
+      default: return <Info size={18} />;
+    }
+  };
+
+  const getColors = () => {
+    switch(type) {
+      case 'success': return 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400';
+      case 'error': return 'bg-red-500/20 border-red-500/30 text-red-400';
+      case 'warning': return 'bg-amber-500/20 border-amber-500/30 text-amber-400';
+      default: return 'bg-blue-500/20 border-blue-500/30 text-blue-400';
+    }
+  };
+
+  return (
+    <div className={`fixed top-20 right-4 z-50 p-4 rounded-xl border backdrop-blur-xl shadow-2xl animate-slide-in-right ${getColors()}`}>
+      <div className="flex items-center gap-3">
+        {getIcon()}
+        <p className="text-sm font-medium">{message}</p>
+        <button onClick={onClose} className="ml-4 hover:opacity-70">
+          <X size={14} />
+        </button>
+      </div>
+    </div>
+  );
+};
+
 export default function AdminDashboard() {
+  const navigate = useNavigate();
+
   const [stats, setStats] = useState({
     total: 0,
     enAttente: 0,
@@ -20,6 +67,7 @@ export default function AdminDashboard() {
   
   const [signalements, setSignalements] = useState([]);
   const [derniersSignalements, setDerniersSignalements] = useState([]);
+  const [signalementsUrgents, setSignalementsUrgents] = useState([]);
   const [agents, setAgents] = useState([]);
   const [agentsWithStats, setAgentsWithStats] = useState([]);
   const [signalementsParType, setSignalementsParType] = useState([]);
@@ -32,138 +80,183 @@ export default function AdminDashboard() {
   const [isExporting, setIsExporting] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState("");
   const [isAssigning, setIsAssigning] = useState(false);
+  const [messageBox, setMessageBox] = useState(null);
   
   const token = localStorage.getItem("token");
+
+  const [showAddAgentModal, setShowAddAgentModal] = useState(false);
+  const [newAgent, setNewAgent] = useState({ nom: "", email: "", password: "" });
+  const [isAddingAgent, setIsAddingAgent] = useState(false);
+
+  const getCreationDate = (signalement) => {
+    return signalement.dateCreation || signalement.createdAt || signalement.date || new Date().toISOString();
+  };
+
+  const getLocalisation = (signalement) => {
+    return signalement.ville || signalement.address || signalement.localisation || "Non spécifiée";
+  };
+  const showMessage = (message, type = 'info') => {
+    setMessageBox({ message, type });
+  };
+
+  const hideMessage = () => {
+    setMessageBox(null);
+  };
 
   useEffect(() => {
     fetchDashboardData();
   }, [periode]);
 
-  // ✅ VERSION AMÉLIORÉE - Calcul des stats des agents
   useEffect(() => {
     if (signalements.length > 0 && agents.length > 0) {
-      // Compter les signalements par agent
-      const agentStats = {};
-      
-      signalements.forEach(signalement => {
-        // 🔥 Vérifier plusieurs possibilités pour l'agent
-        const agentEmail = signalement.agentEmail || 
-                          signalement.assignedTo || 
-                          signalement.agent?.email ||
-                          signalement.assignedAgent?.email;
+      try {
+        const agentStats = {};
         
-        // Afficher pour déboguer
-        if (signalement.statut === "EN_COURS" || signalement.statut === "RESOLU") {
-          console.log(`Signalement ${signalement.id} - Statut: ${signalement.statut} - Agent: ${agentEmail}`);
-        }
-        
-        if (agentEmail) {
-          if (!agentStats[agentEmail]) {
-            agentStats[agentEmail] = {
-              traites: 0,
-              enCours: 0,
-              resolus: 0,
-              enAttente: 0
-            };
-          }
+        signalements.forEach(signalement => {
+          // Vérification que signalement existe
+          if (!signalement) return;
           
-          // Compter selon le statut
-          if (signalement.statut === "RESOLU") {
-            agentStats[agentEmail].resolus++;
-            agentStats[agentEmail].traites++;
-          } else if (signalement.statut === "EN_COURS") {
-            agentStats[agentEmail].enCours++;
-            agentStats[agentEmail].traites++;
-          } else if (signalement.statut === "EN_ATTENTE") {
-            agentStats[agentEmail].enAttente++;
+          const agentEmail = signalement.agentEmail || 
+                            signalement.assignedTo || 
+                            signalement.agent?.email ||
+                            signalement.assignedAgent?.email;
+          
+          if (agentEmail && typeof agentEmail === 'string') {
+            if (!agentStats[agentEmail]) {
+              agentStats[agentEmail] = {
+                traites: 0,
+                enCours: 0,
+                resolus: 0,
+                enAttente: 0
+              };
+            }
+            
+            const statut = signalement.statut || "";
+            if (statut === "RESOLU") {
+              agentStats[agentEmail].resolus++;
+              agentStats[agentEmail].traites++;
+            } else if (statut === "EN_COURS") {
+              agentStats[agentEmail].enCours++;
+              agentStats[agentEmail].traites++;
+            } else if (statut === "EN_ATTENTE") {
+              agentStats[agentEmail].enAttente++;
+            }
           }
-        } else {
-          // 🔥 Si pas d'agent assigné, afficher un avertissement
-          if (signalement.statut !== "EN_ATTENTE") {
-            console.warn(`⚠️ Signalement ${signalement.id} (${signalement.statut}) n'a pas d'agent assigné!`);
-          }
-        }
-      });
-      
-      console.log("📊 Agent stats calculées:", agentStats);
-      
-      // Fusionner avec la liste des agents
-      const agentsAvecStats = agents.map(agent => ({
-        ...agent,
-        signalementsTraites: agentStats[agent.email]?.traites || 0,
-        signalementsEnCours: agentStats[agent.email]?.enCours || 0,
-        signalementsResolus: agentStats[agent.email]?.resolus || 0,
-        signalementsEnAttente: agentStats[agent.email]?.enAttente || 0
-      }));
-      
-      console.log("👥 Agents avec stats:", agentsAvecStats);
-      setAgentsWithStats(agentsAvecStats);
-      
-      // Mettre à jour le nombre d'agents actifs
-      const agentsActifsCount = agentsAvecStats.filter(a => a.signalementsTraites > 0).length;
-      setStats(prev => ({ ...prev, agentsActifs: agentsActifsCount || agents.length }));
+        });
+        
+        const agentsAvecStats = agents.map(agent => {
+          const stats = agentStats[agent.email] || { traites: 0, enCours: 0, resolus: 0, enAttente: 0 };
+          return {
+            ...agent,
+            signalementsTraites: stats.traites,
+            signalementsEnCours: stats.enCours,
+            signalementsResolus: stats.resolus,
+            signalementsEnAttente: stats.enAttente
+          };
+        });
+        
+        setAgentsWithStats(agentsAvecStats);
+        
+        const agentsActifsCount = agentsAvecStats.filter(a => a.signalementsTraites > 0).length;
+        setStats(prev => ({ 
+          ...prev, 
+          agentsActifs: agentsActifsCount || agents.length 
+        }));
+      } catch (error) {
+        console.error("❌ Erreur calcul stats agents:", error);
+      }
     }
   }, [signalements, agents]);
 
   const fetchDashboardData = async () => {
-  setIsLoading(true);
-  try {
-    const signalementsRes = await fetch("http://localhost:8081/api/signalements", {
-      headers: { "Authorization": `Bearer ${token}` }
-    });
-    
-    if (signalementsRes.ok) {
-      const data = await signalementsRes.json();
+    setIsLoading(true);
+    try {
+      console.log("🔄 Chargement des données du dashboard...");
       
-      // ✅ Déplacer les console.log ICI après la définition de data
-      console.log("🔍 Signalements reçus:", data);
-      console.log("🔍 Premier signalement:", data[0]);
-      
-      setSignalements(data);
-      
-      const total = data.length;
-      const enAttente = data.filter(s => s.statut === "EN_ATTENTE").length;
-      const enCours = data.filter(s => s.statut === "EN_COURS").length;
-      const resolus = data.filter(s => s.statut === "RESOLU").length;
-      const tauxResolution = total > 0 ? Math.round((resolus / total) * 100) : 0;
-      
-      setStats(prev => ({
-        ...prev,
-        total,
-        enAttente,
-        enCours,
-        resolus,
-        tauxResolution,
-        tempsMoyen: 2.5
-      }));
-      
-      setDerniersSignalements(data.slice(0, 5));
-      
-      const typesCount = {};
-      data.forEach(s => {
-        const type = s.type || "Autre";
-        typesCount[type] = (typesCount[type] || 0) + 1;
+      const signalementsRes = await fetch("http://localhost:8081/api/signalements", {
+        headers: { "Authorization": `Bearer ${token}` }
       });
-      setSignalementsParType(Object.entries(typesCount).map(([name, value]) => ({ name, value })));
+      
+      if (signalementsRes.ok) {
+        const data = await signalementsRes.json();
+        console.log(`📋 ${data.length} signalements récupérés`);
+        
+        setSignalements(data);
+        
+        // Calcul des stats avec sécurité
+        const total = data.length;
+        const enAttente = data.filter(s => s?.statut === "EN_ATTENTE").length;
+        const enCours = data.filter(s => s?.statut === "EN_COURS").length;
+        const resolus = data.filter(s => s?.statut === "RESOLU").length;
+        const tauxResolution = total > 0 ? Math.round((resolus / total) * 100) : 0;
+        
+        setStats(prev => ({
+          ...prev,
+          total,
+          enAttente,
+          enCours,
+          resolus,
+          tauxResolution,
+          tempsMoyen: 2.5,
+          agentsActifs: prev.agentsActifs  // Garde la valeur existante
+        }));
+        
+        // Derniers signalements (10 plus récents)
+        const tousLesSignalementsRecents = [...data]
+          .sort((a, b) => {
+            const dateA = new Date(getCreationDate(a));
+            const dateB = new Date(getCreationDate(b));
+            return dateB - dateA;
+          })
+          .slice(0, 10);
+        
+        setDerniersSignalements(tousLesSignalementsRecents);
+        
+        // Signalements urgents
+        const urgents = data.filter(s => {
+          const statut = s?.statut || "";
+          return statut === "EN_ATTENTE" || statut === "NOUVEAU" || statut === "URGENT";
+        });
+        
+        if (urgents.length > 0) {
+          showMessage(`${urgents.length} signalement(s) urgent(s) à traiter`, 'warning');
+        }
+        
+        setSignalementsUrgents(urgents);
+        
+        // Types de problèmes
+        const typesCount = {};
+        data.forEach(s => {
+          const type = s?.type || "Autre";
+          typesCount[type] = (typesCount[type] || 0) + 1;
+        });
+        setSignalementsParType(Object.entries(typesCount).map(([name, value]) => ({ name, value })));
+      } else {
+        console.error("❌ Erreur récupération signalements:", signalementsRes.status);
+        showMessage("Impossible de récupérer les signalements", 'error');
+      }
+      
+      // Récupération des agents
+      const agentsRes = await fetch("http://localhost:8081/api/users", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (agentsRes.ok) {
+        const allUsers = await agentsRes.json();
+        const agentsList = allUsers.filter(user => user?.role === "AGENT");
+        setAgents(agentsList);
+        console.log(`👥 ${agentsList.length} agents récupérés`);
+      } else {
+        console.error("❌ Erreur récupération agents:", agentsRes.status);
+      }
+      
+    } catch (error) {
+      console.error("❌ Erreur chargement dashboard:", error);
+      showMessage("Erreur lors du chargement des données", 'error');
+    } finally {
+      setIsLoading(false);
     }
-    
-    const agentsRes = await fetch("http://localhost:8081/api/users", {
-      headers: { "Authorization": `Bearer ${token}` }
-    });
-    if (agentsRes.ok) {
-      const allUsers = await agentsRes.json();
-      const agentsList = allUsers.filter(user => user.role === "AGENT");
-      setAgents(agentsList);
-    }
-    
-  } catch (error) {
-    console.error("Erreur chargement dashboard:", error);
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
   
-// 🔥 FONCTIONS D'EXPORTATION
   const exportToCSV = () => {
     const headers = ["ID", "Titre", "Description", "Type", "Statut", "Localisation", "Date création"];
     const rows = signalements.map(s => [
@@ -186,6 +279,7 @@ export default function AdminDashboard() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+    showMessage("Export CSV réussi", 'success');
   };
 
   const exportToJSON = () => {
@@ -216,6 +310,7 @@ export default function AdminDashboard() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+    showMessage("Export JSON réussi", 'success');
   };
 
   const exportToExcel = () => {
@@ -257,7 +352,7 @@ export default function AdminDashboard() {
       </tr>`;
     });
     
-    html += `</tbody></table></body></html>`;
+    html += `</tbody>}</table></body></html>`;
     
     const blob = new Blob([html], { type: "application/vnd.ms-excel" });
     const link = document.createElement("a");
@@ -268,6 +363,7 @@ export default function AdminDashboard() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+    showMessage("Export Excel réussi", 'success');
   };
 
   const exportToPDF = () => {
@@ -287,18 +383,18 @@ export default function AdminDashboard() {
       </style>
       </head>
       <body>
-        <h1>🏙️ SmartCity - Rapport des signalements</h1>
+        <h1>SmartCity - Rapport des signalements</h1>
         <p>Exporté le ${new Date().toLocaleString()}</p>
         
-        <h2>📊 Statistiques</h2>
+        <h2>Statistiques</h2>
         <div class="stat-card"><strong>Total:</strong> ${stats.total}</div>
         <div class="stat-card"><strong>En attente:</strong> ${stats.enAttente}</div>
         <div class="stat-card"><strong>En cours:</strong> ${stats.enCours}</div>
         <div class="stat-card"><strong>Résolus:</strong> ${stats.resolus}</div>
         <div class="stat-card"><strong>Taux de résolution:</strong> ${stats.tauxResolution}%</div>
         
-        <h2>📋 Liste des signalements</h2>
-        <table>
+        <h2>Liste des signalements</h2>
+        <table border="1">
           <thead><tr><th>ID</th><th>Titre</th><th>Type</th><th>Statut</th><th>Localisation</th><th>Date</th></tr></thead>
           <tbody>
     `);
@@ -328,6 +424,7 @@ export default function AdminDashboard() {
     `);
     printWindow.document.close();
     printWindow.print();
+    showMessage("Export PDF réussi", 'success');
   };
 
   const handleExport = () => {
@@ -348,6 +445,8 @@ export default function AdminDashboard() {
   const getStatusColor = (statut) => {
     const colors = {
       'EN_ATTENTE': 'bg-amber-500/20 text-amber-400',
+      'NOUVEAU': 'bg-red-500/20 text-red-400',
+      'URGENT': 'bg-red-500/20 text-red-400',
       'EN_COURS': 'bg-blue-500/20 text-blue-400',
       'RESOLU': 'bg-emerald-500/20 text-emerald-400'
     };
@@ -356,6 +455,8 @@ export default function AdminDashboard() {
 
   const getStatusLabel = (statut) => {
     const labels = {
+      'NOUVEAU': 'Nouveau',
+      'URGENT': 'Urgent',
       'EN_ATTENTE': 'En attente',
       'EN_COURS': 'En cours',
       'RESOLU': 'Résolu'
@@ -363,17 +464,15 @@ export default function AdminDashboard() {
     return labels[statut] || statut;
   };
 
-  // Ouvrir le modal d'assignation
   const openAssignModal = (signalement) => {
     setSelectedSignalement(signalement);
     setSelectedAgent("");
     setShowAssignModal(true);
   };
 
-  // Assigner un signalement à un agent
   const assignerSignalement = async () => {
     if (!selectedAgent) {
-      alert("Veuillez sélectionner un agent");
+      showMessage("Veuillez sélectionner un agent", 'warning');
       return;
     }
 
@@ -392,20 +491,86 @@ export default function AdminDashboard() {
       });
 
       if (response.ok) {
-        alert(`✅ Signalement assigné à ${agents.find(a => a.email === selectedAgent)?.nom}`);
+        const agentNom = agents.find(a => a.email === selectedAgent)?.nom;
+        showMessage(`Signalement assigné à ${agentNom}`, 'success');
         setShowAssignModal(false);
-        fetchDashboardData(); // Rafraîchir les données
+        fetchDashboardData();
       } else {
         const error = await response.json();
-        alert("❌ Erreur: " + (error.error || "Impossible d'assigner"));
+        showMessage(error.error || "Impossible d'assigner", 'error');
       }
     } catch (error) {
       console.error("Erreur assignation:", error);
-      alert("❌ Erreur réseau");
+      showMessage("Erreur réseau lors de l'assignation", 'error');
     } finally {
       setIsAssigning(false);
     }
   };
+
+  const addAgent = async () => {
+  if (!newAgent.nom || !newAgent.email || !newAgent.password) {
+    showMessage("Veuillez remplir tous les champs", 'warning');
+    return;
+  }
+
+  // Vérifier l'email Gmail
+  if (!newAgent.email.toLowerCase().endsWith("@gmail.com")) {
+    showMessage("L'email doit être une adresse @gmail.com", 'warning');
+    return;
+  }
+
+  // Vérifier la longueur du mot de passe
+  if (newAgent.password.length < 6) {
+    showMessage("Le mot de passe doit contenir au moins 6 caractères", 'warning');
+    return;
+  }
+
+  setIsAddingAgent(true);
+  try {
+    console.log("📤 Envoi de la requête d'ajout d'agent...");
+    
+    // 🔥 IMPORTANT: NE PAS inclure le header Authorization
+    // L'endpoint /api/auth/register est public (pas besoin de token)
+    const response = await fetch("http://localhost:8081/api/auth/register", {
+      method: "POST",
+      headers: { 
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        nom: newAgent.nom,
+        email: newAgent.email,
+        motDePasse: newAgent.password,  // ⚠️ Notez: 'motDePasse' pas 'password'
+        role: "AGENT"
+      })
+    });
+
+    console.log("📡 Statut réponse:", response.status);
+
+    if (response.ok) {
+      showMessage(`Agent ${newAgent.nom} ajouté avec succès`, 'success');
+      setShowAddAgentModal(false);
+      setNewAgent({ nom: "", email: "", password: "" });
+      
+      // Rafraîchir la liste des agents
+      fetchDashboardData();
+    } else {
+      let errorMessage = "Erreur lors de l'ajout";
+      try {
+        const errorText = await response.text();
+        errorMessage = errorText || `Erreur ${response.status}`;
+        console.error("❌ Erreur API:", errorText);
+      } catch (e) {
+        errorMessage = `Erreur ${response.status}: ${response.statusText}`;
+      }
+      showMessage(errorMessage, 'error');
+    }
+  } catch (error) {
+    console.error("❌ Erreur réseau:", error);
+    showMessage("Erreur réseau lors de l'ajout. Vérifiez que le serveur est démarré.", 'error');
+  } finally {
+    setIsAddingAgent(false);
+  }
+};
 
   if (isLoading) {
     return (
@@ -417,12 +582,24 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
+      {/* MessageBox */}
+      {messageBox && (
+        <MessageBox 
+          message={messageBox.message} 
+          type={messageBox.type} 
+          onClose={hideMessage} 
+        />
+      )}
+
       <div className="max-w-7xl mx-auto">
         
         {/* En-tête */}
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-white">📊 Tableau de bord</h1>
+            <h1 className="text-3xl font-bold text-white flex items-center gap-2">
+              <Activity className="w-8 h-8 text-emerald-400" />
+              Tableau de bord
+            </h1>
             <p className="text-white/50 mt-1">Vue d'ensemble de la plateforme SmartCity</p>
           </div>
           <div className="flex gap-3">
@@ -436,12 +613,15 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* MODAL D'EXPORTATION - Garde ton code existant */}
+        {/* MODAL D'EXPORTATION */}
         {showExportModal && (
           <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
             <div className="bg-[#1e1f22] rounded-2xl max-w-md w-full p-6 border border-white/20">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold text-white">📥 Exporter les données</h3>
+                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                  <Download size={20} className="text-emerald-400" />
+                  Exporter les données
+                </h3>
                 <button onClick={() => setShowExportModal(false)} className="text-white/50 hover:text-white">
                   <X size={20} />
                 </button>
@@ -496,7 +676,7 @@ export default function AdminDashboard() {
                 <p className="text-white/50 text-sm">Total signalements</p>
                 <p className="text-3xl font-bold text-white mt-1">{stats.total}</p>
               </div>
-              <div className="bg-blue-500/20 p-3 rounded-xl"><MapPin className="text-blue-400" size={24} /></div>
+              <div className="bg-blue-500/20 p-3 rounded-xl"><BarChart3 className="text-blue-400" size={24} /></div>
             </div>
           </div>
 
@@ -516,7 +696,7 @@ export default function AdminDashboard() {
                 <p className="text-white/50 text-sm">Taux de résolution</p>
                 <p className="text-3xl font-bold text-emerald-300 mt-1">{stats.tauxResolution}%</p>
               </div>
-              <div className="bg-emerald-500/20 p-3 rounded-xl"><CheckCircle className="text-emerald-400" size={24} /></div>
+              <div className="bg-emerald-500/20 p-3 rounded-xl"><Target className="text-emerald-400" size={24} /></div>
             </div>
             <div className="mt-3"><div className="h-1.5 bg-white/10 rounded-full overflow-hidden"><div className="h-full bg-emerald-500 rounded-full" style={{ width: `${stats.tauxResolution}%` }} /></div></div>
           </div>
@@ -527,7 +707,7 @@ export default function AdminDashboard() {
                 <p className="text-white/50 text-sm">Agents actifs</p>
                 <p className="text-3xl font-bold text-white mt-1">{stats.agentsActifs}</p>
               </div>
-              <div className="bg-purple-500/20 p-3 rounded-xl"><Users className="text-purple-400" size={24} /></div>
+              <div className="bg-purple-500/20 p-3 rounded-xl"><UserCheck className="text-purple-400" size={24} /></div>
             </div>
           </div>
         </div>
@@ -536,7 +716,10 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           
           <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 lg:col-span-1">
-            <h3 className="text-white font-semibold mb-4">📊 Par type de problème</h3>
+            <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
+              <BarChart3 size={18} className="text-emerald-400" />
+              Par type de problème
+            </h3>
             <div className="space-y-3">
               {signalementsParType.map((type, index) => (
                 <div key={index}>
@@ -547,9 +730,12 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* ✅ SECTION TOP AGENTS CORRIGÉE */}
+          {/* SECTION TOP AGENTS */}
           <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 lg:col-span-1">
-            <h3 className="text-white font-semibold mb-4">🏆 Top agents</h3>
+            <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
+              <Crown size={18} className="text-yellow-400" />
+              Top agents
+            </h3>
             <div className="space-y-3">
               {agentsWithStats.length > 0 ? (
                 agentsWithStats
@@ -579,10 +765,12 @@ export default function AdminDashboard() {
               )}
             </div>
             
-            {/* Détail des signalements par agent */}
             {agentsWithStats.length > 0 && (
               <div className="mt-4 pt-4 border-t border-white/10">
-                <h4 className="text-white/60 text-xs font-medium mb-2">📊 Détail par agent</h4>
+                <h4 className="text-white/60 text-xs font-medium mb-2 flex items-center gap-1">
+                  <Info size={12} />
+                  Détail par agent
+                </h4>
                 <div className="space-y-2 max-h-40 overflow-y-auto">
                   {agentsWithStats.map(agent => (
                     <div key={agent.id} className="flex justify-between items-center text-xs">
@@ -598,37 +786,81 @@ export default function AdminDashboard() {
               </div>
             )}
             
-            <button className="w-full mt-4 bg-white/10 hover:bg-white/20 text-white py-2 rounded-xl text-sm flex items-center justify-center gap-2 transition">
+            <button 
+              onClick={() => setShowAddAgentModal(true)}
+              className="w-full mt-4 bg-white/10 hover:bg-white/20 text-white py-2 rounded-xl text-sm flex items-center justify-center gap-2 transition"
+            >
               <UserPlus size={16} /> Ajouter un agent
             </button>
           </div>
 
+          {/* SECTION SIGNALEMENTS URGENTS */}
           <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 lg:col-span-1">
-            <h3 className="text-white font-semibold mb-4">⚠️ Signalements urgents</h3>
-            <div className="space-y-3">
-              {derniersSignalements.filter(s => s.statut === "EN_ATTENTE").slice(0, 3).map((signalement) => (
-                <div key={signalement.id} className="p-3 bg-red-500/10 rounded-xl border border-red-500/30">
-                  <p className="text-white font-medium text-sm">{signalement.titre || "Sans titre"}</p>
-                  <p className="text-white/50 text-xs mt-1 line-clamp-2">{signalement.description}</p>
-                  <div className="flex justify-between items-center mt-2">
-                    <span className="text-red-400 text-xs">⚠️ En attente</span>
-                    <button 
-                      onClick={() => openAssignModal(signalement)}
-                      className="text-white/50 hover:text-white text-xs"
-                    >
-                      Assigner →
-                    </button>
+            <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-red-400" />
+              Signalements urgents
+              {signalementsUrgents.length > 0 && (
+                <span className="bg-red-500/30 text-red-400 text-xs px-2 py-0.5 rounded-full ml-2">
+                  {signalementsUrgents.length}
+                </span>
+              )}
+            </h3>
+            
+            {signalementsUrgents.length === 0 ? (
+              <div className="text-center py-8">
+                <CheckCircle className="w-12 h-12 text-emerald-500/30 mx-auto mb-2" />
+                <p className="text-white/50 text-sm">Aucun signalement urgent</p>
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {signalementsUrgents.map((signalement) => (
+                  <div key={signalement.id} className="p-3 bg-red-500/10 rounded-xl border border-red-500/30 hover:bg-red-500/20 transition">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <p className="text-white font-medium text-sm">{signalement.titre || "Sans titre"}</p>
+                        <p className="text-white/50 text-xs mt-1 line-clamp-2">{signalement.description}</p>
+                        <div className="flex items-center gap-3 mt-2">
+                          <span className="text-red-400 text-xs flex items-center gap-1">
+                            <AlertTriangle size={12} />
+                            {getStatusLabel(signalement.statut)}
+                          </span>
+                          <span className="text-white/40 text-xs">
+                            {new Date(signalement.dateCreation).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => openAssignModal(signalement)}
+                        className="text-white/50 hover:text-white text-sm px-2 py-1"
+                      >
+                        Assigner →
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
+            
+            {signalementsUrgents.length > 0 && (
+              <button 
+                onClick={() => navigate("/admin/signalement")}
+                className="w-full mt-4 bg-red-500/20 hover:bg-red-500/30 text-red-400 py-2 rounded-xl text-sm flex items-center justify-center gap-2 transition"
+              >
+                <Eye size={16} />
+                Voir tous les signalements urgents
+                <ChevronRight size={16} />
+              </button>
+            )}
           </div>
         </div>
 
         {/* Derniers signalements */}
         <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 overflow-hidden">
           <div className="p-6 border-b border-white/10 flex justify-between items-center">
-            <h3 className="text-white font-semibold">📋 Derniers signalements</h3>
+            <h3 className="text-white font-semibold flex items-center gap-2">
+              <Activity size={18} className="text-blue-400" />
+              Derniers signalements
+            </h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -656,7 +888,10 @@ export default function AdminDashboard() {
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-[#1e1f22] rounded-2xl w-full max-w-md p-6 border border-white/20">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold text-white">👤 Assigner un agent</h3>
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                <UserPlus size={20} className="text-emerald-400" />
+                Assigner un agent
+              </h3>
               <button 
                 onClick={() => setShowAssignModal(false)} 
                 className="text-white/50 hover:text-white transition"
@@ -705,6 +940,92 @@ export default function AdminDashboard() {
                   <UserPlus size={16} />
                 )}
                 {isAssigning ? "Assignation..." : "Assigner"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes slide-in-right {
+          from { opacity: 0; transform: translateX(100px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+        .animate-slide-in-right {
+          animation: slide-in-right 0.3s ease-out;
+        }
+      `}</style>
+
+      {/* MODAL D'AJOUT D'AGENT */}
+      {showAddAgentModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#1e1f22] rounded-2xl w-full max-w-md p-6 border border-white/20">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                <UserPlus size={20} className="text-emerald-400" />
+                Ajouter un agent
+              </h3>
+              <button 
+                onClick={() => setShowAddAgentModal(false)} 
+                className="text-white/50 hover:text-white transition"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="text-white/70 text-sm block mb-2">Nom complet</label>
+                <input
+                  type="text"
+                  value={newAgent.nom}
+                  onChange={(e) => setNewAgent({ ...newAgent, nom: e.target.value })}
+                  placeholder="Jean Dupont"
+                  className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500 transition"
+                />
+              </div>
+              
+              <div>
+                <label className="text-white/70 text-sm block mb-2">Email</label>
+                <input
+                  type="email"
+                  value={newAgent.email}
+                  onChange={(e) => setNewAgent({ ...newAgent, email: e.target.value })}
+                  placeholder="agent@smartcity.com"
+                  className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500 transition"
+                />
+              </div>
+              
+              <div>
+                <label className="text-white/70 text-sm block mb-2">Mot de passe</label>
+                <input
+                  type="password"
+                  value={newAgent.password}
+                  onChange={(e) => setNewAgent({ ...newAgent, password: e.target.value })}
+                  placeholder="••••••••"
+                  className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500 transition"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowAddAgentModal(false)}
+                className="flex-1 bg-white/10 hover:bg-white/20 text-white py-2.5 rounded-xl transition"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={addAgent}
+                disabled={isAddingAgent}
+                className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white py-2.5 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 transition"
+              >
+                {isAddingAgent ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <UserPlus size={16} />
+                )}
+                {isAddingAgent ? "Ajout..." : "Ajouter"}
               </button>
             </div>
           </div>

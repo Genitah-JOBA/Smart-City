@@ -5,7 +5,7 @@ import {
   Shield, Bell, Settings, PlusCircle, LayoutDashboard, 
   ClipboardList, Wrench, Users, BarChart3, ChevronDown,
   CheckCircle, Clock, MessageSquare, Loader2, UserCheck,
-  Share2
+  Share2, ChevronRight
 } from "lucide-react";
 
 export default function Navbar() {
@@ -52,43 +52,26 @@ export default function Navbar() {
 
   // Récupération des notifications
   const fetchNotifications = async () => {
-    if (!token) {
-      console.log("⏭️ Pas de token");
-      return;
-    }
+    if (!token) return;
     
-    console.log("🔔 Récupération des notifications depuis l'API...");
     setIsLoadingNotifications(true);
-    
     try {
       const response = await fetch("http://localhost:8081/api/notifications", {
         headers: { "Authorization": `Bearer ${token}` }
       });
       
-      console.log("📡 Réponse API:", response.status);
-      
       if (response.ok) {
         const data = await response.json();
-        console.log(`📬 ${data.notifications?.length || 0} notifications trouvées`);
-        console.log("📋 Détails:", data.notifications);
-        
         setNotifications(data.notifications || []);
         setUnreadCount(data.unreadCount || 0);
-      } else {
-        console.error("❌ Erreur API:", response.status);
-        setNotifications([]);
-        setUnreadCount(0);
       }
     } catch (error) {
-      console.error("❌ Erreur réseau:", error);
-      setNotifications([]);
-      setUnreadCount(0);
+      console.error("Erreur notifications:", error);
     } finally {
       setIsLoadingNotifications(false);
     }
   };
 
-  // Marquer une notification comme lue
   const markAsRead = async (notificationId) => {
     try {
       const response = await fetch(`http://localhost:8081/api/notifications/${notificationId}/read`, {
@@ -97,21 +80,16 @@ export default function Navbar() {
       });
       
       if (response.ok) {
-        // Mettre à jour l'état local
         setNotifications(prev => prev.map(n => 
           n.id === notificationId ? { ...n, lu: true } : n
         ));
         setUnreadCount(prev => Math.max(0, prev - 1));
-        console.log(`✅ Notification ${notificationId} marquée comme lue`);
-      } else {
-        console.error("❌ Erreur API markAsRead:", response.status);
       }
     } catch (error) {
-      console.error("❌ Erreur réseau markAsRead:", error);
+      console.error("Erreur markAsRead:", error);
     }
   };
 
-  // Marquer toutes comme lues
   const markAllAsRead = async () => {
     try {
       const response = await fetch("http://localhost:8081/api/notifications/read-all", {
@@ -122,12 +100,9 @@ export default function Navbar() {
       if (response.ok) {
         setNotifications(prev => prev.map(n => ({ ...n, lu: true })));
         setUnreadCount(0);
-        console.log("✅ Toutes les notifications marquées comme lues");
-      } else {
-        console.error("❌ Erreur API markAllAsRead:", response.status);
       }
     } catch (error) {
-      console.error("❌ Erreur réseau markAllAsRead:", error);
+      console.error("Erreur markAllAsRead:", error);
     }
   };
 
@@ -148,38 +123,27 @@ export default function Navbar() {
   
     if (isEmailNotification) {
       let expediteur = "Quelqu'un";
-      
       const match = notif.message.match(/^(.+?) vous a envoyé un email/);
-      if (match) {
-        expediteur = match[1];
-      }
-      
+      if (match) expediteur = match[1];
       return `${expediteur} vous a envoyé un email. Veuillez consulter votre boîte email.`;
     }
-    
     return notif.message;
   };
 
-  // Actualisation à chaque 5s
   useEffect(() => {
     if (token) {
       fetchNotifications();
       const interval = setInterval(() => {
-        console.log(" Rafraîchissement automatique des notifications");
-        fetchNotifications();
-      }, 5000);
+        if (document.visibilityState === 'visible') fetchNotifications();
+      }, 30000);
       return () => clearInterval(interval);
     }
   }, [token]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (!document.hidden && token) {
-        console.log(" Onglet réactivé, rafraîchissement des notifications");
-        fetchNotifications();
-      }
+      if (!document.hidden && token) fetchNotifications();
     };
-    
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [token]);
@@ -194,6 +158,7 @@ export default function Navbar() {
   const openLogoutModal = () => {
     setShowLogoutModal(true);
     setShowUserMenu(false);
+    setIsOpen(false);
   };
 
   // Navigation selon le rôle
@@ -208,8 +173,7 @@ export default function Navbar() {
     } else if (role === "AGENT") {
       return [
         { path: "/agent/dashboard", name: "Dashboard", icon: LayoutDashboard },
-        { path: "/agent/signalements-assignes", name: "Les signalements", icon: AlertTriangle },
-        { path: "/agent/interventions", name: "Interventions", icon: Wrench },
+        { path: "/agent/signalements-assignes", name: "Signalements", icon: AlertTriangle },
         { path: "/agent/profil", name: "Profil", icon: User },
       ];
     } else {
@@ -242,216 +206,219 @@ export default function Navbar() {
 
   return (
     <>
-      {/* Modal de confirmation de déconnexion */}
+      {/* Modal de déconnexion */}
       {showLogoutModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
-          <div className="bg-white rounded-2xl p-6 sm:p-8 max-w-[90%] sm:max-w-sm w-full shadow-2xl transform animate-modal-pop">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
             <div className="text-center">
-              <div className="mx-auto w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center mb-4 bg-red-100 text-red-600 animate-scale">
-                <LogOut className="w-7 h-7 sm:w-8 sm:h-8" />
+              <div className="mx-auto w-14 h-14 rounded-full flex items-center justify-center mb-4 bg-red-100 text-red-600">
+                <LogOut className="w-7 h-7" />
               </div>
-              <h3 className="text-lg sm:text-xl font-bold mb-2 text-slate-900">Déconnexion</h3>
-              <p className="text-slate-600 text-xs sm:text-sm mb-6">Êtes-vous sûr de vouloir vous déconnecter ?</p>
+              <h3 className="text-lg font-bold mb-2 text-gray-900">Déconnexion</h3>
+              <p className="text-gray-600 text-sm mb-6">Êtes-vous sûr de vouloir vous déconnecter ?</p>
               <div className="flex gap-3">
-                <button onClick={() => setShowLogoutModal(false)} className="flex-1 py-2.5 sm:py-3 rounded-xl font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-all">Annuler</button>
-                <button onClick={handleLogout} className="flex-1 py-2.5 sm:py-3 rounded-xl font-bold text-white bg-red-500 hover:bg-red-600 transition-all shadow-lg">Déconnexion</button>
+                <button onClick={() => setShowLogoutModal(false)} className="flex-1 py-2.5 rounded-xl font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition">Annuler</button>
+                <button onClick={handleLogout} className="flex-1 py-2.5 rounded-xl font-medium text-white bg-red-500 hover:bg-red-600 transition">Déconnexion</button>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Navbar */}
-      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled ? "bg-slate-900/80 backdrop-blur-2xl shadow-2xl border-b border-white/10" : "bg-slate-900/90"}`}>
-        <div className="px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <Link to={userRole === "ADMIN" ? "/admin/problemes" : userRole === "AGENT" ? "/agent/dashboard" : "/signalements"} className="group relative flex items-center gap-3">
+      {/* Navbar principale */}
+      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        scrolled 
+          ? "bg-slate-900/95 backdrop-blur-xl shadow-2xl border-b border-white/10" 
+          : "bg-slate-900/90 border-b border-white/5"
+      }`}>
+        <div className="px-3 sm:px-4 lg:px-6">
+          <div className="flex items-center justify-between h-14 sm:h-16">
+            
+            {/* Logo - Version responsive */}
+            <Link 
+              to={userRole === "ADMIN" ? "/admin/dashboard" : userRole === "AGENT" ? "/agent/dashboard" : "/signalements"} 
+              className="flex items-center gap-2 sm:gap-3 flex-shrink-0"
+            >
               <div className="relative">
-                <div className="absolute inset-0 bg-emerald-500 rounded-xl blur-lg opacity-50 group-hover:opacity-75 transition"></div>
-                <div className="relative w-10 h-10 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl flex items-center justify-center shadow-xl group-hover:scale-105 transition">
-                  <MapPin className="w-5 h-5 text-white" />
+                <div className="absolute inset-0 bg-emerald-500 rounded-lg blur-md opacity-50"></div>
+                <div className="relative w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-lg flex items-center justify-center shadow-lg">
+                  <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                 </div>
               </div>
-              <div className="relative">
-                <h1 className="text-xl font-bold tracking-tight">
-                  <span className="bg-gradient-to-r from-white via-white to-emerald-400 bg-clip-text text-transparent">SmartCity</span>
+              <div className="hidden xs:block">
+                <h1 className="text-base sm:text-lg md:text-xl font-bold tracking-tight">
+                  <span className="bg-gradient-to-r from-white to-emerald-400 bg-clip-text text-transparent">SmartCity</span>
                 </h1>
-                <p className="text-[9px] text-emerald-400/70 font-medium tracking-wider absolute -bottom-3">{getPageTitle()}</p>
+                <p className="text-[8px] sm:text-[9px] text-emerald-400/70 font-medium -mt-0.5">{getPageTitle()}</p>
               </div>
             </Link>
 
-            {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center gap-2 bg-white/5 backdrop-blur-sm rounded-full p-1 border border-white/10">
+            {/* Navigation Desktop - visible sur tablette et desktop */}
+            <div className="hidden sm:flex items-center gap-1 md:gap-2">
               {navLinks.map((link) => {
                 const Icon = link.icon;
+                const active = isActive(link.path);
                 return (
-                  <Link key={link.path} to={link.path} className={`relative flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-300 ${isActive(link.path) ? "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/25" : "text-white/70 hover:text-white hover:bg-white/10"}`}>
-                    <Icon size={16} />
-                    <span className="text-sm font-medium">{link.name}</span>
+                  <Link 
+                    key={link.path} 
+                    to={link.path} 
+                    className={`relative flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 rounded-lg transition-all duration-200 ${
+                      active 
+                        ? "text-emerald-400 bg-emerald-500/10" 
+                        : "text-white/70 hover:text-white hover:bg-white/5"
+                    }`}
+                  >
+                    <Icon size={16} className="md:w-[18px] md:h-[18px]" />
+                    <span className="text-xs md:text-sm font-medium whitespace-nowrap">{link.name}</span>
+                    {active && (
+                      <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2">
+                        <div className="w-4 md:w-5 h-0.5 bg-gradient-to-r from-emerald-400 to-emerald-500 rounded-full"></div>
+                      </div>
+                    )}
                   </Link>
                 );
               })}
             </div>
 
-            {/* User Info & Actions */}
-            <div className="hidden md:flex items-center gap-4">
+            {/* Actions utilisateur Desktop */}
+            <div className="flex items-center gap-2 sm:gap-3">
               
-              {/* NOTIFICATIONS */}
+              {/* Notifications */}
               <div className="relative notifications-menu">
                 <button
                   onClick={() => {
                     setShowNotifications(!showNotifications);
-                    if (!showNotifications) {
-                      fetchNotifications();
-                    }
+                    if (!showNotifications) fetchNotifications();
                   }}
-                  className="relative p-2 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-all duration-300"
+                  className="relative p-1.5 sm:p-2 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition"
                 >
-                  <Bell size={20} />
+                  <Bell size={18} className="sm:w-[20px] sm:h-[20px]" />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-500 rounded-full text-[10px] flex items-center justify-center text-white animate-pulse px-1">
+                    <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] bg-red-500 rounded-full text-[9px] flex items-center justify-center text-white px-1">
                       {unreadCount > 9 ? "9+" : unreadCount}
                     </span>
                   )}
                 </button>
                 
                 {showNotifications && (
-                  <div className="absolute right-0 mt-2 w-80 bg-slate-800/95 backdrop-blur-xl rounded-2xl border border-white/20 shadow-2xl overflow-hidden z-50">
+                  <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-slate-800/95 backdrop-blur-xl rounded-xl border border-white/20 shadow-2xl overflow-hidden z-50">
                     <div className="p-3 border-b border-white/10 flex justify-between items-center">
-                      <h3 className="text-white font-semibold">Notifications</h3>
+                      <h3 className="text-white font-semibold text-sm">Notifications</h3>
                       <div className="flex gap-2">
-                        <button 
-                          onClick={fetchNotifications} 
-                          className="text-xs text-emerald-400 hover:text-emerald-300"
-                        >
-                          Rafraîchir
-                        </button>
+                        <button onClick={fetchNotifications} className="text-xs text-emerald-400 hover:text-emerald-300">Rafraîchir</button>
                         {notifications.length > 0 && (
-                          <button onClick={markAllAsRead} className="text-xs text-emerald-400 hover:text-emerald-300">
-                            Tout marquer lu
-                          </button>
+                          <button onClick={markAllAsRead} className="text-xs text-emerald-400 hover:text-emerald-300">Tout lire</button>
                         )}
                       </div>
                     </div>
-                    <div className="max-h-96 overflow-y-auto">
+                    <div className="max-h-80 overflow-y-auto">
                       {isLoadingNotifications ? (
-                        <div className="p-4 text-center">
-                          <Loader2 size={24} className="animate-spin text-emerald-400 mx-auto" />
-                        </div>
+                        <div className="p-4 text-center"><Loader2 size={24} className="animate-spin text-emerald-400 mx-auto" /></div>
                       ) : notifications.length === 0 ? (
                         <div className="p-8 text-center">
                           <Bell size={32} className="text-white/20 mx-auto mb-2" />
                           <p className="text-white/40 text-sm">Aucune notification</p>
                         </div>
                       ) : (
-                      notifications.map(notif => (
-                        <div 
-                          key={notif.id} 
-                          onClick={() => {
-                            markAsRead(notif.id);
-                            
-                            if (notif.type === "ASSIGNATION" && userRole === "AGENT") {
-                              if (notif.signalementId) {
-                                navigate(`/signalement/${notif.signalementId}`);
-                              } else {
-                                 navigate("/agent/signalements-assignes");
-                              }
-                            }
-                            
-                            else if (notif.type === "NOUVEAU_SIGNALEMENT" && userRole === "ADMIN") {
-                              navigate("/admin/signalement");
-                            }
-                            
-                            else if (notif.signalementId) {
-                              navigate(`/signalement/${notif.signalementId}`);
-                            }
-                            
-                            else if (notif.lien) {
-                              navigate(notif.lien);
-                            }
-                            
-                            else if (userRole === "AGENT") {
-                              navigate("/agent/signalements-assignes");
-                            } else if (userRole === "ADMIN") {
-                              navigate("/admin/signalement");
-                            } else {
-                              navigate("/signalements");
-                            }
-                            
-                            setShowNotifications(false);
-                          }}
-                          className={`p-3 border-b border-white/5 hover:bg-white/5 transition cursor-pointer ${!notif.lu ? 'bg-emerald-500/5 border-l-2 border-l-emerald-500' : ''}`}
-                        >
-                          <div className="flex items-start gap-2">
-                            {getNotificationIcon(notif.type)}
-                            <div className="flex-1">
-                              <p className="text-white/80 text-sm font-medium">{notif.title}</p>
-                              <p className="text-white/60 text-xs mt-0.5">{formatNotificationMessage(notif)}</p>
-                              <p className="text-white/30 text-[10px] mt-1">
-                                {new Date(notif.dateCreation).toLocaleString()}
-                              </p>
-                            </div>
-                            {notif.lu && (
-                              <div className="flex-shrink-0">
-                                <CheckCircle size={16} className="text-emerald-500" />
+                        notifications.map(notif => (
+                          <div 
+                            key={notif.id} 
+                            onClick={() => {
+                              markAsRead(notif.id);
+                              setShowNotifications(false);
+                            }}
+                            className={`p-3 border-b border-white/5 hover:bg-white/5 transition cursor-pointer ${!notif.lu ? 'bg-emerald-500/5 border-l-2 border-l-emerald-500' : ''}`}
+                          >
+                            <div className="flex items-start gap-2">
+                              {getNotificationIcon(notif.type)}
+                              <div className="flex-1 min-w-0">
+                                <p className="text-white/80 text-xs sm:text-sm font-medium truncate">{notif.title}</p>
+                                <p className="text-white/60 text-xs mt-0.5 line-clamp-2">{formatNotificationMessage(notif)}</p>
+                                <p className="text-white/30 text-[10px] mt-1">{new Date(notif.dateCreation).toLocaleString()}</p>
                               </div>
-                            )}
+                              {!notif.lu && <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1"></div>}
+                            </div>
                           </div>
-                        </div>
-                      ))
+                        ))
                       )}
                     </div>
                   </div>
                 )}
               </div>
               
+              {/* Menu utilisateur */}
               <div className="relative user-menu">
-                <button onClick={() => setShowUserMenu(!showUserMenu)} className="flex items-center gap-3 pl-3 border-l border-white/20 hover:opacity-80 transition">
-                  <div className="relative group">
-                    <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full blur-md opacity-50 group-hover:opacity-75 transition"></div>
-                    <div className="relative w-10 h-10 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center shadow-lg cursor-pointer">
-                      <User className="w-5 h-5 text-white" />
+                <button 
+                  onClick={() => setShowUserMenu(!showUserMenu)} 
+                  className="flex items-center gap-2 pl-2 sm:pl-3 border-l border-white/20 hover:opacity-80 transition"
+                >
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full blur-md opacity-50"></div>
+                    <div className="relative w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center shadow-lg">
+                      <User className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                     </div>
                   </div>
+                  <span className="hidden md:inline text-white/80 text-sm font-medium capitalize">{userName || "Utilisateur"}</span>
+                  <ChevronDown size={14} className="text-white/60 hidden sm:block" />
                 </button>
 
                 {showUserMenu && (
-                  <div className="absolute right-0 mt-2 w-56 bg-slate-800/95 backdrop-blur-xl rounded-2xl border border-white/20 shadow-2xl overflow-hidden z-50">
+                  <div className="absolute right-0 mt-2 w-48 bg-slate-800/95 backdrop-blur-xl rounded-xl border border-white/20 shadow-2xl overflow-hidden z-50">
                     <div className="p-3 border-b border-white/10 bg-white/5">
-                      <p className="text-white text-sm font-medium capitalize">{userName || "Utilisateur"}</p>
+                      <p className="text-white text-sm font-medium capitalize truncate">{userName || "Utilisateur"}</p>
                       <p className="text-emerald-400 text-xs">
                         {userRole === "ADMIN" ? "Administrateur" : userRole === "AGENT" ? "Agent terrain" : "Citoyen"}
                       </p>
                     </div>
+                    <div className="p-1">
+                      <button onClick={openLogoutModal} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition text-sm">
+                        <LogOut size={16} /> Déconnexion
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
-              
-              <button onClick={openLogoutModal} className="bg-amber-500/10 rounded-full w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors">
-                <LogOut size={16} /> Déconnexion
+
+              {/* Bouton menu mobile */}
+              <button 
+                onClick={() => setIsOpen(!isOpen)} 
+                className="sm:hidden relative w-8 h-8 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center"
+              >
+                {isOpen ? <X size={16} className="text-white" /> : <Menu size={16} className="text-white" />}
               </button>
             </div>
-
-            <button onClick={() => setIsOpen(!isOpen)} className="md:hidden relative w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center hover:bg-white/20 transition">
-              {isOpen ? <X size={20} className="text-white" /> : <Menu size={20} className="text-white" />}
-            </button>
           </div>
         </div>
 
-        {/* Mobile Navigation */}
-        <div className={`md:hidden fixed inset-x-0 top-16 bg-slate-900/95 backdrop-blur-2xl border-b border-white/10 transition-all duration-400 overflow-hidden shadow-2xl ${isOpen ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"}`}>
-          <div className="p-4 space-y-2">
-            {navLinks.map((link) => {
-              const Icon = link.icon;
-              return (
-                <Link key={link.path} to={link.path} onClick={() => setIsOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition ${isActive(link.path) ? "bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 text-emerald-400 border border-emerald-500/30" : "text-white/70 hover:text-white hover:bg-white/10"}`}>
-                  <Icon size={20} />
-                  <span className="font-medium">{link.name}</span>
-                </Link>
-              );
-            })}
+        {/* Navigation Mobile - Overlay style */}
+        <div className={`fixed inset-x-0 top-14 bottom-0 bg-slate-900/98 backdrop-blur-xl transition-all duration-300 z-40 ${
+          isOpen ? "translate-x-0" : "translate-x-full"
+        }`}>
+          <div className="flex flex-col h-full overflow-y-auto p-4">
+            <div className="space-y-1">
+              {navLinks.map((link) => {
+                const Icon = link.icon;
+                const active = isActive(link.path);
+                return (
+                  <Link 
+                    key={link.path} 
+                    to={link.path} 
+                    onClick={() => setIsOpen(false)} 
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                      active 
+                        ? "bg-gradient-to-r from-emerald-500/20 to-emerald-600/10 text-emerald-400" 
+                        : "text-white/70 hover:text-white hover:bg-white/10"
+                    }`}
+                  >
+                    <Icon size={20} />
+                    <span className="font-medium flex-1">{link.name}</span>
+                    {active && <ChevronRight size={16} className="text-emerald-400" />}
+                  </Link>
+                );
+              })}
+            </div>
             
-            <div className="pt-4 mt-2 border-t border-white/10">
+            <div className="pt-6 mt-4 border-t border-white/10">
               <div className="flex items-center gap-3 px-4 py-3 bg-white/5 rounded-xl">
                 <div className="relative">
                   <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full blur-md opacity-50"></div>
@@ -459,12 +426,17 @@ export default function Navbar() {
                     <User className="w-5 h-5 text-white" />
                   </div>
                 </div>
-                <div>
+                <div className="flex-1">
                   <p className="text-white font-medium capitalize">{userName || "Citoyen"}</p>
-                  <p className="text-emerald-400 text-xs">{userRole === "ADMIN" ? "Administrateur" : userRole === "AGENT" ? "Agent" : "Citoyen"}</p>
+                  <p className="text-emerald-400 text-xs">
+                    {userRole === "ADMIN" ? "Administrateur" : userRole === "AGENT" ? "Agent terrain" : "Citoyen"}
+                  </p>
                 </div>
               </div>
-              <button onClick={openLogoutModal} className="w-full flex items-center justify-center gap-2 px-4 py-3 mt-3 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 transition border border-red-500/20">
+              <button 
+                onClick={openLogoutModal} 
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 mt-3 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 transition border border-red-500/20"
+              >
                 <LogOut size={18} /> Déconnexion
               </button>
             </div>
@@ -472,15 +444,31 @@ export default function Navbar() {
         </div>
       </nav>
 
-      <div className="h-16"></div>
+      {/* Espace pour compenser la navbar fixe */}
+      <div className="h-14 sm:h-16"></div>
 
-      <style>{`
-        @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes modal-pop { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
-        @keyframes scale { 0% { transform: scale(0.8); } 100% { transform: scale(1); } }
-        .animate-fade-in { animation: fade-in 0.2s ease-out; }
-        .animate-modal-pop { animation: modal-pop 0.3s ease-out; }
-        .animate-scale { animation: scale 0.3s ease-out; }
+      <style jsx>{`
+        @keyframes slide-in {
+          from { width: 0; opacity: 0; }
+          to { width: 1rem; opacity: 1; }
+        }
+        @media (min-width: 768px) {
+          @keyframes slide-in {
+            from { width: 0; opacity: 0; }
+            to { width: 1.25rem; opacity: 1; }
+          }
+        }
+        .line-clamp-2 {
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+        @media (min-width: 480px) {
+          .xs\\:block {
+            display: block;
+          }
+        }
       `}</style>
     </>
   );

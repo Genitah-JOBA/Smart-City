@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { User, Lock, Save, Eye, EyeOff, Edit2, X, Check, Shield, Award, Crown, Sparkles, Moon, Star } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { User, Lock, Save, Eye, EyeOff, Edit2, X, Check, Shield, Award, Crown, Sparkles, Moon, Star, AlertCircle } from "lucide-react";
 
 export default function Profil() {
   const [userInfo, setUserInfo] = useState({ 
@@ -26,7 +26,153 @@ export default function Profil() {
   const [isLoading, setIsLoading] = useState(false);
   const [avatarHover, setAvatarHover] = useState(false);
   
+  // États d'erreur pour les champs
+  const [nomError, setNomError] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [currentPasswordError, setCurrentPasswordError] = useState("");
+  const [newPasswordError, setNewPasswordError] = useState("");
+  const [confirmPasswordError, setConfirmPasswordError] = useState("");
+  
+  // Refs pour les champs
+  const nomInputRef = useRef(null);
+  const emailInputRef = useRef(null);
+  const currentPasswordInputRef = useRef(null);
+  const newPasswordInputRef = useRef(null);
+  const confirmPasswordInputRef = useRef(null);
+  
   const token = localStorage.getItem("token");
+
+  // ✅ Validation du nom (≥ 2 lettres, pas de chiffres, pas de caractères spéciaux)
+  const validateNom = (value) => {
+    if (!value.trim()) return "Le nom est requis";
+    if (/\d/.test(value)) return "Le nom ne doit pas contenir de chiffres";
+    const nameRegex = /^[a-zA-ZÀ-ÿ\s-]+$/;
+    if (!nameRegex.test(value)) return "Le nom ne doit contenir que des lettres, espaces ou tirets";
+    if (value.length < 2) return "Le nom doit contenir au moins 2 caractères";
+    return "";
+  };
+
+  // ✅ Validation de l'email
+  const validateEmail = (value) => {
+    if (!value.trim()) return "L'email est requis";
+    if (!value.toLowerCase().endsWith("@gmail.com")) {
+      return "L'email doit impérativement se terminer par @gmail.com";
+    }
+    const localPart = value.toLowerCase().replace("@gmail.com", "");
+    if (localPart.length === 0) return "Veuillez saisir un email valide";
+    if (/\s/.test(localPart)) return "L'email ne doit pas contenir d'espaces";
+    return "";
+  };
+
+  // ✅ Validation mot de passe (≥ 6 caractères)
+  const validatePassword = (value) => {
+    if (!value || value.trim() === "") return "Le mot de passe est requis";
+    if (value.length < 6) return "Le mot de passe doit contenir au moins 6 caractères";
+    return "";
+  };
+
+  // ✅ Validation confirmation mot de passe
+  const validateConfirmPassword = (value) => {
+    if (!value || value.trim() === "") return "La confirmation est requise";
+    if (value !== passwordData.newPassword) return "Les mots de passe ne correspondent pas";
+    if (value.length < 6) return "Le mot de passe doit contenir au moins 6 caractères";
+    return "";
+  };
+
+  // ✅ Gestion des changements avec validation immédiate
+  const handleNomChange = (e) => {
+    const value = e.target.value;
+    setFormData({ ...formData, nom: value });
+    setNomError(validateNom(value));
+  };
+
+  const handleNomBlur = () => {
+    const error = validateNom(formData.nom);
+    setNomError(error);
+    if (error) {
+      setTimeout(() => nomInputRef.current?.focus(), 10);
+    }
+  };
+
+  const handleEmailChange = (e) => {
+    const value = e.target.value;
+    setFormData({ ...formData, email: value });
+    setEmailError(validateEmail(value));
+  };
+
+  const handleEmailBlur = () => {
+    const error = validateEmail(formData.email);
+    setEmailError(error);
+    if (error) {
+      setTimeout(() => emailInputRef.current?.focus(), 10);
+    }
+  };
+
+  // ✅ Gestion des mots de passe avec blocage
+  const handleCurrentPasswordChange = (e) => {
+    const value = e.target.value;
+    setPasswordData({ ...passwordData, currentPassword: value });
+    const error = validatePassword(value);
+    setCurrentPasswordError(error);
+  };
+
+  const handleCurrentPasswordBlur = () => {
+    const error = validatePassword(passwordData.currentPassword);
+    setCurrentPasswordError(error);
+    if (error && currentPasswordInputRef.current) {
+      setTimeout(() => currentPasswordInputRef.current.focus(), 10);
+    }
+  };
+
+  const handleNewPasswordChange = (e) => {
+    const value = e.target.value;
+    setPasswordData({ ...passwordData, newPassword: value });
+    const error = validatePassword(value);
+    setNewPasswordError(error);
+    
+    // Revalider la confirmation si elle existe déjà
+    if (passwordData.confirmPassword) {
+      const confirmError = validateConfirmPassword(passwordData.confirmPassword);
+      setConfirmPasswordError(confirmError);
+    }
+  };
+
+  const handleNewPasswordBlur = () => {
+    const error = validatePassword(passwordData.newPassword);
+    setNewPasswordError(error);
+    if (error && newPasswordInputRef.current) {
+      setTimeout(() => newPasswordInputRef.current.focus(), 10);
+    }
+  };
+
+  const handleConfirmPasswordChange = (e) => {
+    const value = e.target.value;
+    setPasswordData({ ...passwordData, confirmPassword: value });
+    const error = validateConfirmPassword(value);
+    setConfirmPasswordError(error);
+  };
+
+  const handleConfirmPasswordBlur = () => {
+    const error = validateConfirmPassword(passwordData.confirmPassword);
+    setConfirmPasswordError(error);
+    if (error && confirmPasswordInputRef.current) {
+      setTimeout(() => confirmPasswordInputRef.current.focus(), 10);
+    }
+  };
+
+  // Vérifier si le formulaire de profil est valide
+  const isProfileFormValid = () => {
+    return nomError === "" && emailError === "" && formData.nom.trim() !== "" && formData.email.trim() !== "";
+  };
+
+  // Vérifier si le formulaire de mot de passe est valide
+  const isPasswordFormValid = () => {
+    const isCurrentValid = passwordData.currentPassword.length >= 6;
+    const isNewValid = passwordData.newPassword.length >= 6;
+    const isConfirmValid = passwordData.confirmPassword === passwordData.newPassword && passwordData.confirmPassword.length >= 6;
+    
+    return isCurrentValid && isNewValid && isConfirmValid;
+  };
 
   useEffect(() => {
     if (token) {
@@ -89,6 +235,12 @@ export default function Profil() {
   };
 
   const handleUpdateProfile = async () => {
+    if (!isProfileFormValid()) {
+      setMessage({ type: "error", text: "Veuillez corriger les erreurs avant de valider" });
+      setTimeout(() => setMessage({ type: "", text: "" }), 3000);
+      return;
+    }
+
     console.log("✏️ Mise à jour profil:", { nom: formData.nom, email: formData.email });
     setIsLoading(true);
     setMessage({ type: "", text: "" });
@@ -138,18 +290,9 @@ export default function Profil() {
   };
 
   const handleChangePassword = async () => {
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setMessage({ type: "error", text: "Les mots de passe ne correspondent pas" });
-      return;
-    }
-
-    if (passwordData.newPassword.length < 6) {
-      setMessage({ type: "error", text: "Le mot de passe doit contenir au moins 6 caractères" });
-      return;
-    }
-
-    if (!passwordData.currentPassword) {
-      setMessage({ type: "error", text: "Veuillez entrer votre mot de passe actuel" });
+    if (!isPasswordFormValid()) {
+      setMessage({ type: "error", text: "Veuillez corriger les erreurs avant de valider" });
+      setTimeout(() => setMessage({ type: "", text: "" }), 3000);
       return;
     }
 
@@ -177,6 +320,9 @@ export default function Profil() {
         setMessage({ type: "success", text: "Mot de passe changé avec succès !" });
         setShowPasswordForm(false);
         setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
+        setCurrentPasswordError("");
+        setNewPasswordError("");
+        setConfirmPasswordError("");
       } else {
         const errorText = await response.text();
         console.error("❌ Erreur:", errorText);
@@ -220,7 +366,6 @@ export default function Profil() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 relative overflow-hidden">
       {/* Animated Background Elements */}
       <div className="absolute inset-0 overflow-hidden">
-        {/* Étoiles animées */}
         <div className="absolute top-20 left-10 animate-twinkle">
           <Star className="w-4 h-4 text-white/20 fill-white/10" />
         </div>
@@ -234,19 +379,16 @@ export default function Profil() {
           <Star className="w-3 h-3 text-white/20 fill-white/10" />
         </div>
         
-        {/* Lueurs d'ambiance */}
         <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl animate-pulse"></div>
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl animate-pulse delay-2000"></div>
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-sky-500/5 rounded-full blur-3xl animate-pulse delay-3000"></div>
         
-        {/* Cercles orbitaux */}
         <div className="absolute top-1/4 right-1/4 w-64 h-64 border border-white/5 rounded-full blur-xl animate-spin-slow"></div>
         <div className="absolute bottom-1/4 left-1/3 w-48 h-48 border border-white/5 rounded-full blur-xl animate-spin-slow-reverse"></div>
       </div>
 
       <div className="container mx-auto max-w-4xl pt-8 relative z-10">
-        {/* Header with animation */}
         <div className="text-center mb-8 animate-fade-in-down">
           <div className="inline-flex items-center gap-3 bg-white/5 backdrop-blur-xl rounded-full px-6 py-2 mb-4 border border-white/10 shadow-xl">
             <Moon className="w-5 h-5 text-indigo-400" />
@@ -255,7 +397,6 @@ export default function Profil() {
           </div>
         </div>
         
-        {/* Message avec animation */}
         {message.text && (
           <div className={`mb-6 p-4 rounded-xl transform transition-all duration-500 animate-slide-in-right backdrop-blur-xl ${
             message.type === 'success' 
@@ -287,7 +428,6 @@ export default function Profil() {
           <div className="space-y-6 animate-fade-in-up">
             {/* Profile Card */}
             <div className="group relative bg-white/5 backdrop-blur-2xl rounded-3xl border border-white/10 hover:border-white/20 transition-all duration-500 overflow-hidden shadow-2xl">
-              {/* Animated gradient border */}
               <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 via-sky-500/10 to-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
               
               <div className="relative p-8">
@@ -337,20 +477,34 @@ export default function Profil() {
                   </div>
                 </div>
 
-                {/* Info Fields */}
+                {/* Info Fields avec validation */}
                 <div className="space-y-4">
                   <div className="group/field relative">
                     <div className="absolute inset-0 bg-white/5 rounded-xl opacity-0 group-hover/field:opacity-100 transition-opacity duration-300"></div>
                     <div className="relative p-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 group-hover/field:border-white/20 transition-all">
                       <p className="text-white/50 text-xs mb-1 font-medium">NOM COMPLET</p>
                       {isEditing ? (
-                        <input
-                          type="text"
-                          value={formData.nom}
-                          onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
-                          className="w-full bg-white/10 border border-white/20 text-white text-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-transparent rounded-lg px-3 py-2 placeholder-white/30"
-                          placeholder="Votre nom"
-                        />
+                        <>
+                          <input
+                            ref={nomInputRef}
+                            type="text"
+                            value={formData.nom}
+                            onChange={handleNomChange}
+                            onBlur={handleNomBlur}
+                            className={`w-full bg-white/10 border text-white text-lg focus:outline-none focus:ring-2 rounded-lg px-3 py-2 placeholder-white/30 ${
+                              nomError 
+                                ? "border-red-500 focus:ring-red-500/50" 
+                                : "border-white/20 focus:border-indigo-500/50 focus:ring-indigo-500/30"
+                            }`}
+                            placeholder="Votre nom"
+                          />
+                          {nomError && (
+                            <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+                              <AlertCircle size={12} />
+                              {nomError}
+                            </p>
+                          )}
+                        </>
                       ) : (
                         <p className="text-white text-lg font-medium">{userInfo.nom}</p>
                       )}
@@ -362,13 +516,27 @@ export default function Profil() {
                     <div className="relative p-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 group-hover/field:border-white/20 transition-all">
                       <p className="text-white/50 text-xs mb-1 font-medium">ADRESSE EMAIL</p>
                       {isEditing ? (
-                        <input
-                          type="email"
-                          value={formData.email}
-                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                          className="w-full bg-white/10 border border-white/20 text-white text-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-transparent rounded-lg px-3 py-2 placeholder-white/30"
-                          placeholder="votre@email.com"
-                        />
+                        <>
+                          <input
+                            ref={emailInputRef}
+                            type="email"
+                            value={formData.email}
+                            onChange={handleEmailChange}
+                            onBlur={handleEmailBlur}
+                            className={`w-full bg-white/10 border text-white text-lg focus:outline-none focus:ring-2 rounded-lg px-3 py-2 placeholder-white/30 ${
+                              emailError 
+                                ? "border-red-500 focus:ring-red-500/50" 
+                                : "border-white/20 focus:border-indigo-500/50 focus:ring-indigo-500/30"
+                            }`}
+                            placeholder="votre@email.com"
+                          />
+                          {emailError && (
+                            <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+                              <AlertCircle size={12} />
+                              {emailError}
+                            </p>
+                          )}
+                        </>
                       ) : (
                         <p className="text-white text-lg">{userInfo.email}</p>
                       )}
@@ -391,8 +559,12 @@ export default function Profil() {
                   <div className="flex gap-3 mt-8 animate-fade-in">
                     <button
                       onClick={handleUpdateProfile}
-                      disabled={isLoading}
-                      className="flex-1 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white font-semibold py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 transform hover:scale-105 shadow-lg"
+                      disabled={isLoading || !isProfileFormValid()}
+                      className={`flex-1 bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-semibold py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 shadow-lg ${
+                        (!isProfileFormValid() || isLoading) 
+                          ? "opacity-50 cursor-not-allowed" 
+                          : "hover:from-indigo-600 hover:to-purple-600 transform hover:scale-105"
+                      }`}
                     >
                       {isLoading ? (
                         <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -407,6 +579,8 @@ export default function Profil() {
                       onClick={() => {
                         setIsEditing(false);
                         setFormData({ nom: userInfo.nom, email: userInfo.email });
+                        setNomError("");
+                        setEmailError("");
                       }}
                       className="px-6 bg-white/10 backdrop-blur-xl hover:bg-white/20 text-white font-semibold py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 transform hover:scale-105 border border-white/20"
                     >
@@ -442,11 +616,17 @@ export default function Profil() {
                       <label className="text-white/70 text-sm mb-2 block font-medium">Mot de passe actuel</label>
                       <div className="relative group/input">
                         <input
+                          ref={currentPasswordInputRef}
                           type={showPassword ? "text" : "password"}
                           value={passwordData.currentPassword}
-                          onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                          className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/30 transition-all pr-12"
-                          placeholder="••••••••"
+                          onChange={handleCurrentPasswordChange}
+                          onBlur={handleCurrentPasswordBlur}
+                          className={`w-full bg-white/10 border rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 transition-all pr-12 ${
+                            currentPasswordError 
+                              ? "border-red-500 focus:ring-red-500/30" 
+                              : "border-white/20 focus:border-indigo-500/50 focus:ring-indigo-500/30"
+                          }`}
+                          placeholder="•••••••• (6 caractères min)"
                         />
                         <button
                           type="button"
@@ -456,17 +636,29 @@ export default function Profil() {
                           {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                         </button>
                       </div>
+                      {currentPasswordError && (
+                        <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+                          <AlertCircle size={12} />
+                          {currentPasswordError}
+                        </p>
+                      )}
                     </div>
 
                     <div>
                       <label className="text-white/70 text-sm mb-2 block font-medium">Nouveau mot de passe</label>
                       <div className="relative group/input">
                         <input
+                          ref={newPasswordInputRef}
                           type={showNewPassword ? "text" : "password"}
                           value={passwordData.newPassword}
-                          onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                          className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/30 transition-all pr-12"
-                          placeholder="••••••••"
+                          onChange={handleNewPasswordChange}
+                          onBlur={handleNewPasswordBlur}
+                          className={`w-full bg-white/10 border rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 transition-all pr-12 ${
+                            newPasswordError 
+                              ? "border-red-500 focus:ring-red-500/30" 
+                              : "border-white/20 focus:border-indigo-500/50 focus:ring-indigo-500/30"
+                          }`}
+                          placeholder="•••••••• (6 caractères min)"
                         />
                         <button
                           type="button"
@@ -476,16 +668,28 @@ export default function Profil() {
                           {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                         </button>
                       </div>
+                      {newPasswordError && (
+                        <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+                          <AlertCircle size={12} />
+                          {newPasswordError}
+                        </p>
+                      )}
                     </div>
 
                     <div>
                       <label className="text-white/70 text-sm mb-2 block font-medium">Confirmer le mot de passe</label>
                       <div className="relative group/input">
                         <input
+                          ref={confirmPasswordInputRef}
                           type={showConfirmPassword ? "text" : "password"}
                           value={passwordData.confirmPassword}
-                          onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                          className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/30 transition-all pr-12"
+                          onChange={handleConfirmPasswordChange}
+                          onBlur={handleConfirmPasswordBlur}
+                          className={`w-full bg-white/10 border rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 transition-all pr-12 ${
+                            confirmPasswordError 
+                              ? "border-red-500 focus:ring-red-500/30" 
+                              : "border-white/20 focus:border-indigo-500/50 focus:ring-indigo-500/30"
+                          }`}
                           placeholder="••••••••"
                         />
                         <button
@@ -496,13 +700,23 @@ export default function Profil() {
                           {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                         </button>
                       </div>
+                      {confirmPasswordError && (
+                        <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+                          <AlertCircle size={12} />
+                          {confirmPasswordError}
+                        </p>
+                      )}
                     </div>
 
                     <div className="flex gap-3 pt-4">
                       <button
                         onClick={handleChangePassword}
-                        disabled={isLoading}
-                        className="flex-1 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white font-semibold py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 transform hover:scale-105 shadow-lg"
+                        disabled={isLoading || !isPasswordFormValid()}
+                        className={`flex-1 bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-semibold py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 shadow-lg ${
+                          (!isPasswordFormValid() || isLoading) 
+                            ? "opacity-50 cursor-not-allowed" 
+                            : "hover:from-indigo-600 hover:to-purple-600 transform hover:scale-105"
+                        }`}
                       >
                         {isLoading ? (
                           <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -517,6 +731,9 @@ export default function Profil() {
                         onClick={() => {
                           setShowPasswordForm(false);
                           setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
+                          setCurrentPasswordError("");
+                          setNewPasswordError("");
+                          setConfirmPasswordError("");
                         }}
                         className="px-6 bg-white/10 backdrop-blur-xl hover:bg-white/20 text-white font-semibold py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 transform hover:scale-105 border border-white/20"
                       >
@@ -546,94 +763,45 @@ export default function Profil() {
 
       <style jsx>{`
         @keyframes fade-in-down {
-          from {
-            opacity: 0;
-            transform: translateY(-20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+          from { opacity: 0; transform: translateY(-20px); }
+          to { opacity: 1; transform: translateY(0); }
         }
-        
         @keyframes fade-in-up {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
         }
-        
         @keyframes slide-in-right {
-          from {
-            opacity: 0;
-            transform: translateX(50px);
-          }
-          to {
-            opacity: 1;
-            transform: translateX(0);
-          }
+          from { opacity: 0; transform: translateX(50px); }
+          to { opacity: 1; transform: translateX(0); }
         }
-        
         @keyframes twinkle {
           0%, 100% { opacity: 0.2; transform: scale(1); }
           50% { opacity: 0.8; transform: scale(1.2); }
         }
-        
         @keyframes twinkle-delay {
           0%, 100% { opacity: 0.2; transform: scale(1); }
           50% { opacity: 0.8; transform: scale(1.3); }
         }
-        
         @keyframes twinkle-slow {
           0%, 100% { opacity: 0.1; transform: scale(1); }
           50% { opacity: 0.6; transform: scale(1.1); }
         }
-        
         @keyframes spin-slow {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
-        
         @keyframes spin-slow-reverse {
           from { transform: rotate(360deg); }
           to { transform: rotate(0deg); }
         }
-        
-        .animate-fade-in-down {
-          animation: fade-in-down 0.6s ease-out;
-        }
-        
-        .animate-fade-in-up {
-          animation: fade-in-up 0.6s ease-out;
-        }
-        
-        .animate-slide-in-right {
-          animation: slide-in-right 0.4s ease-out;
-        }
-        
-        .animate-twinkle {
-          animation: twinkle 3s ease-in-out infinite;
-        }
-        
-        .animate-twinkle-delay {
-          animation: twinkle-delay 4s ease-in-out infinite;
-        }
-        
-        .animate-twinkle-slow {
-          animation: twinkle-slow 5s ease-in-out infinite;
-        }
-        
-        .animate-spin-slow {
-          animation: spin-slow 20s linear infinite;
-        }
-        
-        .animate-spin-slow-reverse {
-          animation: spin-slow-reverse 15s linear infinite;
-        }
+        .animate-fade-in-down { animation: fade-in-down 0.6s ease-out; }
+        .animate-fade-in-up { animation: fade-in-up 0.6s ease-out; }
+        .animate-slide-in-right { animation: slide-in-right 0.4s ease-out; }
+        .animate-twinkle { animation: twinkle 3s ease-in-out infinite; }
+        .animate-twinkle-delay { animation: twinkle-delay 4s ease-in-out infinite; }
+        .animate-twinkle-slow { animation: twinkle-slow 5s ease-in-out infinite; }
+        .animate-spin-slow { animation: spin-slow 20s linear infinite; }
+        .animate-spin-slow-reverse { animation: spin-slow-reverse 15s linear infinite; }
       `}</style>
     </div>
   );

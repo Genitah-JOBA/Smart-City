@@ -509,7 +509,7 @@ const sendSharedMessage = async () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      {/* Header */}
+      {/* Header
       <header className="sticky top-0 z-30 bg-[#242526] border-b border-gray-700/50 shadow-lg">
         <div className="container mx-auto max-w-3xl px-4 py-3">
           <div className="flex items-center justify-between">
@@ -527,7 +527,7 @@ const sendSharedMessage = async () => {
             </div>
           </div>
         </div>
-      </header>
+      </header> */}
 
       {/* Modal de partage */}
       {showShareModal && selectedSignalementToShare && (

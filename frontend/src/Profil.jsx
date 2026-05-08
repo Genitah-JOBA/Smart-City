@@ -1,11 +1,126 @@
 import { useState, useEffect, useRef } from "react";
 import { 
-  User, Lock, Eye, EyeOff, Edit2, X, Check, 
+  User, Lock, Eye, EyeOff, Edit2, X, Check, AlertCircle,
   MapPin, Clock, MessageCircle, Share2, MoreHorizontal, 
   Construction, Lightbulb, Trash2, Droplets, TreePine, 
   Shield, HelpCircle, AlertTriangle, PlayCircle, CheckCircle2,
   ChevronLeft, ChevronRight, Image, Road, Trash
 } from "lucide-react";
+
+// ✅ COMPOSANT INPUT AVEC VALIDATION
+const ValidatedInput = ({ 
+  label, 
+  value, 
+  onChange, 
+  type = "text", 
+  placeholder, 
+  required = true,
+  minLength,
+  pattern,
+  errorMessage,
+  onValidChange,
+  className = "",
+  showPasswordToggle = false,
+  onTogglePassword
+}) => {
+  const [error, setError] = useState("");
+  const [touched, setTouched] = useState(false);
+  const [showPassword, setShowPassword] = useState(type === "password");
+  const inputRef = useRef(null);
+
+  const validate = (val) => {
+    if (required && !val.trim()) {
+      return "Ce champ est requis";
+    }
+    if (minLength && val.length < minLength) {
+      return `Minimum ${minLength} caractères`;
+    }
+    if (pattern && !pattern.test(val)) {
+      return errorMessage || "Format invalide";
+    }
+    return "";
+  };
+
+  const handleChange = (e) => {
+    const newValue = e.target.value;
+    const validationError = validate(newValue);
+    setError(validationError);
+    onChange(newValue);
+    if (onValidChange) {
+      onValidChange(validationError === "");
+    }
+  };
+
+  const handleBlur = () => {
+    setTouched(true);
+    const validationError = validate(value);
+    setError(validationError);
+    
+    // ✅ Si le champ est invalide, on empêche la perte de focus
+    if (validationError && inputRef.current) {
+      setTimeout(() => {
+        inputRef.current.focus();
+      }, 10);
+    }
+  };
+
+  const togglePassword = () => {
+    setShowPassword(!showPassword);
+    if (onTogglePassword) onTogglePassword();
+  };
+
+  const isValid = !error && value.trim() !== "";
+  const currentType = showPasswordToggle ? (showPassword ? "text" : "password") : type;
+
+  return (
+    <div className="mb-3">
+      <label className="text-white/80 text-xs font-medium block mb-1">
+        {label} {required && <span className="text-red-400">*</span>}
+      </label>
+      <div className="relative">
+        <input
+          ref={inputRef}
+          type={currentType}
+          value={value}
+          onChange={handleChange}
+          onBlur={handleBlur}
+          onFocus={() => setTouched(true)}
+          className={`w-full bg-gray-700/50 border rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 transition-all ${
+            showPasswordToggle ? 'pr-10' : 'pr-8'
+          } ${
+            touched && error 
+              ? "border-red-500 focus:ring-red-500/20" 
+              : isValid && touched
+              ? "border-emerald-500 focus:ring-emerald-500/20"
+              : "border-gray-600 focus:border-emerald-500 focus:ring-emerald-500/20"
+          } ${className}`}
+          placeholder={placeholder}
+        />
+        {touched && error && (
+          <AlertCircle className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-red-400" />
+        )}
+        {touched && isValid && !error && !showPasswordToggle && (
+          <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-400" />
+        )}
+        {showPasswordToggle && (
+          <button
+            type="button"
+            onClick={togglePassword}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300"
+          >
+            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
+        )}
+      </div>
+      {touched && error && (
+        <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+          <AlertCircle size={12} />
+          {error}
+        </p>
+      )}
+    </div>
+  );
+};
 
 export default function Profil() {
   const [userInfo, setUserInfo] = useState({ 
@@ -16,11 +131,6 @@ export default function Profil() {
   const [signalements, setSignalements] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [selectedImages, setSelectedImages] = useState(null);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [formData, setFormData] = useState({
     nom: "",
     email: "",
@@ -33,20 +143,18 @@ export default function Profil() {
   const [message, setMessage] = useState({ type: "", text: "" });
   const [isLoading, setIsLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
-  const [focusedField, setFocusedField] = useState(null);
-  const [errors, setErrors] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedImages, setSelectedImages] = useState(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   
-  // Refs pour les champs
-  const nomInputRef = useRef(null);
-  const emailInputRef = useRef(null);
-  const currentPasswordInputRef = useRef(null);
-  const newPasswordInputRef = useRef(null);
-  const confirmPasswordInputRef = useRef(null);
+  // États de validation
+  const [isNomValid, setIsNomValid] = useState(false);
+  const [isEmailValid, setIsEmailValid] = useState(false);
+  const [isCurrentPasswordValid, setIsCurrentPasswordValid] = useState(false);
+  const [isNewPasswordValid, setIsNewPasswordValid] = useState(false);
+  const [isConfirmPasswordValid, setIsConfirmPasswordValid] = useState(false);
   
   const token = localStorage.getItem("token");
   const [currentUserId, setCurrentUserId] = useState(null);
-  const [currentUserRole, setCurrentUserRole] = useState(null);
 
   useEffect(() => {
     fetchUserProfile();
@@ -64,10 +172,7 @@ export default function Profil() {
 
     try {
       const response = await fetch("http://localhost:8081/api/auth/me", {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json"
-        }
+        headers: { "Authorization": `Bearer ${token}` }
       });
 
       if (response.ok) {
@@ -107,10 +212,7 @@ export default function Profil() {
 
     try {
       const response = await fetch("http://localhost:8081/api/signalements", {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json"
-        }
+        headers: { "Authorization": `Bearer ${token}` }
       });
 
       if (response.ok) {
@@ -123,7 +225,6 @@ export default function Profil() {
         });
         setSignalements(signalementsTries);
       } else {
-        console.error("Erreur récupération signalements");
         setSignalements([]);
       }
     } catch (error) {
@@ -141,14 +242,12 @@ export default function Profil() {
       if (response.ok) {
         const userData = await response.json();
         setCurrentUserId(userData.id);
-        setCurrentUserRole(userData.role);
       }
     } catch (error) {
       console.error("Erreur récupération utilisateur:", error);
     }
   };
 
-  // Méthodes de validation
   const validateNom = (value) => {
     if (!value.trim()) return "Le nom est requis";
     if (/\d/.test(value)) return "Le nom ne doit pas contenir de chiffres";
@@ -161,136 +260,19 @@ export default function Profil() {
   const validateEmail = (value) => {
     if (!value.trim()) return "L'email est requis";
     if (!value.toLowerCase().endsWith("@gmail.com")) {
-      return "L'email doit impérativement être une adresse @gmail.com";
+      return "L'email doit être une adresse @gmail.com";
     }
     return null;
-  };
-
-  const validateCurrentPassword = (value) => {
-    if (!value) return "Le mot de passe actuel est requis";
-    if (value.length < 6) return "Le mot de passe doit contenir au moins 6 caractères";
-    return null;
-  };
-
-  const validateNewPassword = (value) => {
-    if (!value) return "Le nouveau mot de passe est requis";
-    if (value.length < 6) return "Le mot de passe doit contenir au moins 6 caractères";
-    return null;
-  };
-
-  const validateConfirmPassword = (value) => {
-    if (!value) return "La confirmation est requise";
-    if (value !== passwordData.newPassword) return "Les mots de passe ne correspondent pas";
-    return null;
-  };
-
-  // Validation AVEC blocage de sortie du champ (le curseur reste sur le champ tant que l'info n'est pas valide)
-  const handleNomBlur = () => {
-    const error = validateNom(formData.nom);
-    setErrors(prev => ({ ...prev, nom: error }));
-    if (error && nomInputRef.current) {
-      setTimeout(() => nomInputRef.current.focus(), 0);
-    }
-  };
-
-  const handleEmailBlur = () => {
-    const error = validateEmail(formData.email);
-    setErrors(prev => ({ ...prev, email: error }));
-    if (error && emailInputRef.current) {
-      setTimeout(() => emailInputRef.current.focus(), 0);
-    }
-  };
-
-  const handleCurrentPasswordBlur = () => {
-    const error = validateCurrentPassword(passwordData.currentPassword);
-    setErrors(prev => ({ ...prev, currentPassword: error }));
-    if (error && currentPasswordInputRef.current) {
-      setTimeout(() => currentPasswordInputRef.current.focus(), 0);
-    }
-  };
-
-  const handleNewPasswordBlur = () => {
-    const error = validateNewPassword(passwordData.newPassword);
-    setErrors(prev => ({ ...prev, newPassword: error }));
-    if (error && newPasswordInputRef.current) {
-      setTimeout(() => newPasswordInputRef.current.focus(), 0);
-    }
-  };
-
-  const handleConfirmPasswordBlur = () => {
-    const error = validateConfirmPassword(passwordData.confirmPassword);
-    setErrors(prev => ({ ...prev, confirmPassword: error }));
-    if (error && confirmPasswordInputRef.current) {
-      setTimeout(() => confirmPasswordInputRef.current.focus(), 0);
-    }
-  };
-
-  // Gestion des changements
-  const handleNomChange = (e) => {
-    const value = e.target.value.replace(/[0-9]/g, "");
-    setFormData({ ...formData, nom: value });
-    const error = validateNom(value);
-    setErrors(prev => ({ ...prev, nom: error }));
-    if (!error) setErrors(prev => ({ ...prev, nom: null }));
-  };
-
-  const handleEmailChange = (e) => {
-    const value = e.target.value;
-    setFormData({ ...formData, email: value });
-    const error = validateEmail(value);
-    setErrors(prev => ({ ...prev, email: error }));
-    if (!error) setErrors(prev => ({ ...prev, email: null }));
-  };
-
-  const handleCurrentPasswordChange = (e) => {
-    const value = e.target.value;
-    setPasswordData({ ...passwordData, currentPassword: value });
-    const error = validateCurrentPassword(value);
-    setErrors(prev => ({ ...prev, currentPassword: error }));
-    if (!error) setErrors(prev => ({ ...prev, currentPassword: null }));
-  };
-
-  const handleNewPasswordChange = (e) => {
-    const value = e.target.value;
-    setPasswordData({ ...passwordData, newPassword: value });
-    const error = validateNewPassword(value);
-    setErrors(prev => ({ ...prev, newPassword: error }));
-    if (!error) setErrors(prev => ({ ...prev, newPassword: null }));
-    
-    if (passwordData.confirmPassword) {
-      const confirmError = validateConfirmPassword(passwordData.confirmPassword);
-      setErrors(prev => ({ ...prev, confirmPassword: confirmError }));
-    }
-  };
-
-  const handleConfirmPasswordChange = (e) => {
-    const value = e.target.value;
-    setPasswordData({ ...passwordData, confirmPassword: value });
-    const error = validateConfirmPassword(value);
-    setErrors(prev => ({ ...prev, confirmPassword: error }));
-    if (!error) setErrors(prev => ({ ...prev, confirmPassword: null }));
   };
 
   const handleUpdateProfile = async () => {
-    const nomError = validateNom(formData.nom);
-    const emailError = validateEmail(formData.email);
-    
-    if (nomError || emailError) {
-      setErrors({ nom: nomError, email: emailError });
-      setMessage({ type: "error", text: "Veuillez corriger les erreurs" });
+    if (!isNomValid || !isEmailValid) {
+      setMessage({ type: "error", text: "Veuillez corriger les erreurs avant de valider" });
       setTimeout(() => setMessage({ type: "", text: "" }), 3000);
-      
-      if (nomError && nomInputRef.current) {
-        nomInputRef.current.focus();
-      } else if (emailError && emailInputRef.current) {
-        emailInputRef.current.focus();
-      }
       return;
     }
     
     setIsLoading(true);
-    setMessage({ type: "", text: "" });
-
     try {
       const response = await fetch("http://localhost:8081/api/auth/update-profile", {
         method: "PUT",
@@ -305,14 +287,9 @@ export default function Profil() {
       });
 
       if (response.ok) {
-        setUserInfo({
-          ...userInfo,
-          nom: formData.nom,
-          email: formData.email
-        });
+        setUserInfo({ ...userInfo, nom: formData.nom, email: formData.email });
         setMessage({ type: "success", text: "Profil mis à jour !" });
         setIsEditing(false);
-        setErrors({});
       } else {
         const error = await response.text();
         setMessage({ type: "error", text: error || "Erreur lors de la mise à jour" });
@@ -326,24 +303,13 @@ export default function Profil() {
   };
 
   const handleChangePassword = async () => {
-    const currentError = validateCurrentPassword(passwordData.currentPassword);
-    const newError = validateNewPassword(passwordData.newPassword);
-    const confirmError = validateConfirmPassword(passwordData.confirmPassword);
-    
-    if (currentError || newError || confirmError) {
-      setErrors({ 
-        currentPassword: currentError, 
-        newPassword: newError, 
-        confirmPassword: confirmError 
-      });
-      setMessage({ type: "error", text: "Veuillez corriger les erreurs" });
+    if (!isCurrentPasswordValid || !isNewPasswordValid || !isConfirmPasswordValid) {
+      setMessage({ type: "error", text: "Veuillez corriger les erreurs avant de valider" });
       setTimeout(() => setMessage({ type: "", text: "" }), 3000);
       return;
     }
 
     setIsLoading(true);
-    setMessage({ type: "", text: "" });
-
     try {
       const response = await fetch("http://localhost:8081/api/auth/change-password", {
         method: "POST",
@@ -361,7 +327,9 @@ export default function Profil() {
         setMessage({ type: "success", text: "Mot de passe changé !" });
         setShowPasswordForm(false);
         setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
-        setErrors({});
+        setIsCurrentPasswordValid(false);
+        setIsNewPasswordValid(false);
+        setIsConfirmPasswordValid(false);
       } else {
         const error = await response.text();
         setMessage({ type: "error", text: error || "Erreur lors du changement" });
@@ -378,11 +346,8 @@ export default function Profil() {
     try {
       const response = await fetch(`http://localhost:8081/api/signalements/${id}`, {
         method: "DELETE",
-        headers: {
-          "Authorization": `Bearer ${token}`
-        }
+        headers: { "Authorization": `Bearer ${token}` }
       });
-
       if (response.ok) {
         setMessage({ type: "success", text: "Signalement supprimé !" });
         fetchSignalements();
@@ -397,7 +362,6 @@ export default function Profil() {
     }
   };
 
-  // Gestion de la galerie d'images
   const openImageViewer = (images, startIndex = 0) => {
     setSelectedImages(images);
     setCurrentImageIndex(startIndex);
@@ -441,7 +405,6 @@ export default function Profil() {
     return roles[role] || role;
   };
 
-  // Catégories
   const categories = [
     { id: "VOIRIE", name: "Voirie", icon: Road },
     { id: "ECLAIRAGE", name: "Éclairage", icon: Lightbulb },
@@ -502,7 +465,6 @@ export default function Profil() {
     const date = new Date(dateString);
     const now = new Date();
     const diffInSeconds = Math.floor((now - date) / 1000);
-    
     if (diffInSeconds < 60) return "À l'instant";
     if (diffInSeconds < 3600) return `Il y a ${Math.floor(diffInSeconds / 60)} min`;
     if (diffInSeconds < 86400) return `Il y a ${Math.floor(diffInSeconds / 3600)} h`;
@@ -510,58 +472,29 @@ export default function Profil() {
     return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
   };
 
-  // Fonction pour formater l'adresse complète
   const getFullAddress = (signalement) => {
     if (signalement.address && signalement.address.length > 10) {
       return signalement.address;
     }
-    
     const parts = [];
-    if (signalement.address && signalement.address !== signalement.ville) {
-      parts.push(signalement.address);
-    }
-    if (signalement.ville) {
-      parts.push(signalement.ville);
-    }
-    if (signalement.commune && signalement.commune !== signalement.ville) {
-      parts.push(`District de ${signalement.commune}`);
-    }
-    
-    if (parts.length > 0) {
-      return parts.join(', ');
-    }
-    
+    if (signalement.address && signalement.address !== signalement.ville) parts.push(signalement.address);
+    if (signalement.ville) parts.push(signalement.ville);
+    if (signalement.commune && signalement.commune !== signalement.ville) parts.push(`District de ${signalement.commune}`);
+    if (parts.length > 0) return parts.join(', ');
     return signalement.address || signalement.ville || signalement.commune || "Localisation inconnue";
   };
 
-  // Vérifier si le formulaire de modification de profil est valide
-  const isProfileFormValid = () => {
-    return formData.nom.trim() !== "" && 
-           formData.email.trim() !== "" &&
-           !validateNom(formData.nom) && 
-           !validateEmail(formData.email);
-  };
-
-  // Vérifier si le formulaire de changement de mot de passe est valide
-  const isPasswordFormValid = () => {
-    return passwordData.currentPassword.trim() !== "" &&
-           passwordData.newPassword.trim() !== "" &&
-           passwordData.confirmPassword.trim() !== "" &&
-           !validateCurrentPassword(passwordData.currentPassword) && 
-           !validateNewPassword(passwordData.newPassword) && 
-           !validateConfirmPassword(passwordData.confirmPassword);
-  };
+  const isProfileFormValid = isNomValid && isEmailValid;
+  const isPasswordFormValid = isCurrentPasswordValid && isNewPasswordValid && isConfirmPasswordValid;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       <header className="sticky top-0 z-30 bg-[#242526] border-b border-gray-700/50 shadow-lg">
         <div className="container mx-auto max-w-3xl px-4 py-3">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-              <User className="w-6 h-6 text-emerald-400" />
-              Mon profil
-            </h1>
-          </div>
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <User className="w-6 h-6 text-emerald-400" />
+            Mon profil
+          </h1>
         </div>
       </header>
 
@@ -608,54 +541,43 @@ export default function Profil() {
 
             {isEditing && (
               <div className="space-y-3 mt-4">
-                <div className="space-y-1">
-                  <label className="text-white/80 text-xs font-medium">Nom complet</label>
-                  <div className={`relative transition-all duration-300 ${focusedField === 'nom' ? 'scale-[1.02]' : ''}`}>
-                    <input
-                      ref={nomInputRef}
-                      type="text"
-                      value={formData.nom}
-                      onChange={handleNomChange}
-                      onFocus={() => setFocusedField('nom')}
-                      onBlur={handleNomBlur}
-                      className={`w-full bg-gray-700/50 border rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 transition-all ${
-                        errors.nom 
-                          ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' 
-                          : 'border-gray-600 focus:border-emerald-500 focus:ring-emerald-500/20'
-                      }`}
-                      placeholder="Votre nom"
-                    />
-                  </div>
-                  {errors.nom && <p className="text-red-400 text-xs mt-1 animate-shake">{errors.nom}</p>}
-                </div>
+                <ValidatedInput
+                  label="Nom complet"
+                  value={formData.nom}
+                  onChange={(val) => {
+                    setFormData({ ...formData, nom: val });
+                    const error = validateNom(val);
+                    setIsNomValid(!error);
+                  }}
+                  placeholder="Votre nom"
+                  required={true}
+                  minLength={2}
+                  errorMessage="Le nom doit contenir au moins 2 caractères"
+                  onValidChange={(valid) => setIsNomValid(valid)}
+                />
 
-                <div className="space-y-1">
-                  <label className="text-white/80 text-xs font-medium">Email</label>
-                  <div className={`relative transition-all duration-300 ${focusedField === 'email' ? 'scale-[1.02]' : ''}`}>
-                    <input
-                      ref={emailInputRef}
-                      type="email"
-                      value={formData.email}
-                      onChange={handleEmailChange}
-                      onFocus={() => setFocusedField('email')}
-                      onBlur={handleEmailBlur}
-                      className={`w-full bg-gray-700/50 border rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 transition-all ${
-                        errors.email 
-                          ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' 
-                          : 'border-gray-600 focus:border-emerald-500 focus:ring-emerald-500/20'
-                      }`}
-                      placeholder="votre@email.com"
-                    />
-                  </div>
-                  {errors.email && <p className="text-red-400 text-xs mt-1 animate-shake">{errors.email}</p>}
-                </div>
+                <ValidatedInput
+                  label="Email"
+                  value={formData.email}
+                  onChange={(val) => {
+                    setFormData({ ...formData, email: val });
+                    const error = validateEmail(val);
+                    setIsEmailValid(!error);
+                  }}
+                  type="email"
+                  placeholder="votre@email.com"
+                  required={true}
+                  pattern={/^[^\s@]+@[^\s@]+\.[^\s@]+$/}
+                  errorMessage="L'email doit être une adresse @gmail.com"
+                  onValidChange={(valid) => setIsEmailValid(valid)}
+                />
 
                 <div className="flex gap-2">
                   <button
                     onClick={handleUpdateProfile}
-                    disabled={isLoading || !isProfileFormValid()}
+                    disabled={isLoading || !isProfileFormValid}
                     className={`flex-1 font-semibold py-2 rounded-lg transition text-sm ${
-                      !isProfileFormValid() || isLoading
+                      !isProfileFormValid || isLoading
                         ? 'bg-gray-600 cursor-not-allowed opacity-50'
                         : 'bg-emerald-600 hover:bg-emerald-700 text-white'
                     }`}
@@ -666,7 +588,8 @@ export default function Profil() {
                     onClick={() => {
                       setIsEditing(false);
                       setFormData({ nom: userInfo.nom, email: userInfo.email });
-                      setErrors({});
+                      setIsNomValid(true);
+                      setIsEmailValid(true);
                     }}
                     className="px-4 bg-gray-600 hover:bg-gray-500 text-white font-semibold py-2 rounded-lg transition text-sm"
                   >
@@ -699,90 +622,62 @@ export default function Profil() {
           
           {showPasswordForm ? (
             <div className="p-4 space-y-3">
-              <div className="space-y-1">
-                <label className="text-white/80 text-xs font-medium">Mot de passe actuel</label>
-                <div className="relative">
-                  <input
-                    ref={currentPasswordInputRef}
-                    type={showPassword ? "text" : "password"}
-                    value={passwordData.currentPassword}
-                    onChange={handleCurrentPasswordChange}
-                    onBlur={handleCurrentPasswordBlur}
-                    className={`w-full bg-gray-700/50 border rounded-lg px-3 py-2 text-white text-sm pr-8 focus:outline-none focus:ring-2 transition-all ${
-                      errors.currentPassword 
-                        ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' 
-                        : 'border-gray-600 focus:border-emerald-500 focus:ring-emerald-500/20'
-                    }`}
-                    placeholder="••••••••"
-                  />
-                  <button
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400"
-                  >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-                {errors.currentPassword && <p className="text-red-400 text-xs mt-1 animate-shake">{errors.currentPassword}</p>}
-              </div>
+              <ValidatedInput
+                label="Mot de passe actuel"
+                value={passwordData.currentPassword}
+                onChange={(val) => {
+                  setPasswordData({ ...passwordData, currentPassword: val });
+                  setIsCurrentPasswordValid(val.length >= 6);
+                }}
+                type="password"
+                placeholder="••••••••"
+                required={true}
+                minLength={6}
+                errorMessage="Le mot de passe doit contenir au moins 6 caractères"
+                onValidChange={(valid) => setIsCurrentPasswordValid(valid)}
+                showPasswordToggle={true}
+              />
 
-              <div className="space-y-1">
-                <label className="text-white/80 text-xs font-medium">Nouveau mot de passe</label>
-                <div className="relative">
-                  <input
-                    ref={newPasswordInputRef}
-                    type={showNewPassword ? "text" : "password"}
-                    value={passwordData.newPassword}
-                    onChange={handleNewPasswordChange}
-                    onBlur={handleNewPasswordBlur}
-                    className={`w-full bg-gray-700/50 border rounded-lg px-3 py-2 text-white text-sm pr-8 focus:outline-none focus:ring-2 transition-all ${
-                      errors.newPassword 
-                        ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' 
-                        : 'border-gray-600 focus:border-emerald-500 focus:ring-emerald-500/20'
-                    }`}
-                    placeholder="••••••••"
-                  />
-                  <button
-                    onClick={() => setShowNewPassword(!showNewPassword)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400"
-                  >
-                    {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-                {errors.newPassword && <p className="text-red-400 text-xs mt-1 animate-shake">{errors.newPassword}</p>}
-              </div>
+              <ValidatedInput
+                label="Nouveau mot de passe"
+                value={passwordData.newPassword}
+                onChange={(val) => {
+                  setPasswordData({ ...passwordData, newPassword: val });
+                  setIsNewPasswordValid(val.length >= 6);
+                }}
+                type="password"
+                placeholder="••••••••"
+                required={true}
+                minLength={6}
+                errorMessage="Le mot de passe doit contenir au moins 6 caractères"
+                onValidChange={(valid) => setIsNewPasswordValid(valid)}
+                showPasswordToggle={true}
+              />
 
-              <div className="space-y-1">
-                <label className="text-white/80 text-xs font-medium">Confirmer le mot de passe</label>
-                <div className="relative">
-                  <input
-                    ref={confirmPasswordInputRef}
-                    type={showConfirmPassword ? "text" : "password"}
-                    value={passwordData.confirmPassword}
-                    onChange={handleConfirmPasswordChange}
-                    onBlur={handleConfirmPasswordBlur}
-                    className={`w-full bg-gray-700/50 border rounded-lg px-3 py-2 text-white text-sm pr-8 focus:outline-none focus:ring-2 transition-all ${
-                      errors.confirmPassword 
-                        ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' 
-                        : 'border-gray-600 focus:border-emerald-500 focus:ring-emerald-500/20'
-                    }`}
-                    placeholder="••••••••"
-                  />
-                  <button
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400"
-                  >
-                    {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-                {errors.confirmPassword && <p className="text-red-400 text-xs mt-1 animate-shake">{errors.confirmPassword}</p>}
-              </div>
+              <ValidatedInput
+                label="Confirmer le mot de passe"
+                value={passwordData.confirmPassword}
+                onChange={(val) => {
+                  setPasswordData({ ...passwordData, confirmPassword: val });
+                  setIsConfirmPasswordValid(val.length >= 6 && val === passwordData.newPassword);
+                }}
+                type="password"
+                placeholder="••••••••"
+                required={true}
+                minLength={6}
+                errorMessage={passwordData.confirmPassword !== passwordData.newPassword 
+                  ? "Les mots de passe ne correspondent pas" 
+                  : "Le mot de passe doit contenir au moins 6 caractères"}
+                onValidChange={(valid) => setIsConfirmPasswordValid(valid)}
+                showPasswordToggle={true}
+              />
 
               <div className="flex gap-2">
                 <button
                   onClick={handleChangePassword}
-                  disabled={isLoading || !isPasswordFormValid()}
+                  disabled={isLoading || !isPasswordFormValid}
                   className={`flex-1 font-semibold py-2 rounded-lg transition text-sm ${
-                    !isPasswordFormValid() || isLoading
+                    !isPasswordFormValid || isLoading
                       ? 'bg-gray-600 cursor-not-allowed opacity-50'
                       : 'bg-emerald-600 hover:bg-emerald-700 text-white'
                   }`}
@@ -793,7 +688,9 @@ export default function Profil() {
                   onClick={() => {
                     setShowPasswordForm(false);
                     setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
-                    setErrors({});
+                    setIsCurrentPasswordValid(false);
+                    setIsNewPasswordValid(false);
+                    setIsConfirmPasswordValid(false);
                   }}
                   className="px-4 bg-gray-600 hover:bg-gray-500 text-white font-semibold py-2 rounded-lg transition text-sm"
                 >
@@ -892,8 +789,7 @@ export default function Profil() {
                     {hasImages && (
                       <div className={`grid gap-1 mb-3 ${
                         s.images.length === 1 ? 'grid-cols-1' :
-                        s.images.length === 2 ? 'grid-cols-2' :
-                        'grid-cols-2'
+                        s.images.length === 2 ? 'grid-cols-2' : 'grid-cols-2'
                       }`}>
                         {s.images.slice(0, 4).map((img, index) => (
                           <div 
@@ -979,83 +875,37 @@ export default function Profil() {
         </div>
       </main>
 
+      {/* Lightbox */}
       {selectedImages && (
-        <div 
-          className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center"
-          onClick={closeImageViewer}
-        >
-          <button 
-            className="absolute top-4 right-4 text-white hover:text-gray-300 p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors z-10"
-            onClick={closeImageViewer}
-          >
+        <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center" onClick={closeImageViewer}>
+          <button className="absolute top-4 right-4 text-white hover:text-gray-300 p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors z-10" onClick={closeImageViewer}>
             <X size={24} />
           </button>
-
           <div className="absolute top-4 left-4 text-white text-sm bg-black/50 px-3 py-1.5 rounded-full z-10">
             {currentImageIndex + 1} / {selectedImages.length}
           </div>
-
           {currentImageIndex > 0 && (
-            <button 
-              className="absolute left-4 text-white hover:text-gray-300 p-3 rounded-full bg-black/50 hover:bg-black/70 transition-colors z-10"
-              onClick={(e) => { e.stopPropagation(); prevImage(); }}
-            >
+            <button className="absolute left-4 text-white hover:text-gray-300 p-3 rounded-full bg-black/50 hover:bg-black/70 transition-colors z-10" onClick={(e) => { e.stopPropagation(); prevImage(); }}>
               <ChevronLeft size={32} />
             </button>
           )}
-
           {currentImageIndex < selectedImages.length - 1 && (
-            <button 
-              className="absolute right-4 text-white hover:text-gray-300 p-3 rounded-full bg-black/50 hover:bg-black/70 transition-colors z-10"
-              onClick={(e) => { e.stopPropagation(); nextImage(); }}
-            >
+            <button className="absolute right-4 text-white hover:text-gray-300 p-3 rounded-full bg-black/50 hover:bg-black/70 transition-colors z-10" onClick={(e) => { e.stopPropagation(); nextImage(); }}>
               <ChevronRight size={32} />
             </button>
           )}
-
-          <img 
-            src={selectedImages[currentImageIndex]?.url} 
-            className="max-w-[90vw] max-h-[90vh] object-contain"
-            alt={`Image ${currentImageIndex + 1}`}
-            onClick={(e) => e.stopPropagation()}
-            onError={(e) => {
-              e.target.src = "https://placehold.co/800x600/242526/808080?text=Image+non+disponible";
-            }}
-          />
-
+          <img src={selectedImages[currentImageIndex]?.url} className="max-w-[90vw] max-h-[90vh] object-contain" alt={`Image ${currentImageIndex + 1}`} onClick={(e) => e.stopPropagation()} />
           {selectedImages.length > 1 && (
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 bg-black/50 p-2 rounded-xl backdrop-blur-sm z-10">
               {selectedImages.map((img, index) => (
-                <button
-                  key={index}
-                  onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(index); }}
-                  className={`w-12 h-12 rounded-lg overflow-hidden border-2 transition-all ${
-                    index === currentImageIndex ? 'border-emerald-500 scale-105' : 'border-transparent opacity-60 hover:opacity-100'
-                  }`}
-                >
-                  <img 
-                    src={img.url} 
-                    className="w-full h-full object-cover" 
-                    alt={`Miniature ${index + 1}`}
-                    onError={(e) => {
-                      e.target.src = "https://placehold.co/100x100/242526/808080?text=Error";
-                    }}
-                  />
+                <button key={index} onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(index); }} className={`w-12 h-12 rounded-lg overflow-hidden border-2 transition-all ${index === currentImageIndex ? 'border-emerald-500 scale-105' : 'border-transparent opacity-60 hover:opacity-100'}`}>
+                  <img src={img.url} className="w-full h-full object-cover" alt={`Miniature ${index + 1}`} />
                 </button>
               ))}
             </div>
           )}
         </div>
       )}
-
-      <style>{`
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          25% { transform: translateX(-5px); }
-          75% { transform: translateX(5px); }
-        }
-        .animate-shake { animation: shake 0.3s ease-in-out; }
-      `}</style>
     </div>
   );
 }
