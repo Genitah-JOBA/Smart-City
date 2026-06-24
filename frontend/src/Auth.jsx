@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { MapPin, Smartphone, Building2, Shield, ArrowRight, Eye, EyeOff, UserPlus, LogIn, Sparkles, Rocket, Zap, Award, Loader2 } from "lucide-react";
+import { MapPin, Smartphone, Building2, Shield, ArrowRight, Eye, EyeOff, UserPlus, LogIn, Sparkles, Rocket, Zap, Award, Loader2, Phone, Home } from "lucide-react";
 
 export default function Auth() {
   // État pour basculer entre login et register
@@ -24,6 +24,10 @@ export default function Auth() {
   // États spécifiques à l'inscription
   const [nom, setNom] = useState("");
   const [role, setRole] = useState("CITIZEN");
+  const [domaine, setDomaine] = useState("");
+  const [metier, setMetier] = useState("");
+  const [telephone, setTelephone] = useState("");
+  const [adresse, setAdresse] = useState("");
   
   const [errors, setErrors] = useState({});
 
@@ -63,38 +67,13 @@ export default function Auth() {
       setEmail("");
       setMotDePasse("");
       setNom("");
+      setDomaine("");
+      setMetier("");
+      setTelephone("");
+      setAdresse("");
       setShowPassword(false);
       setIsAnimating(false);
     }, 500);
-  };
-
-  // 🔥 PLUS FIABLE : Récupérer le rôle depuis l'API
-  const fetchUserRole = async (token) => {
-    try {
-      const response = await fetch("http://localhost:8081/api/auth/me", {
-        method: "GET",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json"
-        }
-      });
-      
-      if (response.ok) {
-        const userData = await response.json();
-        console.log("📦 Données utilisateur:", userData);
-        return userData.role || userData.role?.toUpperCase() || "CITIZEN";
-      }
-    } catch (error) {
-      console.error("Erreur récupération rôle:", error);
-    }
-    
-    // Fallback : essayer de décoder le token
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      return payload.role || payload.roles?.[0] || "CITIZEN";
-    } catch {
-      return "CITIZEN";
-    }
   };
 
   const redirectToDashboard = (role) => {
@@ -111,6 +90,91 @@ export default function Auth() {
     } else {
       navigate("/signalements", { replace: true });
     }
+  };
+
+  // ⭐ UNE SEULE DÉCLARATION DE roles
+  const roles = [
+    { id: "CITIZEN", label: "Citoyen", icon: Smartphone, color: "from-emerald-600 to-teal-500", description: "Signalez des problèmes dans votre quartier" },
+    { id: "AGENT", label: "Agent Municipal", icon: Building2, color: "from-green-600 to-green-400", description: "Gérez et résolvez les signalements" },
+  ];
+
+  // ⭐ LISTE DES DOMAINES AVEC DECHETS (au lieu de PROPRETE)
+  const domaines = [
+    { id: "VOIRIE", label: "Voirie et infrastructures", icon: "🛣️", description: "Routes, trottoirs, nids-de-poule" },
+    { id: "ECLAIRAGE", label: "Éclairage public", icon: "💡", description: "Lampadaires, éclairage urbain" },
+    { id: "DECHETS", label: "Déchets et Propreté", icon: "🗑️", description: "Collecte des déchets, nettoyage" },
+    { id: "ESPACES_VERTS", label: "Espaces verts", icon: "🌳", description: "Parcs, jardins, arbres" },
+    { id: "TRANSPORTS", label: "Transports et mobilité", icon: "🚌", description: "Transports en commun, stationnement" },
+    { id: "SECURITE", label: "Sécurité et prévention", icon: "👮", description: "Sécurité publique, prévention" },
+    { id: "URBANISME", label: "Urbanisme", icon: "🏗️", description: "Aménagement urbain, construction" },
+  ];
+
+  // ⭐ MÉTIERS PAR DOMAINE AVEC DECHETS
+  const metiersParDomaine = {
+    VOIRIE: [
+      { id: "AGENT_VOIRIE", label: "Agent de voirie", icon: "🛠️", description: "Réparation nids-de-poule, entretien chaussées" },
+      { id: "TECHNICIEN_GENIE_CIVIL", label: "Technicien génie civil", icon: "🏗️", description: "Inspection ponts, tunnels, ouvrages d'art" },
+      { id: "CHEF_CHANTIER_VOIRIE", label: "Chef de chantier voirie", icon: "📋", description: "Coordination travaux routiers" },
+      { id: "AGENT_SIGNALISATION", label: "Agent de signalisation", icon: "🚦", description: "Pose et entretien panneaux, feux tricolores" }
+    ],
+    ECLAIRAGE: [
+      { id: "TECHNICIEN_ECLAIRAGE", label: "Technicien éclairage", icon: "💡", description: "Réparation lampadaires, entretien du réseau" },
+      { id: "INGENIEUR_ECLAIRAGE", label: "Ingénieur éclairage urbain", icon: "📐", description: "Conception schéma d'éclairage, optimisation énergétique" },
+      { id: "AGENT_MAINTENANCE_ELEC", label: "Agent maintenance électrique", icon: "⚡", description: "Dépannage pannes électriques" }
+    ],
+    DECHETS: [
+      { id: "AGENT_COLLECTE", label: "Agent de collecte", icon: "🚛", description: "Ramassage ordures ménagères" },
+      { id: "TECHNICIEN_NETTOIEMENT", label: "Technicien nettoiement", icon: "🧹", description: "Nettoyage rues, espaces publics" },
+      { id: "RESPONSABLE_DECHETTERIE", label: "Responsable déchetterie", icon: "♻️", description: "Gestion des déchèteries" },
+      { id: "AGENT_TRI", label: "Agent de tri", icon: "🗑️", description: "Centre de tri des déchets" },
+      { id: "COORDINATEUR_PROPRETE", label: "Coordinateur propreté", icon: "📊", description: "Planification tournées" }
+    ],
+    ESPACES_VERTS: [
+      { id: "JARDINIER_MUNICIPAL", label: "Jardinier municipal", icon: "🌿", description: "Entretien parcs, jardins, massifs" },
+      { id: "ELAGUEUR", label: "Élagueur", icon: "🌳", description: "Taille et entretien arbres" },
+      { id: "TECHNICIEN_ESPACES_VERTS", label: "Technicien espaces verts", icon: "🏡", description: "Aménagement paysager" },
+      { id: "PAYSAGISTE_URBAIN", label: "Paysagiste urbain", icon: "🎨", description: "Conception espaces verts" },
+      { id: "AGENT_ARROSAGE", label: "Agent arrosage", icon: "💧", description: "Gestion système d'irrigation" }
+    ],
+    TRANSPORTS: [
+      { id: "AGENT_REGULATION", label: "Agent de régulation", icon: "🚦", description: "Gestion trafic, feux, bouchons" },
+      { id: "CONTROLEUR_TRANSPORT", label: "Contrôleur transport", icon: "🎫", description: "Contrôle bus, tramway, métro" },
+      { id: "TECHNICIEN_STATIONNEMENT", label: "Technicien stationnement", icon: "🅿️", description: "Gestion parkings, horodateurs" },
+      { id: "AGENT_MOBILITE_DOUCE", label: "Agent mobilité douce", icon: "🚲", description: "Entretien pistes cyclables, bornes vélos" }
+    ],
+    SECURITE: [
+      { id: "AGENT_SECURITE_URBAINE", label: "Agent de sécurité urbaine", icon: "👮", description: "Surveillance quartiers" },
+      { id: "POLICE_MUNICIPALE", label: "Police municipale", icon: "👮‍♂️", description: "Maintien ordre public, verbalisation" },
+      { id: "AGENT_MEDIATEUR", label: "Agent médiateur", icon: "🤝", description: "Gestion conflits de quartier" },
+      { id: "COORDINATEUR_VIDEO", label: "Coordinateur vidéoprotection", icon: "📹", description: "Supervision caméras" }
+    ],
+    URBANISME: [
+      { id: "URBANISTE", label: "Urbaniste", icon: "🏙️", description: "Planification urbaine" },
+      { id: "ARCHITECTE_CONSEIL", label: "Architecte conseil", icon: "🏛️", description: "Conseil en architecture" },
+      { id: "TECHNICIEN_URBANISME", label: "Technicien urbanisme", icon: "📐", description: "Instruction permis de construire" },
+      { id: "CHARGE_MISSION_URBAIN", label: "Chargé de mission urbain", icon: "📋", description: "Projets d'aménagement" }
+    ]
+  };
+
+  // ⭐ Validation du téléphone (10 chiffres, commence par 032/033/034/037/038)
+  const validatePhone = (phone) => {
+    if (!phone) return "Le numéro de téléphone est obligatoire";
+    const phoneRegex = /^(032|033|034|037|038)\d{7}$/;
+    if (!phoneRegex.test(phone)) {
+      return "Le téléphone doit commencer par 032, 033, 034, 037 ou 038 et contenir exactement 10 chiffres";
+    }
+    return null;
+  };
+
+  // ⭐ Validation de l'adresse (minimum 6 caractères, lettres, chiffres et espaces uniquement)
+  const validateAddress = (address) => {
+    if (!address) return "L'adresse est obligatoire";
+    if (address.length < 6) return "L'adresse doit contenir au moins 6 caractères";
+    const addressRegex = /^[a-zA-Z0-9\s]+$/;
+    if (!addressRegex.test(address)) {
+      return "L'adresse ne doit contenir que des lettres, chiffres et espaces (pas de caractères spéciaux)";
+    }
+    return null;
   };
 
   const handleLogin = async (e) => {
@@ -149,63 +213,61 @@ export default function Auth() {
 
     const token = await response.text();
     
-    // 🔥 Récupérer les informations utilisateur depuis l'API
-    const userResponse = await fetch("http://localhost:8081/api/auth/me", {
-      method: "GET",
-      headers: {
-        "Authorization": `Bearer ${token}`,
-        "Content-Type": "application/json"
-      }
-    });
+    // ⭐ Stocker le token IMMÉDIATEMENT
+    localStorage.setItem("token", token);
     
-    let userData = {};
+    // ⭐ Décoder le token pour obtenir les infos sans appel API
     let userId = null;
     let userNom = email.split('@')[0];
     let userRole = "CITIZEN";
+    let userDomaine = null;
+    let userMetier = null;
     
-    if (userResponse.ok) {
-      userData = await userResponse.json();
-      userId = userData.id || userData.userId;
-      userNom = userData.nom || userData.prenom || email.split('@')[0];
-      userRole = userData.role || userData.role?.toUpperCase() || "CITIZEN";
-      console.log("📦 Données utilisateur:", userData);
-      console.log("🆔 User ID récupéré:", userId);
-    } else {
-      // Fallback : essayer de décoder le token
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        userId = payload.userId || payload.id || payload.sub;
-        userRole = payload.role || payload.roles?.[0] || "CITIZEN";
-        console.log("🆔 User ID depuis token:", userId);
-      } catch {
-        userRole = "CITIZEN";
-      }
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      userId = payload.userId || payload.id || payload.sub;
+      userRole = payload.role || "CITIZEN";
+      userDomaine = payload.domaine;
+      userMetier = payload.metier;
+      console.log("📦 Payload du token:", payload);
+    } catch (e) {
+      console.error("Erreur décodage token:", e);
     }
     
     const normalizedRole = userRole.toUpperCase();
     
-    console.log("✅ Rôle récupéré:", normalizedRole);
-    console.log("✅ Nom utilisateur:", userNom);
-    console.log("✅ ID utilisateur:", userId);
+    console.log("✅ Rôle depuis token:", normalizedRole);
     
-    // 🔥 STOCKER TOUTES LES INFORMATIONS DANS LOCALSTORAGE
-    localStorage.setItem("token", token);
+    // Stocker toutes les infos
     localStorage.setItem("userRole", normalizedRole);
     localStorage.setItem("userEmail", email);
     localStorage.setItem("userNom", userNom);
+    if (userDomaine) localStorage.setItem("userDomaine", userDomaine);
+    if (userMetier) localStorage.setItem("userMetier", userMetier);
     
-    // 🔥 CRITIQUE : Stocker l'objet user COMPLET avec l'ID
     localStorage.setItem("user", JSON.stringify({
       id: userId,
       nom: userNom,
-      prenom: userData.prenom || "",
       email: email,
-      role: normalizedRole
+      role: normalizedRole,
+      domaine: userDomaine,
+      metier: userMetier
     }));
 
     setIsSuccess(true);
     setMessage(`Connexion réussie ! Bienvenue ${userNom}`);
     setShowModal(true);
+    
+    // ⭐ Redirection après un court délai
+    setTimeout(() => {
+      if (normalizedRole === "ADMIN") {
+        navigate("/admin/dashboard", { replace: true });
+      } else if (normalizedRole === "AGENT") {
+        navigate("/agent/signalements-assignes", { replace: true });
+      } else {
+        navigate("/signalements", { replace: true });
+      }
+    }, 500);
     
   } catch (error) {
     setIsSuccess(false);
@@ -216,7 +278,7 @@ export default function Auth() {
   }
 };
 
-  // Gestion de l'inscription OPTIMISÉE
+  // Gestion de l'inscription OPTIMISÉE avec validations renforcées
   const handleRegister = async (e) => {
     e.preventDefault();
     
@@ -238,6 +300,28 @@ export default function Auth() {
     if (motDePasse.length < 6) {
       newErrors.motDePasse = "Le mot de passe doit contenir plus de 6 caractères.";
     }
+    
+    // ⭐ Validation du téléphone (obligatoire)
+    const phoneError = validatePhone(telephone);
+    if (phoneError) {
+      newErrors.telephone = phoneError;
+    }
+    
+    // ⭐ Validation de l'adresse (obligatoire)
+    const addressError = validateAddress(adresse);
+    if (addressError) {
+      newErrors.adresse = addressError;
+    }
+    
+    // Validation du domaine pour les agents
+    if (role === "AGENT" && !domaine) {
+      newErrors.domaine = "Veuillez sélectionner votre domaine d'intervention";
+    }
+    
+    // Validation du métier pour les agents
+    if (role === "AGENT" && domaine && !metier) {
+      newErrors.metier = "Veuillez sélectionner votre métier";
+    }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -248,10 +332,23 @@ export default function Auth() {
     setIsLoading(true);
 
     try {
+      const requestBody = { 
+        nom, 
+        email, 
+        motDePasse, 
+        role,
+        telephone: telephone,
+        adresse: adresse,
+        domaine: role === "AGENT" ? domaine : null,
+        metier: role === "AGENT" && metier ? metier : null
+      };
+      
+      console.log("📤 Envoi inscription:", requestBody);
+
       const response = await fetch("http://localhost:8081/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nom, email, motDePasse, role }),
+        body: JSON.stringify(requestBody),
       });
 
       if (response.status === 409) {
@@ -270,6 +367,11 @@ export default function Auth() {
       setNom(""); 
       setEmail(""); 
       setMotDePasse("");
+      setRole("CITIZEN");
+      setDomaine("");
+      setMetier("");
+      setTelephone("");
+      setAdresse("");
       
     } catch (error) {
       setIsSuccess(false);
@@ -299,10 +401,39 @@ export default function Auth() {
     }
   };
 
-  const roles = [
-    { id: "CITIZEN", label: "Citoyen", icon: Smartphone, color: "from-emerald-600 to-teal-500", description: "Signalez des problèmes dans votre quartier" },
-    { id: "AGENT", label: "Agent Municipal", icon: Building2, color: "from-green-600 to-green-400", description: "Gérez et résolvez les signalements" },
-  ];
+  // ⭐ Validation en temps réel du téléphone
+  const validatePhoneField = (e) => {
+    const value = e.target.value;
+    if (value !== "") {
+      const phoneRegex = /^(032|033|034|037|038)\d{7}$/;
+      if (!phoneRegex.test(value)) {
+        setErrors(prev => ({ ...prev, telephone: "Le téléphone doit commencer par 032, 033, 034, 037 ou 038 et contenir exactement 10 chiffres" }));
+      } else {
+        setErrors(prev => ({ ...prev, telephone: null }));
+      }
+    } else {
+      setErrors(prev => ({ ...prev, telephone: "Le numéro de téléphone est obligatoire" }));
+    }
+  };
+
+  // ⭐ Validation en temps réel de l'adresse
+  const validateAddressField = (e) => {
+    const value = e.target.value;
+    if (value !== "") {
+      if (value.length < 6) {
+        setErrors(prev => ({ ...prev, adresse: "L'adresse doit contenir au moins 6 caractères" }));
+      } else {
+        const addressRegex = /^[a-zA-Z0-9\s]+$/;
+        if (!addressRegex.test(value)) {
+          setErrors(prev => ({ ...prev, adresse: "L'adresse ne doit contenir que des lettres, chiffres et espaces" }));
+        } else {
+          setErrors(prev => ({ ...prev, adresse: null }));
+        }
+      }
+    } else {
+      setErrors(prev => ({ ...prev, adresse: "L'adresse est obligatoire" }));
+    }
+  };
 
   const getFormAnimationClass = () => {
     if (!isAnimating) return "animate-form-enter";
@@ -367,7 +498,6 @@ export default function Auth() {
                   if (isSuccess) {
                     const userRole = localStorage.getItem("userRole");
                     if (userRole) {
-                      // Redirection immédiate
                       if (userRole === "ADMIN") {
                         navigate("/admin/dashboard", { replace: true });
                       } else if (userRole === "AGENT") {
@@ -376,7 +506,6 @@ export default function Auth() {
                         navigate("/signalements", { replace: true });
                       }
                     } else {
-                      // Pour l'inscription, basculer vers connexion
                       setShowModal(false);
                       setAnimationDirection("right");
                       setIsAnimating(true);
@@ -616,6 +745,56 @@ export default function Auth() {
                     </div>
                   </div>
 
+                  {/* ⭐ Numéro de téléphone (OBLIGATOIRE avec validation) */}
+                  <div className="space-y-1">
+                    <label className="text-white/80 text-xs font-medium flex items-center gap-2">
+                      <Phone size={14} />
+                      Téléphone *
+                    </label>
+                    <input
+                      type="tel"
+                      placeholder="0321234567"
+                      value={telephone}
+                      onChange={(e) => {
+                        setTelephone(e.target.value);
+                        validatePhoneField(e);
+                      }}
+                      onBlur={validatePhoneField}
+                      className={`w-full bg-white/10 border rounded-xl px-4 py-3 text-white placeholder-white/50 focus:outline-none focus:ring-2 transition-all text-sm backdrop-blur-md ${
+                        errors.telephone ? "border-red-500 focus:ring-red-500/50" : "border-white/20 focus:border-emerald-500 focus:ring-emerald-500/50"
+                      }`}
+                      required
+                      disabled={isLoading}
+                    />
+                    {errors.telephone && <p className="text-red-400 text-xs mt-1 animate-shake">{errors.telephone}</p>}
+                    <p className="text-white/30 text-[10px]">Format: 0321234567 (10 chiffres, commence par 032, 033, 034, 037 ou 038)</p>
+                  </div>
+
+                  {/* ⭐ Adresse complète (OBLIGATOIRE avec validation) */}
+                  <div className="space-y-1">
+                    <label className="text-white/80 text-xs font-medium flex items-center gap-2">
+                      <Home size={14} />
+                      Adresse complète *
+                    </label>
+                    <textarea
+                      placeholder="Ex: 0203 AR 0180 Antanimalandy centre MAHAJANGA I"
+                      value={adresse}
+                      onChange={(e) => {
+                        setAdresse(e.target.value);
+                        validateAddressField(e);
+                      }}
+                      onBlur={validateAddressField}
+                      rows={2}
+                      className={`w-full bg-white/10 border rounded-xl px-4 py-3 text-white placeholder-white/50 focus:outline-none focus:ring-2 transition-all text-sm backdrop-blur-md resize-none ${
+                        errors.adresse ? "border-red-500 focus:ring-red-500/50" : "border-white/20 focus:border-emerald-500 focus:ring-emerald-500/50"
+                      }`}
+                      required
+                      disabled={isLoading}
+                    />
+                    {errors.adresse && <p className="text-red-400 text-xs mt-1 animate-shake">{errors.adresse}</p>}
+                    <p className="text-white/30 text-[10px]">Minimum 6 caractères, uniquement lettres, chiffres et espaces</p>
+                  </div>
+
                   {/* Sélection du rôle */}
                   <div className="space-y-2">
                     <label className="text-white/80 text-xs font-medium text-center block">Type de compte</label>
@@ -627,7 +806,15 @@ export default function Auth() {
                           <button
                             key={r.id}
                             type="button"
-                            onClick={() => !isLoading && setRole(r.id)}
+                            onClick={() => {
+                              if (!isLoading) {
+                                setRole(r.id);
+                                if (r.id === "CITIZEN") {
+                                  setDomaine("");
+                                  setMetier("");
+                                }
+                              }
+                            }}
                             disabled={isLoading}
                             className={`relative py-2 px-4 rounded-xl transition-all duration-300 flex-1 transform hover:scale-105 ${
                               isSelected 
@@ -648,6 +835,101 @@ export default function Auth() {
                       {role === "CITIZEN" ? "👤 Signalez des problèmes dans votre quartier" : "🏢 Gérez et résolvez les signalements citoyens"}
                     </p>
                   </div>
+
+                  {/* Sélection du domaine (visible seulement pour AGENT) */}
+                  {role === "AGENT" && (
+                    <div className="space-y-2 animate-slide-in-right">
+                      <label className="text-white/80 text-xs font-medium text-center block">
+                        🏢 Domaine d'intervention
+                      </label>
+                      <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto custom-scrollbar">
+                        {domaines.map((d) => {
+                          const isSelected = domaine === d.id;
+                          return (
+                            <button
+                              key={d.id}
+                              type="button"
+                              onClick={() => {
+                                if (!isLoading) {
+                                  setDomaine(d.id);
+                                  setMetier("");
+                                }
+                              }}
+                              disabled={isLoading}
+                              className={`flex items-center gap-3 p-3 rounded-xl transition-all duration-300 text-left ${
+                                isSelected
+                                  ? "bg-gradient-to-r from-emerald-600 to-emerald-500 shadow-lg border border-emerald-400/50"
+                                  : "bg-white/5 hover:bg-white/10 border border-white/20"
+                              } disabled:opacity-50 disabled:cursor-not-allowed group`}
+                            >
+                              <span className="text-2xl">{d.icon}</span>
+                              <div className="flex-1">
+                                <div className={`font-semibold text-sm ${isSelected ? "text-white" : "text-white/90"}`}>
+                                  {d.label}
+                                </div>
+                                <div className={`text-xs ${isSelected ? "text-emerald-200" : "text-white/50"}`}>
+                                  {d.description}
+                                </div>
+                              </div>
+                              {isSelected && (
+                                <div className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center">
+                                  <div className="w-2 h-2 bg-white rounded-full" />
+                                </div>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {errors.domaine && (
+                        <p className="text-red-400 text-xs mt-1 animate-shake text-center">{errors.domaine}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Sélection du métier (visible seulement si domaine sélectionné) */}
+                  {role === "AGENT" && domaine && metiersParDomaine[domaine] && (
+                    <div className="space-y-2 animate-slide-in-right">
+                      <label className="text-white/80 text-xs font-medium text-center block">
+                        👨‍💼 Votre métier
+                      </label>
+                      <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto custom-scrollbar">
+                        {metiersParDomaine[domaine].map((m) => {
+                          const isSelected = metier === m.id;
+                          return (
+                            <button
+                              key={m.id}
+                              type="button"
+                              onClick={() => !isLoading && setMetier(m.id)}
+                              disabled={isLoading}
+                              className={`flex items-center gap-3 p-3 rounded-xl transition-all duration-300 text-left ${
+                                isSelected
+                                  ? "bg-gradient-to-r from-blue-600 to-blue-500 shadow-lg border border-blue-400/50"
+                                  : "bg-white/5 hover:bg-white/10 border border-white/20"
+                              } disabled:opacity-50 disabled:cursor-not-allowed group`}
+                            >
+                              <span className="text-2xl">{m.icon}</span>
+                              <div className="flex-1">
+                                <div className={`font-semibold text-sm ${isSelected ? "text-white" : "text-white/90"}`}>
+                                  {m.label}
+                                </div>
+                                <div className={`text-xs ${isSelected ? "text-blue-200" : "text-white/50"}`}>
+                                  {m.description}
+                                </div>
+                              </div>
+                              {isSelected && (
+                                <div className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center">
+                                  <div className="w-2 h-2 bg-white rounded-full" />
+                                </div>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {errors.metier && (
+                        <p className="text-red-400 text-xs mt-1 animate-shake text-center">{errors.metier}</p>
+                      )}
+                    </div>
+                  )}
 
                   <button
                     type="submit"
@@ -763,6 +1045,25 @@ export default function Auth() {
         @keyframes ping {
           0% { transform: scale(1); opacity: 1; }
           75%, 100% { transform: scale(2); opacity: 0; }
+        }
+
+        /* Styles pour le scrollbar personnalisé */
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 4px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 10px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(16, 185, 129, 0.5);
+          border-radius: 10px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(16, 185, 129, 0.8);
         }
       `}</style>
     </div>

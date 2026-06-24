@@ -7,13 +7,15 @@ import {
   Send, Calendar, User, Phone, Mail, Star, Heart,
   Share, Download, Trash2, Edit, Save, Plus, Minus,
   Settings, LogOut, Menu, Bell, MessageSquare, Home,
-  Shield, Zap, Rocket, Sparkles, Globe, Lock, Unlock
+  Shield, Zap, Rocket, Sparkles, Globe, Lock, Unlock,
+  TrendingUp, TrendingDown, Flame, Activity
 } from "lucide-react";
 
 export default function AgentSignalementsAssignes() {
   const [signalements, setSignalements] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState("TOUS");
+  const [viewMode, setViewMode] = useState("agent"); // "agent" ou "ia"
   const [selectedImages, setSelectedImages] = useState(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   
@@ -34,18 +36,58 @@ export default function AgentSignalementsAssignes() {
   
   const token = localStorage.getItem("token");
 
-  const showMessage = (type, title, message) => {
-    setMessageBox({
-      show: true,
-      type: type,
-      title: title,
-      message: message
+  // Fonction IA pour analyser le signalement et attribuer une étiquette
+  const analyzeWithAI = (signalement) => {
+    const { titre, description, type, images } = signalement;
+    const text = `${titre || ""} ${description || ""} ${type || ""}`.toLowerCase();
+    
+    // Mots-clés d'urgence
+    const urgentKeywords = [
+      'danger', 'urgence', 'accident', 'effondrement', 'incendie', 'explosion',
+      'crise', 'grave', 'critique', 'immédiat', 'secours', 'blessé',
+      'effondre', 'écroule', 'cassé', 'trou dangereux', 'mort', 'décès',
+      'inondation', 'éboulement', 'glissement', 'terroriste', 'agression'
+    ];
+    
+    // Mots-clés importants
+    const importantKeywords = [
+      'important', 'problème majeur', 'gêne importante', 'réparation urgente',
+      'panne', 'coupure', 'dégât', 'vandalisme', 'insalubre', 'danger potentiel'
+    ];
+    
+    // Mots-clés modérés
+    const moderateKeywords = [
+      'modéré', 'gênant', 'désagréable', 'encombrant', 'propre',
+      'nettoyage', 'éclairage', 'trottoir', 'route abîmée'
+    ];
+    
+    let urgencyScore = 0;
+    let importanceScore = 0;
+    
+    urgentKeywords.forEach(word => {
+      if (text.includes(word)) urgencyScore += 2;
     });
     
-    if (type === "success") {
-      setTimeout(() => {
-        setMessageBox(prev => ({ ...prev, show: false }));
-      }, 3000);
+    importantKeywords.forEach(word => {
+      if (text.includes(word)) importanceScore += 1;
+    });
+    
+    moderateKeywords.forEach(word => {
+      if (text.includes(word)) importanceScore += 0.5;
+    });
+    
+    // Vérifier les images
+    if (images && images.length > 2) urgencyScore += 1;
+    
+    // Déterminer l'étiquette avec score pour le tri
+    if (urgencyScore >= 3 || importanceScore >= 4) {
+      return { level: "urgent", label: "URGENT", color: "bg-red-500/20 text-red-400 border-red-500/30", icon: Flame, priority: 0 };
+    } else if (urgencyScore >= 1 || importanceScore >= 2) {
+      return { level: "important", label: "IMPORTANT", color: "bg-orange-500/20 text-orange-400 border-orange-500/30", icon: TrendingUp, priority: 1 };
+    } else if (importanceScore >= 1) {
+      return { level: "modere", label: "MODÉRÉ", color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30", icon: Activity, priority: 2 };
+    } else {
+      return { level: "faible", label: "FAIBLE", color: "bg-green-500/20 text-green-400 border-green-500/30", icon: TrendingDown, priority: 3 };
     }
   };
 
@@ -58,12 +100,27 @@ export default function AgentSignalementsAssignes() {
         if (res.ok) {
           const data = await res.json();
           // Garder seulement les signalements EN_ATTENTE et EN_COURS
-          const signalementsActifs = data.filter(s => s.statut === "EN_ATTENTE" || s.statut === "EN_COURS");
+          let signalementsActifs = data.filter(s => s.statut === "EN_ATTENTE" || s.statut === "EN_COURS");
           
-          const signalementsTries = signalementsActifs.sort((a, b) => {
-            const priority = { "EN_ATTENTE": 0, "EN_COURS": 1 };
-            return priority[a.statut] - priority[b.statut];
-          });
+          // Analyser chaque signalement avec l'IA (ajouter les étiquettes)
+          signalementsActifs = signalementsActifs.map(s => ({
+            ...s,
+            aiTag: analyzeWithAI(s)
+          }));
+          
+          // Trier selon le mode d'affichage
+          let signalementsTries;
+          if (viewMode === "ia") {
+            // Tri par dangerosité (du plus urgent au moins urgent)
+            signalementsTries = signalementsActifs.sort((a, b) => a.aiTag.priority - b.aiTag.priority);
+          } else {
+            // Tri par date (plus récent en premier)
+            signalementsTries = signalementsActifs.sort((a, b) => {
+              const dateA = new Date(a.dateCreation || a.createdAt || a.dateSignalement || 0);
+              const dateB = new Date(b.dateCreation || b.createdAt || b.dateSignalement || 0);
+              return dateB - dateA;
+            });
+          }
           
           setSignalements(signalementsTries);
         } else {
@@ -76,7 +133,7 @@ export default function AgentSignalementsAssignes() {
       }
     };
     fetchSignalements();
-  }, [token]);
+  }, [token, viewMode]);
 
   // Filtrer selon le bouton sélectionné
   const filteredSignalements = signalements.filter(s => {
@@ -91,6 +148,10 @@ export default function AgentSignalementsAssignes() {
     total: signalements.length,
     enAttente: signalements.filter(s => s.statut === "EN_ATTENTE").length,
     enCours: signalements.filter(s => s.statut === "EN_COURS").length,
+    urgent: signalements.filter(s => s.aiTag?.level === "urgent").length,
+    important: signalements.filter(s => s.aiTag?.level === "important").length,
+    modere: signalements.filter(s => s.aiTag?.level === "modere").length,
+    faible: signalements.filter(s => s.aiTag?.level === "faible").length,
     resolus: 0
   };
 
@@ -188,7 +249,6 @@ export default function AgentSignalementsAssignes() {
       });
 
       if (res.ok) {
-        // Supprimer le signalement résolu de la liste
         setSignalements(prev => prev.filter(s => s.id !== currentSignalementId));
         setShowProofModal(false);
         setProofDescription("");
@@ -259,6 +319,21 @@ export default function AgentSignalementsAssignes() {
     return icons[statut] || AlertTriangle;
   };
 
+  const showMessage = (type, title, message) => {
+    setMessageBox({
+      show: true,
+      type: type,
+      title: title,
+      message: message
+    });
+    
+    if (type === "success") {
+      setTimeout(() => {
+        setMessageBox(prev => ({ ...prev, show: false }));
+      }, 3000);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
@@ -279,8 +354,66 @@ export default function AgentSignalementsAssignes() {
             <ClipboardList className="w-8 h-8 text-emerald-400" />
             <h1 className="text-3xl font-bold text-white">SIGNALEMENTS ACTIFS</h1>
           </div>
-          <p className="text-white/50 text-sm mt-2">Signalements en attente de traitement</p>
+          <p className="text-white/50 text-sm mt-2">
+            {viewMode === "ia" 
+              ? "Classés par niveau de dangerosité (du plus urgent au moins urgent)" 
+              : "Classés par date (du plus récent au plus ancien)"}
+          </p>
         </div>
+
+        {/* Switch Vue Agent / Vue IA */}
+        <div className="flex justify-center gap-4 mb-6">
+          <button
+            onClick={() => setViewMode("agent")}
+            className={`px-6 py-2 rounded-xl font-semibold transition flex items-center gap-2 ${
+              viewMode === "agent"
+                ? "bg-emerald-600 text-white shadow-lg"
+                : "bg-white/10 text-white/70 hover:bg-white/20"
+            }`}
+          >
+            <User size={18} />
+            Organisée par Date le plus récent
+          </button>
+          <button
+            onClick={() => setViewMode("ia")}
+            className={`px-6 py-2 rounded-xl font-semibold transition flex items-center gap-2 ${
+              viewMode === "ia"
+                ? "bg-purple-600 text-white shadow-lg"
+                : "bg-white/10 text-white/70 hover:bg-white/20"
+            }`}
+          >
+            <Sparkles size={18} />
+            Organisée par IA - Dangerosité
+          </button>
+        </div>
+
+        {/* Statistiques IA (visible uniquement en mode IA) */}
+        {viewMode === "ia" && stats.total > 0 && (
+          <div className="flex justify-center mb-6">
+            <div className="grid grid-cols-4 gap-2 max-w-2xl">
+              <div className="bg-red-500/20 rounded-xl p-3 text-center border border-red-500/30 min-w-[80px]">
+                <Flame className="w-5 h-5 text-red-400 mx-auto mb-1" />
+                <div className="text-xl font-bold text-red-400">{stats.urgent}</div>
+                <div className="text-white/50 text-xs">Urgent</div>
+              </div>
+              <div className="bg-orange-500/20 rounded-xl p-3 text-center border border-orange-500/30 min-w-[80px]">
+                <TrendingUp className="w-5 h-5 text-orange-400 mx-auto mb-1" />
+                <div className="text-xl font-bold text-orange-400">{stats.important}</div>
+                <div className="text-white/50 text-xs">Important</div>
+              </div>
+              <div className="bg-yellow-500/20 rounded-xl p-3 text-center border border-yellow-500/30 min-w-[80px]">
+                <Activity className="w-5 h-5 text-yellow-400 mx-auto mb-1" />
+                <div className="text-xl font-bold text-yellow-400">{stats.modere}</div>
+                <div className="text-white/50 text-xs">Modéré</div>
+              </div>
+              <div className="bg-green-500/20 rounded-xl p-3 text-center border border-green-500/30 min-w-[80px]">
+                <TrendingDown className="w-5 h-5 text-green-400 mx-auto mb-1" />
+                <div className="text-xl font-bold text-green-400">{stats.faible}</div>
+                <div className="text-white/50 text-xs">Faible</div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* CARTES STATISTIQUES AVEC NOMBRES */}
         <div className="grid grid-cols-3 gap-4 mb-6">
@@ -366,11 +499,19 @@ export default function AgentSignalementsAssignes() {
               <p className="text-white/40 text-sm mt-2">Tous les signalements ont été traités !</p>
             </div>
           ) : (
-            filteredSignalements.map((s) => {
+            filteredSignalements.map((s, index) => {
               const StatusIcon = getStatusIcon(s.statut);
+              const AITag = s.aiTag;
               
               return (
-                <div key={s.id} className="bg-[#242526] backdrop-blur-xl rounded-xl overflow-hidden border border-white/20 hover:shadow-xl transition-shadow hover:scale-[1.02] duration-300">
+                <div 
+                  key={s.id} 
+                  className={`bg-[#242526] backdrop-blur-xl rounded-xl overflow-hidden border border-white/20 hover:shadow-xl transition-shadow hover:scale-[1.02] duration-300 ${
+                    viewMode === "ia" && index === 0 && AITag?.priority === 0 
+                      ? 'ring-2 ring-red-500 shadow-lg shadow-red-500/20' 
+                      : ''
+                  }`}
+                >
                   {/* Section photo */}
                   {s.images && s.images.length > 0 ? (
                     <div className="relative">
@@ -405,9 +546,27 @@ export default function AgentSignalementsAssignes() {
                   )}
 
                   <div className="p-4">
-                    <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-medium mb-3 ${getStatusColor(s.statut)}`}>
-                      <StatusIcon size={14} />
-                      {getStatusLabel(s.statut)}
+                    {/* Badges : Statut + Étiquette IA (mode IA) */}
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-medium ${getStatusColor(s.statut)}`}>
+                        <StatusIcon size={14} />
+                        {getStatusLabel(s.statut)}
+                      </div>
+                      
+                      {/* Étiquette IA (visible uniquement en mode IA) */}
+                      {viewMode === "ia" && AITag && (
+                        <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-medium ${AITag.color}`}>
+                          <AITag.icon size={14} />
+                          {AITag.label}
+                        </div>
+                      )}
+                      
+                      {/* Indicateur de priorité (mode IA) */}
+                      {viewMode === "ia" && AITag && index === 0 && AITag.priority === 0 && (
+                        <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-red-600 text-white text-[10px] font-bold animate-pulse">
+                          PRIORITÉ MAXIMALE
+                        </div>
+                      )}
                     </div>
 
                     <h3 className="text-white font-bold text-lg mb-2 line-clamp-1">
@@ -418,7 +577,7 @@ export default function AgentSignalementsAssignes() {
                       {s.description || "Aucune description fournie"}
                     </p>
                     
-                    <div className="flex items-center gap-2 text-white/40 text-xs mb-4">
+                    <div className="flex items-center gap-2 text-white/40 text-xs mb-2">
                       <MapPin size={12} />
                       <span>{s.address || s.ville || s.commune || "Localisation non spécifiée"}</span>
                     </div>

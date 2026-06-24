@@ -4,7 +4,7 @@ import {
   MapPin, Clock, MessageCircle, Share2, MoreHorizontal, 
   Construction, Lightbulb, Trash2, Droplets, TreePine, 
   Shield, HelpCircle, AlertTriangle, PlayCircle, CheckCircle2,
-  ChevronLeft, ChevronRight, Image, Road, Trash
+  ChevronLeft, ChevronRight, Image, Road, Trash, Home
 } from "lucide-react";
 
 // ✅ COMPOSANT INPUT AVEC VALIDATION
@@ -56,7 +56,6 @@ const ValidatedInput = ({
     const validationError = validate(value);
     setError(validationError);
     
-    // ✅ Si le champ est invalide, on empêche la perte de focus
     if (validationError && inputRef.current) {
       setTimeout(() => {
         inputRef.current.focus();
@@ -126,7 +125,8 @@ export default function Profil() {
   const [userInfo, setUserInfo] = useState({ 
     nom: "", 
     email: "", 
-    role: "" 
+    role: "",
+    adresse: ""
   });
   const [signalements, setSignalements] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
@@ -134,6 +134,7 @@ export default function Profil() {
   const [formData, setFormData] = useState({
     nom: "",
     email: "",
+    adresse: ""
   });
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
@@ -149,12 +150,20 @@ export default function Profil() {
   // États de validation
   const [isNomValid, setIsNomValid] = useState(false);
   const [isEmailValid, setIsEmailValid] = useState(false);
+  const [isAdresseValid, setIsAdresseValid] = useState(false);
   const [isCurrentPasswordValid, setIsCurrentPasswordValid] = useState(false);
   const [isNewPasswordValid, setIsNewPasswordValid] = useState(false);
   const [isConfirmPasswordValid, setIsConfirmPasswordValid] = useState(false);
   
   const token = localStorage.getItem("token");
   const [currentUserId, setCurrentUserId] = useState(null);
+
+  // Validation adresse
+  const validateAdresse = (value) => {
+    if (!value.trim()) return "L'adresse est obligatoire";
+    if (value.length < 4) return "L'adresse doit contenir au moins 4 caractères";
+    return null;
+  };
 
   useEffect(() => {
     fetchUserProfile();
@@ -180,24 +189,30 @@ export default function Profil() {
         setUserInfo({
           nom: data.nom || data.name || "Utilisateur",
           email: data.email || data.sub || "",
-          role: data.role || "CITOYEN"
+          role: data.role || "CITOYEN",
+          adresse: data.adresse || ""
         });
         setFormData({
           nom: data.nom || data.name || "Utilisateur",
           email: data.email || data.sub || "",
+          adresse: data.adresse || ""
         });
+        setIsAdresseValid(!!data.adresse && data.adresse.length >= 4);
       } else {
         try {
           const payload = JSON.parse(atob(token.split('.')[1]));
           setUserInfo({
             nom: payload.nom || payload.name || payload.sub?.split('@')[0] || "Utilisateur",
             email: payload.sub || payload.email || "",
-            role: payload.role || "CITOYEN"
+            role: payload.role || "CITOYEN",
+            adresse: payload.adresse || ""
           });
           setFormData({
             nom: payload.nom || payload.name || payload.sub?.split('@')[0] || "Utilisateur",
             email: payload.sub || payload.email || "",
+            adresse: payload.adresse || ""
           });
+          setIsAdresseValid(!!payload.adresse && payload.adresse.length >= 4);
         } catch (error) {
           console.error("Erreur décodage token:", error);
         }
@@ -266,7 +281,7 @@ export default function Profil() {
   };
 
   const handleUpdateProfile = async () => {
-    if (!isNomValid || !isEmailValid) {
+    if (!isNomValid || !isEmailValid || !isAdresseValid) {
       setMessage({ type: "error", text: "Veuillez corriger les erreurs avant de valider" });
       setTimeout(() => setMessage({ type: "", text: "" }), 3000);
       return;
@@ -282,12 +297,13 @@ export default function Profil() {
         },
         body: JSON.stringify({
           nom: formData.nom,
-          email: formData.email
+          email: formData.email,
+          adresse: formData.adresse
         })
       });
 
       if (response.ok) {
-        setUserInfo({ ...userInfo, nom: formData.nom, email: formData.email });
+        setUserInfo({ ...userInfo, nom: formData.nom, email: formData.email, adresse: formData.adresse });
         setMessage({ type: "success", text: "Profil mis à jour !" });
         setIsEditing(false);
       } else {
@@ -484,7 +500,7 @@ export default function Profil() {
     return signalement.address || signalement.ville || signalement.commune || "Localisation inconnue";
   };
 
-  const isProfileFormValid = isNomValid && isEmailValid;
+  const isProfileFormValid = isNomValid && isEmailValid && isAdresseValid;
   const isPasswordFormValid = isCurrentPasswordValid && isNewPasswordValid && isConfirmPasswordValid;
 
   return (
@@ -572,6 +588,22 @@ export default function Profil() {
                   onValidChange={(valid) => setIsEmailValid(valid)}
                 />
 
+                {/* ⭐ NOUVEAU - CHAMP ADRESSE */}
+                <ValidatedInput
+                  label="Adresse complète"
+                  value={formData.adresse}
+                  onChange={(val) => {
+                    setFormData({ ...formData, adresse: val });
+                    const error = validateAdresse(val);
+                    setIsAdresseValid(!error);
+                  }}
+                  placeholder="Votre adresse complète"
+                  required={true}
+                  minLength={4}
+                  errorMessage="L'adresse doit contenir au moins 4 caractères"
+                  onValidChange={(valid) => setIsAdresseValid(valid)}
+                />
+
                 <div className="flex gap-2">
                   <button
                     onClick={handleUpdateProfile}
@@ -587,9 +619,14 @@ export default function Profil() {
                   <button
                     onClick={() => {
                       setIsEditing(false);
-                      setFormData({ nom: userInfo.nom, email: userInfo.email });
+                      setFormData({ 
+                        nom: userInfo.nom, 
+                        email: userInfo.email,
+                        adresse: userInfo.adresse
+                      });
                       setIsNomValid(true);
                       setIsEmailValid(true);
+                      setIsAdresseValid(!!userInfo.adresse && userInfo.adresse.length >= 4);
                     }}
                     className="px-4 bg-gray-600 hover:bg-gray-500 text-white font-semibold py-2 rounded-lg transition text-sm"
                   >
@@ -708,7 +745,7 @@ export default function Profil() {
           )}
         </div>
 
-        {/* Section Mes signalements */}
+        {/* Section Mes signalements (inchangée) */}
         <div className="bg-[#242526] rounded-xl shadow-lg overflow-hidden">
           <div className="p-4 border-b border-gray-700/50">
             <div className="flex items-center gap-2">

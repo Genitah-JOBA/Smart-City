@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { User, Mail, Shield, Save, Lock, Eye, EyeOff, Edit2, X, Check, AlertCircle, CheckCircle, Info } from "lucide-react";
+import { User, Mail, Shield, Save, Lock, Eye, EyeOff, Edit2, X, Check, AlertCircle, CheckCircle, Info, Briefcase, MapPin, Wrench, Building2, Lightbulb, Trash2, TreePine, Bus, ShieldCheck, Palette, Home, Phone } from "lucide-react";
 
 // ✅ COMPOSANT MESSAGEBOX MODERNE
 const MessageBox = ({ type, message, onClose, autoClose = 5000 }) => {
@@ -124,7 +124,6 @@ const ValidatedInput = ({
     const validationError = validate(value);
     setError(validationError);
     
-    // ✅ Si le champ est invalide, on empêche la perte de focus
     if (validationError) {
       setTimeout(() => {
         if (inputRef.current) {
@@ -190,17 +189,159 @@ const ValidatedInput = ({
   );
 };
 
+// ✅ SÉLECTEUR DE DOMAINE
+const DomaineSelector = ({ value, onChange, label, onValidChange }) => {
+  const domaines = [
+    { id: "VOIRIE", label: "Voirie", icon: MapPin, description: "Routes, trottoirs, nids-de-poule" },
+    { id: "ECLAIRAGE", label: "Éclairage", icon: Lightbulb, description: "Lampadaires, éclairage public" },
+    { id: "PROPRETE", label: "Propreté", icon: Trash2, description: "Collecte des déchets, nettoyage" },
+    { id: "ESPACES_VERTS", label: "Espaces verts", icon: TreePine, description: "Parcs, jardins, arbres" },
+    { id: "TRANSPORTS", label: "Transports", icon: Bus, description: "Transport en commun, stationnement" },
+    { id: "SECURITE", label: "Sécurité", icon: ShieldCheck, description: "Sécurité publique, prévention" },
+    { id: "URBANISME", label: "Urbanisme", icon: Building2, description: "Aménagement urbain" },
+  ];
+
+  const selectedDomaine = domaines.find(d => d.id === value);
+
+  const handleChange = (id) => {
+    onChange(id);
+    if (onValidChange) onValidChange(true);
+  };
+
+  return (
+    <div className="mb-4">
+      <label className="text-white/70 text-sm mb-2 block">{label}</label>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        {domaines.map((domaine) => {
+          const Icon = domaine.icon;
+          const isSelected = value === domaine.id;
+          return (
+            <button
+              key={domaine.id}
+              type="button"
+              onClick={() => handleChange(domaine.id)}
+              className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${
+                isSelected
+                  ? "bg-emerald-600/40 border border-emerald-400 shadow-lg shadow-emerald-500/20"
+                  : "bg-white/5 border border-white/20 hover:bg-white/10"
+              }`}
+            >
+              <Icon className={`w-5 h-5 ${isSelected ? "text-emerald-400" : "text-white/60"}`} />
+              <span className={`text-xs font-medium ${isSelected ? "text-emerald-300" : "text-white/70"}`}>
+                {domaine.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      {selectedDomaine && (
+        <p className="text-white/40 text-xs mt-2">{selectedDomaine.description}</p>
+      )}
+    </div>
+  );
+};
+
+// ✅ SÉLECTEUR DE MÉTIER
+const MetierSelector = ({ domaine, value, onChange, label, onValidChange }) => {
+  const metiersParDomaine = {
+    VOIRIE: [
+      { id: "AGENT_VOIRIE", label: "Agent de voirie", icon: Wrench },
+      { id: "TECHNICIEN_GENIE_CIVIL", label: "Technicien génie civil", icon: Building2 },
+      { id: "CHEF_CHANTIER_VOIRIE", label: "Chef de chantier", icon: Briefcase },
+      { id: "AGENT_SIGNALISATION", label: "Agent signalisation", icon: MapPin },
+    ],
+    ECLAIRAGE: [
+      { id: "TECHNICIEN_ECLAIRAGE", label: "Technicien éclairage", icon: Lightbulb },
+      { id: "INGENIEUR_ECLAIRAGE", label: "Ingénieur éclairage", icon: Wrench },
+      { id: "AGENT_MAINTENANCE_ELEC", label: "Agent maintenance", icon: Shield },
+    ],
+    PROPRETE: [
+      { id: "AGENT_COLLECTE", label: "Agent de collecte", icon: Trash2 },
+      { id: "TECHNICIEN_NETTOIEMENT", label: "Technicien nettoiement", icon: Wrench },
+      { id: "RESPONSABLE_DECHETTERIE", label: "Responsable déchetterie", icon: Briefcase },
+    ],
+    ESPACES_VERTS: [
+      { id: "JARDINIER_MUNICIPAL", label: "Jardinier municipal", icon: TreePine },
+      { id: "ELAGUEUR", label: "Élagueur", icon: Wrench },
+      { id: "PAYSAGISTE_URBAIN", label: "Paysagiste urbain", icon: Palette },
+    ],
+    TRANSPORTS: [
+      { id: "AGENT_REGULATION", label: "Agent régulation", icon: Bus },
+      { id: "CONTROLEUR_TRANSPORT", label: "Contrôleur transport", icon: Shield },
+      { id: "TECHNICIEN_STATIONNEMENT", label: "Technicien stationnement", icon: MapPin },
+    ],
+    SECURITE: [
+      { id: "AGENT_SECURITE_URBAINE", label: "Agent sécurité", icon: ShieldCheck },
+      { id: "POLICE_MUNICIPALE", label: "Police municipale", icon: Shield },
+      { id: "AGENT_MEDIATEUR", label: "Agent médiateur", icon: Wrench },
+    ],
+    URBANISME: [
+      { id: "URBANISTE", label: "Urbaniste", icon: Building2 },
+      { id: "ARCHITECTE_CONSEIL", label: "Architecte conseil", icon: Palette },
+      { id: "TECHNICIEN_URBANISME", label: "Technicien urbanisme", icon: Wrench },
+    ],
+  };
+
+  const metiers = metiersParDomaine[domaine] || [];
+  const selectedMetier = metiers.find(m => m.id === value);
+
+  const handleChange = (id) => {
+    onChange(id);
+    if (onValidChange) onValidChange(true);
+  };
+
+  if (!domaine || metiers.length === 0) return null;
+
+  return (
+    <div className="mb-4">
+      <label className="text-white/70 text-sm mb-2 block">{label}</label>
+      <div className="grid grid-cols-1 gap-2">
+        {metiers.map((metier) => {
+          const Icon = metier.icon;
+          const isSelected = value === metier.id;
+          return (
+            <button
+              key={metier.id}
+              type="button"
+              onClick={() => handleChange(metier.id)}
+              className={`flex items-center gap-3 p-2 rounded-lg transition-all ${
+                isSelected
+                  ? "bg-blue-600/40 border border-blue-400 shadow-lg shadow-blue-500/20"
+                  : "bg-white/5 border border-white/20 hover:bg-white/10"
+              }`}
+            >
+              <Icon className={`w-5 h-5 ${isSelected ? "text-blue-400" : "text-white/60"}`} />
+              <span className={`text-sm ${isSelected ? "text-blue-300" : "text-white/80"}`}>
+                {metier.label}
+              </span>
+              {isSelected && <Check className="ml-auto w-4 h-4 text-blue-400" />}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 export default function Profil() {
   const [userInfo, setUserInfo] = useState({ 
     nom: "", 
     email: "", 
-    role: "" 
+    role: "",
+    domaine: "",
+    metier: "",
+    adresse: "",
+    telephone: ""  // ⭐ AJOUTÉ
   });
   const [isEditing, setIsEditing] = useState(false);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [formData, setFormData] = useState({
     nom: "",
     email: "",
+    domaine: "",
+    metier: "",
+    adresse: "",
+    telephone: ""  // ⭐ AJOUTÉ
   });
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
@@ -213,6 +354,10 @@ export default function Profil() {
   // États de validation
   const [isNomValid, setIsNomValid] = useState(false);
   const [isEmailValid, setIsEmailValid] = useState(false);
+  const [isDomaineValid, setIsDomaineValid] = useState(false);
+  const [isMetierValid, setIsMetierValid] = useState(false);
+  const [isAdresseValid, setIsAdresseValid] = useState(false);
+  const [isTelephoneValid, setIsTelephoneValid] = useState(false);  // ⭐ AJOUTÉ
   const [isFormValid, setIsFormValid] = useState(false);
   
   // États de validation des mots de passe
@@ -222,6 +367,7 @@ export default function Profil() {
   const [isPasswordFormValid, setIsPasswordFormValid] = useState(false);
   
   const token = localStorage.getItem("token");
+  const userRole = localStorage.getItem("userRole");
 
   const showMessage = (type, text) => {
     setMessageBox({ show: true, type, text });
@@ -237,8 +383,15 @@ export default function Profil() {
 
   // Vérifier si le formulaire profil est valide
   useEffect(() => {
-    setIsFormValid(isNomValid && isEmailValid);
-  }, [isNomValid, isEmailValid]);
+    let formValid = isNomValid && isEmailValid && isAdresseValid && isTelephoneValid;
+    
+    // Pour les agents en mode édition, domaine et métier sont obligatoires
+    if (userRole === "AGENT" && isEditing) {
+      formValid = formValid && isDomaineValid && isMetierValid;
+    }
+    
+    setIsFormValid(formValid);
+  }, [isNomValid, isEmailValid, isAdresseValid, isTelephoneValid, isDomaineValid, isMetierValid, userRole, isEditing]);
 
   // Vérifier si le formulaire mot de passe est valide
   useEffect(() => {
@@ -263,30 +416,73 @@ export default function Profil() {
 
       if (response.ok) {
         const data = await response.json();
+        const hasDomaine = !!data.domaine;
+        const hasMetier = !!data.metier;
+        const hasAdresse = !!data.adresse && data.adresse.length >= 4;
+        const hasTelephone = !!data.telephone && data.telephone.length >= 10;  // ⭐ AJOUTÉ
+        
         setUserInfo({
           nom: data.nom || data.name || "Utilisateur",
           email: data.email || data.sub || "",
-          role: data.role || "CITOYEN"
+          role: data.role || "CITOYEN",
+          domaine: data.domaine || "",
+          metier: data.metier || "",
+          adresse: data.adresse || "",
+          telephone: data.telephone || ""  // ⭐ AJOUTÉ
         });
         setFormData({
           nom: data.nom || data.name || "Utilisateur",
           email: data.email || data.sub || "",
+          domaine: data.domaine || "",
+          metier: data.metier || "",
+          adresse: data.adresse || "",
+          telephone: data.telephone || ""  // ⭐ AJOUTÉ
         });
+        
+        // Initialiser les états de validation
+        setIsNomValid(true);
+        setIsEmailValid(true);
+        setIsAdresseValid(hasAdresse);
+        setIsTelephoneValid(hasTelephone);  // ⭐ AJOUTÉ
+        setIsDomaineValid(hasDomaine);
+        setIsMetierValid(hasMetier);
+        
       } else if (response.status === 403) {
         showMessage("error", "Session expirée. Redirection vers la connexion...");
         setTimeout(() => handleLogout(), 2000);
       } else {
         try {
           const payload = JSON.parse(atob(token.split('.')[1]));
+          const hasDomaine = !!payload.domaine;
+          const hasMetier = !!payload.metier;
+          const hasAdresse = !!payload.adresse && payload.adresse.length >= 4;
+          const hasTelephone = !!payload.telephone && payload.telephone.length >= 10;  // ⭐ AJOUTÉ
+          
           setUserInfo({
             nom: payload.nom || payload.name || payload.sub?.split('@')[0] || "Utilisateur",
             email: payload.sub || payload.email || "",
-            role: payload.role || "CITOYEN"
+            role: payload.role || "CITOYEN",
+            domaine: payload.domaine || "",
+            metier: payload.metier || "",
+            adresse: payload.adresse || "",
+            telephone: payload.telephone || ""  // ⭐ AJOUTÉ
           });
           setFormData({
             nom: payload.nom || payload.name || payload.sub?.split('@')[0] || "Utilisateur",
             email: payload.sub || payload.email || "",
+            domaine: payload.domaine || "",
+            metier: payload.metier || "",
+            adresse: payload.adresse || "",
+            telephone: payload.telephone || ""  // ⭐ AJOUTÉ
           });
+          
+          setIsNomValid(true);
+          setIsEmailValid(true);
+          setIsAdresseValid(hasAdresse);
+          setIsTelephoneValid(hasTelephone);  // ⭐ AJOUTÉ
+          setIsDomaineValid(hasDomaine);
+          setIsMetierValid(hasMetier);
+          
         } catch (error) {
           console.error("Erreur décodage token:", error);
         }
@@ -294,6 +490,23 @@ export default function Profil() {
     } catch (error) {
       console.error("Erreur récupération profil:", error);
     }
+  };
+
+  // Validation adresse
+  const validateAdresse = (adresse) => {
+    if (!adresse.trim()) return "L'adresse est obligatoire";
+    if (adresse.length < 4) return "L'adresse doit contenir au moins 4 caractères";
+    return null;
+  };
+
+  // ⭐ Validation téléphone
+  const validateTelephone = (telephone) => {
+    if (!telephone.trim()) return "Le numéro de téléphone est obligatoire";
+    const phoneRegex = /^(032|033|034|037|038)\d{7}$/;
+    if (!phoneRegex.test(telephone)) {
+      return "Le téléphone doit commencer par 032, 033, 034, 037 ou 038 et contenir exactement 10 chiffres";
+    }
+    return null;
   };
 
   const handleUpdateProfile = async () => {
@@ -307,6 +520,20 @@ export default function Profil() {
 
     const emailChanged = formData.email !== userInfo.email;
 
+    // Corps de la requête avec domaine, métier, adresse et téléphone
+    const requestBody = {
+      nom: formData.nom,
+      email: formData.email,
+      adresse: formData.adresse,
+      telephone: formData.telephone  // ⭐ AJOUTÉ
+    };
+
+    // Si l'utilisateur est un agent, inclure domaine et métier
+    if (userRole === "AGENT") {
+      requestBody.domaine = formData.domaine;
+      requestBody.metier = formData.metier;
+    }
+
     try {
       const response = await fetch("http://localhost:8081/api/auth/update-profile", {
         method: "PUT",
@@ -314,10 +541,7 @@ export default function Profil() {
           "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-          nom: formData.nom,
-          email: formData.email
-        })
+        body: JSON.stringify(requestBody)
       });
 
       if (response.ok) {
@@ -327,11 +551,19 @@ export default function Profil() {
           localStorage.setItem("token", data.token);
           localStorage.setItem("userEmail", formData.email);
           localStorage.setItem("userNom", formData.nom);
+          if (formData.domaine) localStorage.setItem("userDomaine", formData.domaine);
+          if (formData.metier) localStorage.setItem("userMetier", formData.metier);
+          if (formData.adresse) localStorage.setItem("userAdresse", formData.adresse);
+          if (formData.telephone) localStorage.setItem("userTelephone", formData.telephone);  // ⭐ AJOUTÉ
           
           setUserInfo({
             ...userInfo,
             nom: formData.nom,
-            email: formData.email
+            email: formData.email,
+            domaine: formData.domaine,
+            metier: formData.metier,
+            adresse: formData.adresse,
+            telephone: formData.telephone  // ⭐ AJOUTÉ
           });
           
           showMessage("success", "✅ Profil mis à jour avec succès ! Votre session a été actualisée.");
@@ -344,9 +576,17 @@ export default function Profil() {
         } else if (!emailChanged) {
           setUserInfo({
             ...userInfo,
-            nom: formData.nom
+            nom: formData.nom,
+            domaine: formData.domaine,
+            metier: formData.metier,
+            adresse: formData.adresse,
+            telephone: formData.telephone  // ⭐ AJOUTÉ
           });
           localStorage.setItem("userNom", formData.nom);
+          if (formData.domaine) localStorage.setItem("userDomaine", formData.domaine);
+          if (formData.metier) localStorage.setItem("userMetier", formData.metier);
+          if (formData.adresse) localStorage.setItem("userAdresse", formData.adresse);
+          if (formData.telephone) localStorage.setItem("userTelephone", formData.telephone);  // ⭐ AJOUTÉ
           showMessage("success", "✅ Profil mis à jour avec succès !");
           setIsEditing(false);
         }
@@ -448,6 +688,8 @@ export default function Profil() {
     return pwd.length >= 6 && pwd === passwordData.newPassword;
   };
 
+  const isAgent = userRole === "AGENT";
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
       {messageBox.show && (
@@ -489,6 +731,12 @@ export default function Profil() {
               <div>
                 <h3 className="text-xl font-bold text-white">{userInfo.nom}</h3>
                 <p className="text-emerald-400">{getRoleLabel(userInfo.role)}</p>
+                {isAgent && userInfo.domaine && (
+                  <p className="text-white/50 text-sm mt-1 flex items-center gap-1">
+                    <Briefcase size={12} />
+                    {userInfo.domaine} • {userInfo.metier?.replace(/_/g, ' ').toLowerCase()}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -538,6 +786,134 @@ export default function Profil() {
                 )}
               </div>
 
+              {/* ⭐ CHAMP ADRESSE (OBLIGATOIRE) */}
+              <div className="p-4 bg-white/5 rounded-xl">
+                <p className="text-white/50 text-xs mb-1 flex items-center gap-2">
+                  <Home size={14} />
+                  Adresse *
+                </p>
+                {isEditing ? (
+                  <ValidatedInput
+                    label=""
+                    value={formData.adresse}
+                    onChange={(val) => {
+                      setFormData({ ...formData, adresse: val });
+                      const error = validateAdresse(val);
+                      setIsAdresseValid(!error);
+                    }}
+                    placeholder="Votre adresse complète"
+                    required={true}
+                    minLength={4}
+                    errorMessage="L'adresse doit contenir au moins 4 caractères"
+                    onValidChange={(valid) => setIsAdresseValid(valid)}
+                    className="mt-0"
+                  />
+                ) : (
+                  <p className="text-white text-lg">{userInfo.adresse || "Non renseignée"}</p>
+                )}
+              </div>
+
+              {/* ⭐ CHAMP TÉLÉPHONE (OBLIGATOIRE) */}
+              <div className="p-4 bg-white/5 rounded-xl">
+                <p className="text-white/50 text-xs mb-1 flex items-center gap-2">
+                  <Phone size={14} />
+                  Téléphone *
+                </p>
+                {isEditing ? (
+                  <ValidatedInput
+                    label=""
+                    value={formData.telephone}
+                    onChange={(val) => {
+                      setFormData({ ...formData, telephone: val });
+                      const error = validateTelephone(val);
+                      setIsTelephoneValid(!error);
+                    }}
+                    type="tel"
+                    placeholder="0321234567"
+                    required={true}
+                    minLength={10}
+                    pattern={/^(032|033|034|037|038)\d{7}$/}
+                    errorMessage="Le téléphone doit commencer par 032, 033, 034, 037 ou 038 et contenir exactement 10 chiffres"
+                    onValidChange={(valid) => setIsTelephoneValid(valid)}
+                    className="mt-0"
+                  />
+                ) : (
+                  <p className="text-white text-lg">{userInfo.telephone || "Non renseigné"}</p>
+                )}
+              </div>
+
+              {/* Section Domaine et Métier - Visible seulement pour les agents */}
+              {isAgent && (
+                <>
+                  <div className="p-4 bg-white/5 rounded-xl">
+                    <p className="text-white/50 text-xs mb-3 flex items-center gap-2">
+                      <Building2 size={14} />
+                      Domaine d'intervention
+                    </p>
+                    {isEditing ? (
+                      <DomaineSelector
+                        value={formData.domaine}
+                        onChange={(val) => {
+                          setFormData({ ...formData, domaine: val, metier: "" });
+                          setIsDomaineValid(true);
+                          setIsMetierValid(false);
+                        }}
+                        onValidChange={(valid) => setIsDomaineValid(valid)}
+                        label=""
+                      />
+                    ) : (
+                      <p className="text-white text-lg flex items-center gap-2">
+                        {userInfo.domaine ? (
+                          <>
+                            {userInfo.domaine === "VOIRIE" && <MapPin size={20} className="text-emerald-400" />}
+                            {userInfo.domaine === "ECLAIRAGE" && <Lightbulb size={20} className="text-emerald-400" />}
+                            {userInfo.domaine === "PROPRETE" && <Trash2 size={20} className="text-emerald-400" />}
+                            {userInfo.domaine === "ESPACES_VERTS" && <TreePine size={20} className="text-emerald-400" />}
+                            {userInfo.domaine === "TRANSPORTS" && <Bus size={20} className="text-emerald-400" />}
+                            {userInfo.domaine === "SECURITE" && <ShieldCheck size={20} className="text-emerald-400" />}
+                            {userInfo.domaine === "URBANISME" && <Building2 size={20} className="text-emerald-400" />}
+                            {userInfo.domaine}
+                          </>
+                        ) : (
+                          <span className="text-white/40">Non défini</span>
+                        )}
+                      </p>
+                    )}
+                  </div>
+
+                  {formData.domaine && isEditing && (
+                    <div className="p-4 bg-white/5 rounded-xl">
+                      <p className="text-white/50 text-xs mb-3 flex items-center gap-2">
+                        <Wrench size={14} />
+                        Métier
+                      </p>
+                      <MetierSelector
+                        domaine={formData.domaine}
+                        value={formData.metier}
+                        onChange={(val) => {
+                          setFormData({ ...formData, metier: val });
+                          setIsMetierValid(true);
+                        }}
+                        onValidChange={(valid) => setIsMetierValid(valid)}
+                        label=""
+                      />
+                    </div>
+                  )}
+
+                  {!isEditing && userInfo.metier && (
+                    <div className="p-4 bg-white/5 rounded-xl">
+                      <p className="text-white/50 text-xs mb-1 flex items-center gap-2">
+                        <Wrench size={14} />
+                        Métier
+                      </p>
+                      <p className="text-white text-lg flex items-center gap-2">
+                        {userInfo.metier?.replace(/_/g, ' ').toLowerCase()}
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
+
               <div className="p-4 bg-white/5 rounded-xl">
                 <p className="text-white/50 text-xs mb-1">Rôle non modifiable</p>
                 <p className="text-white text-lg">{getRoleLabel(userInfo.role)}</p>
@@ -563,9 +939,20 @@ export default function Profil() {
                 <button
                   onClick={() => {
                     setIsEditing(false);
-                    setFormData({ nom: userInfo.nom, email: userInfo.email });
+                    setFormData({ 
+                      nom: userInfo.nom, 
+                      email: userInfo.email,
+                      domaine: userInfo.domaine,
+                      metier: userInfo.metier,
+                      adresse: userInfo.adresse,
+                      telephone: userInfo.telephone  // ⭐ AJOUTÉ
+                    });
                     setIsNomValid(true);
                     setIsEmailValid(true);
+                    setIsAdresseValid(!!userInfo.adresse && userInfo.adresse.length >= 4);
+                    setIsTelephoneValid(!!userInfo.telephone && userInfo.telephone.length >= 10);  // ⭐ AJOUTÉ
+                    setIsDomaineValid(!!userInfo.domaine);
+                    setIsMetierValid(!!userInfo.metier);
                   }}
                   className="px-6 bg-gray-600 hover:bg-gray-500 text-white font-semibold py-3 rounded-xl transition flex items-center justify-center gap-2"
                 >
@@ -595,7 +982,6 @@ export default function Profil() {
 
             {showPasswordForm ? (
               <div className="space-y-4">
-                {/* Mot de passe actuel */}
                 <ValidatedInput
                   label="Mot de passe actuel"
                   value={passwordData.currentPassword}
@@ -612,7 +998,6 @@ export default function Profil() {
                   showPasswordToggle={true}
                 />
 
-                {/* Nouveau mot de passe */}
                 <ValidatedInput
                   label="Nouveau mot de passe"
                   value={passwordData.newPassword}
@@ -629,7 +1014,6 @@ export default function Profil() {
                   showPasswordToggle={true}
                 />
 
-                {/* Confirmation mot de passe */}
                 <ValidatedInput
                   label="Confirmer le mot de passe"
                   value={passwordData.confirmPassword}

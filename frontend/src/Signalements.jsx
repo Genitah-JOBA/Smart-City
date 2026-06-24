@@ -63,7 +63,6 @@ export default function Signalements() {
         const data = await response.json();
         console.log("📋 Utilisateurs récupérés:", data);
         
-        // Filtrer l'utilisateur courant
         const filteredUsers = data.filter(user => user.id !== currentUserId);
         setUsers(filteredUsers);
         console.log("👥 Utilisateurs après filtrage:", filteredUsers);
@@ -160,6 +159,7 @@ export default function Signalements() {
     
     const comment = {
       id: Date.now(),
+      userId: currentUserData.id,
       user: `${currentUserData.prenom || ""} ${currentUserData.nom || "Anonyme"}`.trim(),
       text: commentText,
       date: new Date().toISOString(),
@@ -177,7 +177,17 @@ export default function Signalements() {
     }));
   };
 
-  const deleteComment = (signalementId, commentId) => {
+  // Supprimer un commentaire (vérification des droits)
+  const deleteComment = (signalementId, commentId, commentUserId) => {
+    const signalement = signalements.find(s => s.id === signalementId);
+    const isSignalementOwner = signalement && (signalement.utilisateur?.id === currentUserId || signalement.citoyen?.id === currentUserId);
+    const isCommentOwner = commentUserId === currentUserId;
+    
+    if (!isCommentOwner && !isSignalementOwner) {
+      alert("Vous n'êtes pas autorisé à supprimer ce commentaire");
+      return;
+    }
+    
     setComments(prev => ({
       ...prev,
       [signalementId]: prev[signalementId].filter(c => c.id !== commentId)
@@ -212,86 +222,85 @@ export default function Signalements() {
   };
 
   // Envoyer le partage via le backend
-const sendSharedMessage = async () => {
-  console.log("🚀 Début de sendSharedMessage");
-  console.log("selectedUsers:", selectedUsers);
-  
-  if (selectedUsers.length === 0) {
-    alert("Veuillez sélectionner au moins un destinataire");
-    return;
-  }
+  const sendSharedMessage = async () => {
+    console.log("🚀 Début de sendSharedMessage");
+    console.log("selectedUsers:", selectedUsers);
+    
+    if (selectedUsers.length === 0) {
+      alert("Veuillez sélectionner au moins un destinataire");
+      return;
+    }
 
-  setIsSharing(true);
-  const currentUserData = getCurrentUser();
-  const senderName = `${currentUserData.prenom || ""} ${currentUserData.nom || "Un citoyen"}`.trim();
-  
-  let successCount = 0;
-  
-  for (const user of selectedUsers) {
-    try {
-      console.log(`📤 Envoi du partage à ${user.email} (ID: ${user.id})`);
-      
-      const shareData = {
-        signalementId: selectedSignalementToShare.id,
-        recipientUserId: user.id,
-        recipientEmail: user.email,
-        signalementTitle: selectedSignalementToShare.titre,
-        senderName: senderName
-      };
-      
-      const response = await fetch("http://localhost:8081/api/notifications/share", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(shareData)
-      });
-      
-      if (response.ok) {
-        const result = await response.json();
-        console.log(`✅ Partagé avec ${user.email}:`, result);
-        successCount++;
+    setIsSharing(true);
+    const currentUserData = getCurrentUser();
+    const senderName = `${currentUserData.prenom || ""} ${currentUserData.nom || "Un citoyen"}`.trim();
+    
+    let successCount = 0;
+    
+    for (const user of selectedUsers) {
+      try {
+        console.log(`📤 Envoi du partage à ${user.email} (ID: ${user.id})`);
         
-        // Sauvegarder localement pour l'affichage des compteurs
-        const share = {
-          id: Date.now() + Math.random(),
+        const shareData = {
           signalementId: selectedSignalementToShare.id,
-          sharedBy: senderName,
-          sharedAt: new Date().toISOString(),
-          sharedWith: user.email,
-          sharedWithName: `${user.prenom || ""} ${user.nom || ""}`.trim(),
-          titre: selectedSignalementToShare.titre,
-          type: selectedSignalementToShare.type,
-          status: selectedSignalementToShare.statut
+          recipientUserId: user.id,
+          recipientEmail: user.email,
+          signalementTitle: selectedSignalementToShare.titre,
+          senderName: senderName
         };
         
-        setShares(prev => ({
-          ...prev,
-          [selectedSignalementToShare.id]: [...(prev[selectedSignalementToShare.id] || []), share]
-        }));
+        const response = await fetch("http://localhost:8081/api/notifications/share", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(shareData)
+        });
         
-      } else {
-        const error = await response.text();
+        if (response.ok) {
+          const result = await response.json();
+          console.log(`✅ Partagé avec ${user.email}:`, result);
+          successCount++;
+          
+          const share = {
+            id: Date.now() + Math.random(),
+            signalementId: selectedSignalementToShare.id,
+            sharedBy: senderName,
+            sharedAt: new Date().toISOString(),
+            sharedWith: user.email,
+            sharedWithName: `${user.prenom || ""} ${user.nom || ""}`.trim(),
+            titre: selectedSignalementToShare.titre,
+            type: selectedSignalementToShare.type,
+            status: selectedSignalementToShare.statut
+          };
+          
+          setShares(prev => ({
+            ...prev,
+            [selectedSignalementToShare.id]: [...(prev[selectedSignalementToShare.id] || []), share]
+          }));
+          
+        } else {
+          const error = await response.text();
+          console.error(`❌ Erreur pour ${user.email}:`, error);
+          alert(`Erreur lors du partage avec ${user.email}`);
+        }
+        
+      } catch (error) {
         console.error(`❌ Erreur pour ${user.email}:`, error);
-        alert(`Erreur lors du partage avec ${user.email}`);
+        alert(`Erreur réseau lors du partage avec ${user.email}`);
       }
-      
-    } catch (error) {
-      console.error(`❌ Erreur pour ${user.email}:`, error);
-      alert(`Erreur réseau lors du partage avec ${user.email}`);
     }
-  }
-  
-  if (successCount > 0) {
-    alert(`✓ Signalement partagé avec ${successCount} utilisateur${successCount > 1 ? 's' : ''}`);
-  }
-  
-  setShowShareModal(false);
-  setSelectedSignalementToShare(null);
-  setSelectedUsers([]);
-  setIsSharing(false);
-};
+    
+    if (successCount > 0) {
+      alert(`✓ Signalement partagé avec ${successCount} utilisateur${successCount > 1 ? 's' : ''}`);
+    }
+    
+    setShowShareModal(false);
+    setSelectedSignalementToShare(null);
+    setSelectedUsers([]);
+    setIsSharing(false);
+  };
 
   const getShareCount = (signalementId) => {
     return shares[signalementId]?.length || 0;
@@ -443,31 +452,41 @@ const sendSharedMessage = async () => {
     return texts[statut] || statut;
   };
 
-  // Composant de commentaires
+  // Composant de commentaires avec gestion des droits de suppression
   const CommentsSection = ({ signalementId }) => {
     const signalComments = comments[signalementId] || [];
     const currentComment = newComments[signalementId] || "";
+    const signalement = signalements.find(s => s.id === signalementId);
+    const isSignalementOwner = signalement && (signalement.utilisateur?.id === currentUserId || signalement.citoyen?.id === currentUserId);
     
     return (
       <div className="border-t border-gray-700/50 mt-3 pt-3">
         <div className="space-y-3 max-h-60 overflow-y-auto mb-3 px-1">
-          {signalComments.map(comment => (
-            <div key={comment.id} className="flex gap-2 group">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-emerald-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                {comment.avatar}
-              </div>
-              <div className="flex-1 bg-gray-700/30 rounded-lg p-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-white text-xs font-medium">{comment.user}</span>
-                  <span className="text-gray-500 text-[10px]">{getRelativeTime(comment.date)}</span>
+          {signalComments.map(comment => {
+            const canDelete = comment.userId === currentUserId || isSignalementOwner;
+            return (
+              <div key={comment.id} className="flex gap-2 group">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-emerald-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                  {comment.avatar}
                 </div>
-                <p className="text-gray-300 text-sm mt-1">{comment.text}</p>
+                <div className="flex-1 bg-gray-700/30 rounded-lg p-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-white text-xs font-medium">{comment.user}</span>
+                    <span className="text-gray-500 text-[10px]">{getRelativeTime(comment.date)}</span>
+                  </div>
+                  <p className="text-gray-300 text-sm mt-1">{comment.text}</p>
+                </div>
+                {canDelete && (
+                  <button 
+                    onClick={() => deleteComment(signalementId, comment.id, comment.userId)} 
+                    className="text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition p-1"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
               </div>
-              <button onClick={() => deleteComment(signalementId, comment.id)} className="text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition p-1">
-                <X size={14} />
-              </button>
-            </div>
-          ))}
+            );
+          })}
           {signalComments.length === 0 && (
             <p className="text-gray-500 text-xs text-center py-2">Aucun commentaire. Soyez le premier à réagir !</p>
           )}
@@ -509,31 +528,11 @@ const sendSharedMessage = async () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      {/* Header
-      <header className="sticky top-0 z-30 bg-[#242526] border-b border-gray-700/50 shadow-lg">
-        <div className="container mx-auto max-w-3xl px-4 py-3">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-              <MapPin className="w-6 h-6 text-blue-400" />
-              Signalements <span className="text-blue-400 text-lg font-normal ml-2">Communauté</span>
-            </h1>
-            <div className="flex items-center gap-3">
-              <button onClick={() => setShowStats(!showStats)} className="text-sm text-gray-400 bg-gray-700/50 px-3 py-1.5 rounded-full flex items-center gap-1 hover:bg-gray-700 transition-colors">
-                <BarChart3 size={14} /> {showStats ? 'Masquer stats' : 'Voir stats'}
-              </button>
-              <span className="text-sm text-gray-400 bg-gray-700/50 px-3 py-1.5 rounded-full">
-                {signalements.length} publication{signalements.length > 1 ? 's' : ''}
-              </span>
-            </div>
-          </div>
-        </div>
-      </header> */}
-
       {/* Modal de partage */}
       {showShareModal && selectedSignalementToShare && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => setShowShareModal(false)}>
-          <div className="bg-[#242526] rounded-2xl max-w-md w-full max-h-[80vh] overflow-hidden shadow-2xl border border-gray-700" onClick={(e) => e.stopPropagation()}>
-            <div className="p-4 border-b border-gray-700 flex justify-between items-center">
+          <div className="bg-[#242526] rounded-2xl max-w-md w-full max-h-[85vh] overflow-hidden shadow-2xl border border-gray-700 flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4 border-b border-gray-700 flex justify-between items-center flex-shrink-0">
               <div className="flex items-center gap-2">
                 <Share2 size={20} className="text-blue-400" />
                 <h2 className="text-white font-bold">Partager le signalement</h2>
@@ -606,7 +605,7 @@ const sendSharedMessage = async () => {
               )}
             </div>
             
-            <div className="p-4 border-t border-gray-700">
+            <div className="p-4 border-t border-gray-700 flex-shrink-0">
               <div className="flex justify-between items-center mb-3">
                 <span className="text-gray-400 text-sm">
                   {selectedUsers.length} utilisateur{selectedUsers.length > 1 ? 's' : ''} sélectionné{selectedUsers.length > 1 ? 's' : ''}
@@ -614,8 +613,12 @@ const sendSharedMessage = async () => {
               </div>
               <button
                 onClick={sendSharedMessage}
-                disabled={isSharing || selectedUsers.length === 0 || users.length === 0}
-                className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium py-3 rounded-xl transition flex items-center justify-center gap-2"
+                disabled={isSharing || selectedUsers.length === 0}
+                className={`w-full font-medium py-3 rounded-xl transition flex items-center justify-center gap-2 ${
+                  isSharing || selectedUsers.length === 0
+                    ? 'bg-gray-600 cursor-not-allowed text-white/70'
+                    : 'bg-blue-600 hover:bg-blue-500 text-white'
+                }`}
               >
                 {isSharing ? (
                   <>

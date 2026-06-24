@@ -3,6 +3,7 @@ import {
   Camera, MapPin, Send, Trash2, Edit2, X, Shield, Road, 
   Lightbulb, Trash, Droplets, Search, Filter, Calendar, User,
   Clock, CheckCircle, RefreshCw, Maximize2, ChevronLeft, ChevronRight,
+  TreePine, Bus, Shield as ShieldIcon, Building2 as BuildingIcon,
   AlertTriangle, PlayCircle, Loader, Navigation2, Building2, Home, Target, LocateFixed, CheckCircle as CheckCircleIcon
 } from "lucide-react";
 
@@ -63,9 +64,13 @@ export default function Signaler() {
 
   const categories = [
     { id: "VOIRIE", name: "Voirie / Routes", icon: Road, color: "from-green-800 to-green-400", iconColor: "text-green-400" },
-    { id: "ECLAIRAGE", name: "Éclairage Public", icon: Lightbulb, color: "from-amber-400 to-amber-300", iconColor: "text-amber-400" },
-    { id: "DECHETS", name: "Déchets / Propreté", icon: Trash, color: "from-red-500 to-red-400", iconColor: "text-red-400" },
-    { id: "EAU", name: "Eau / Assainissement", icon: Droplets, color: "from-blue-500 to-blue-400", iconColor: "text-blue-400" }
+    { id: "ECLAIRAGE", name: "Éclairage Public", icon: Lightbulb, color: "from-slate-600 to-slate-400", iconColor: "text-amber-400" },
+    { id: "PROPRETE", name: "Propreté / Déchets", icon: Trash, color: "from-red-400 to-red-300", iconColor: "text-red-400" },
+    { id: "EAU", name: "Eau / Assainissement", icon: Droplets, color: "from-blue-400 to-blue-300", iconColor: "text-blue-400" },
+    { id: "ESPACES_VERTS", name: "Espaces verts", icon: TreePine, color: "from-emerald-400 to-emerald-700", iconColor: "text-emerald-400" },
+    { id: "TRANSPORTS", name: "Transports / Mobilité", icon: Bus, color: "from-slate-400 to-slate-800", iconColor: "text-purple-400" },
+    { id: "SECURITE", name: "Sécurité / Prévention", icon: Shield, color: "from-red-300 to-red-500", iconColor: "text-slate-400" },
+    { id: "URBANISME", name: "Urbanisme", icon: Building2, color: "from-blue-300 to-blue-500", iconColor: "text-cyan-400" }
   ];
 
   // Obtenir la couleur du statut

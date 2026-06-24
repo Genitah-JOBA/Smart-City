@@ -39,17 +39,15 @@ public class JwtFilter extends OncePerRequestFilter {
             }
         }
 
-        // On vérifie si l'email est là ET si l'utilisateur n'est pas déjà authentifié
         if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails = service.loadUserByUsername(email);
 
-            // AJOUT : Vérification de la validité du token (Expiration, Secret)
-            if (jwtUtil.validateToken(token, userDetails)) {
+            // ⭐ CORRIGÉ : Utiliser getUsername() au lieu de userDetails directement
+            if (jwtUtil.validateToken(token, userDetails.getUsername())) {
                 UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                         userDetails, null, userDetails.getAuthorities());
                 auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 
-                // C'est cette ligne qui "ouvre" la porte 403
                 SecurityContextHolder.getContext().setAuthentication(auth);
             }
         }

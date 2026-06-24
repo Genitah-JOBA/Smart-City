@@ -20,12 +20,31 @@ public class UtilisateurController {
     }
     
     @GetMapping
-    public java.util.List<Utilisateur> getAll() {
+    public List<Utilisateur> getAll() {
         return service.findAll();
     }
 
     @GetMapping("/role/{role}")
     public List<Utilisateur> getByRole(@PathVariable String role) {
         return service.findByRole(role.toUpperCase());
+    }
+    
+    // ⭐ NOUVEAUX ENDPOINTS ⭐
+    
+    @GetMapping("/domaine/{domaine}")
+    public List<Utilisateur> getByDomaine(@PathVariable String domaine) {
+        return service.findByDomaine(domaine.toUpperCase());
+    }
+    
+    @GetMapping("/domaine/{domaine}/metier/{metier}")
+    public List<Utilisateur> getByDomaineAndMetier(
+            @PathVariable String domaine, 
+            @PathVariable String metier) {
+        return service.findByDomaineAndMetier(domaine.toUpperCase(), metier);
+    }
+    
+    @GetMapping("/{id}")
+    public Utilisateur getById(@PathVariable Long id) {
+        return service.findById(id);
     }
 }

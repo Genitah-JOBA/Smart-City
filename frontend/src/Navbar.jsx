@@ -5,7 +5,7 @@ import {
   Shield, Bell, Settings, PlusCircle, LayoutDashboard, 
   ClipboardList, Wrench, Users, BarChart3, ChevronDown,
   CheckCircle, Clock, MessageSquare, Loader2, UserCheck,
-  Share2, ChevronRight
+  Share2, ChevronRight, Brain
 } from "lucide-react";
 
 export default function Navbar() {
@@ -72,23 +72,123 @@ export default function Navbar() {
     }
   };
 
-  const markAsRead = async (notificationId) => {
-    try {
-      const response = await fetch(`http://localhost:8081/api/notifications/${notificationId}/read`, {
-        method: "PUT",
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      
-      if (response.ok) {
-        setNotifications(prev => prev.map(n => 
-          n.id === notificationId ? { ...n, lu: true } : n
-        ));
-        setUnreadCount(prev => Math.max(0, prev - 1));
-      }
-    } catch (error) {
-      console.error("Erreur markAsRead:", error);
+  // ⭐ Fonction pour extraire l'ID du signalement depuis le message ou le lien
+  const extractSignalementId = (notif) => {
+    // Méthode 1: direct via signalementId
+    if (notif.signalementId) {
+      return notif.signalementId;
     }
+    
+    // Méthode 2: depuis le lien (ex: "/signalement/123")
+    if (notif.lien) {
+      const match = notif.lien.match(/\/signalement\/(\d+)/);
+      if (match) {
+        return parseInt(match[1]);
+      }
+    }
+    
+    // Méthode 3: depuis le message (ex: "signalement #123")
+    if (notif.message) {
+      const match = notif.message.match(/#(\d+)/);
+      if (match) {
+        return parseInt(match[1]);
+      }
+    }
+    
+    // Méthode 4: depuis le titre
+    if (notif.title) {
+      const match = notif.title.match(/#(\d+)/);
+      if (match) {
+        return parseInt(match[1]);
+      }
+    }
+    
+    return null;
   };
+
+  // ⭐ Fonction pour déterminer la redirection selon le type de notification
+  const getRedirectPath = (notif) => {
+    const signalementId = extractSignalementId(notif);
+    
+    // Si on a un ID, rediriger vers le détail
+    if (signalementId) {
+      return `/signalement/${signalementId}`;
+    }
+    
+    // Sinon, utiliser le lien s'il existe
+    if (notif.lien) {
+      return notif.lien;
+    }
+    
+    // Fallback selon le rôle
+    if (userRole === "AGENT") {
+      return "/agent/signalements-assignes";
+    } else if (userRole === "ADMIN") {
+      return "/admin/signalement";
+    }
+    return "/signalements";
+  };
+
+  const handleNotificationClick = async (notif) => {
+  console.log("🔔 Notification cliquée:", notif);
+  
+  // Marquer comme lu
+  try {
+    const response = await fetch(`http://localhost:8081/api/notifications/${notif.id}/read`, {
+      method: "PUT",
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+    
+    if (response.ok) {
+      setNotifications(prev => prev.map(n => 
+        n.id === notif.id ? { ...n, lu: true } : n
+      ));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    }
+  } catch (error) {
+    console.error("Erreur markAsRead:", error);
+  }
+  
+  setShowNotifications(false);
+  
+  // ⭐ Extraire l'ID du signalement
+  let signalementId = notif.signalementId;
+  
+  // Essayer d'extraire depuis le message
+  if (!signalementId && notif.message) {
+    const match = notif.message.match(/#(\d+)/);
+    if (match) signalementId = match[1];
+  }
+  
+  // Essayer d'extraire depuis le titre
+  if (!signalementId && notif.title) {
+    const match = notif.title.match(/#(\d+)/);
+    if (match) signalementId = match[1];
+  }
+  
+  // Essayer d'extraire depuis le lien
+  if (!signalementId && notif.lien) {
+    const match = notif.lien.match(/\/(\d+)/);
+    if (match) signalementId = match[1];
+  }
+  
+  console.log("📌 signalementId extrait:", signalementId);
+  
+  // Redirection
+  if (signalementId) {
+    navigate(`/signalement/${signalementId}`);
+  } else {
+    // Fallback selon le rôle
+    const role = localStorage.getItem("userRole");
+    if (role === "ADMIN") {
+      navigate("/admin/signalement");  // ⭐ Singulier
+    } else if (role === "AGENT") {
+      navigate("/agent/signalements-assignes");
+    } else {
+      navigate("/signalements");
+    }
+  }
+};
 
   const markAllAsRead = async () => {
     try {
@@ -167,7 +267,9 @@ export default function Navbar() {
     if (role === "ADMIN") {
       return [
         { path: "/admin/dashboard", name: "Dashboard", icon: LayoutDashboard },
+        { path: "/admin/assignation-ia", name: "Assignation IA", icon: Brain },
         { path: "/admin/signalement", name: "Signalements", icon: ClipboardList },
+        { path: "/admin/users", name: "Utilisateurs", icon: Users },
         { path: "/admin/profil", name: "Profil", icon: User },
       ];
     } else if (role === "AGENT") {
@@ -234,7 +336,7 @@ export default function Navbar() {
         <div className="px-3 sm:px-4 lg:px-6">
           <div className="flex items-center justify-between h-14 sm:h-16">
             
-            {/* Logo - Version responsive */}
+            {/* Logo */}
             <Link 
               to={userRole === "ADMIN" ? "/admin/dashboard" : userRole === "AGENT" ? "/agent/dashboard" : "/signalements"} 
               className="flex items-center gap-2 sm:gap-3 flex-shrink-0"
@@ -253,7 +355,7 @@ export default function Navbar() {
               </div>
             </Link>
 
-            {/* Navigation Desktop - visible sur tablette et desktop */}
+            {/* Navigation Desktop */}
             <div className="hidden sm:flex items-center gap-1 md:gap-2">
               {navLinks.map((link) => {
                 const Icon = link.icon;
@@ -323,10 +425,7 @@ export default function Navbar() {
                         notifications.map(notif => (
                           <div 
                             key={notif.id} 
-                            onClick={() => {
-                              markAsRead(notif.id);
-                              setShowNotifications(false);
-                            }}
+                            onClick={() => handleNotificationClick(notif)}
                             className={`p-3 border-b border-white/5 hover:bg-white/5 transition cursor-pointer ${!notif.lu ? 'bg-emerald-500/5 border-l-2 border-l-emerald-500' : ''}`}
                           >
                             <div className="flex items-start gap-2">
@@ -390,7 +489,7 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Navigation Mobile - Overlay style */}
+        {/* Navigation Mobile */}
         <div className={`fixed inset-x-0 top-14 bottom-0 bg-slate-900/98 backdrop-blur-xl transition-all duration-300 z-40 ${
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}>
@@ -447,7 +546,7 @@ export default function Navbar() {
       {/* Espace pour compenser la navbar fixe */}
       <div className="h-14 sm:h-16"></div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes slide-in {
           from { width: 0; opacity: 0; }
           to { width: 1rem; opacity: 1; }

@@ -22,6 +22,8 @@ import Problemes from "./Problemes";
 import AdminDashboard from "./AdminDashboard";
 import AdminSignalement from "./AdminSignalement";
 import AdminProfil from "./AdminProfil";
+import AssignationIA from "./AssignationIA";
+import UsersManagement from "./UsersManagement";
 
 // Page détail signalement (pour les notifications)
 import SignalementDetail from "./SignalementDetail";
@@ -204,6 +206,7 @@ function App() {
             </ProtectedLayout>
           } 
         />
+        
         <Route
           path="/agent/problemes" 
           element={
@@ -237,6 +240,24 @@ function App() {
           element={
             <ProtectedLayout>
               <AdminProfil />
+            </ProtectedLayout>
+          } 
+        />
+        
+        <Route 
+          path="/admin/assignation-ia" 
+          element={
+            <ProtectedLayout>
+              <AssignationIA />
+            </ProtectedLayout>
+          } 
+        />
+
+        <Route 
+          path="/admin/users" 
+          element={
+            <ProtectedLayout>
+              <UsersManagement />
             </ProtectedLayout>
           } 
         />

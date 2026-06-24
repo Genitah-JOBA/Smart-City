@@ -76,7 +76,7 @@ export default function AdminDashboard() {
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedSignalement, setSelectedSignalement] = useState(null);
   const [showExportModal, setShowExportModal] = useState(false);
-  const [exportFormat, setExportFormat] = useState("csv");
+  const [exportFormat, setExportFormat] = useState("excel");
   const [isExporting, setIsExporting] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState("");
   const [isAssigning, setIsAssigning] = useState(false);
@@ -95,6 +95,7 @@ export default function AdminDashboard() {
   const getLocalisation = (signalement) => {
     return signalement.ville || signalement.address || signalement.localisation || "Non spécifiée";
   };
+  
   const showMessage = (message, type = 'info') => {
     setMessageBox({ message, type });
   };
@@ -113,7 +114,6 @@ export default function AdminDashboard() {
         const agentStats = {};
         
         signalements.forEach(signalement => {
-          // Vérification que signalement existe
           if (!signalement) return;
           
           const agentEmail = signalement.agentEmail || 
@@ -183,7 +183,6 @@ export default function AdminDashboard() {
         
         setSignalements(data);
         
-        // Calcul des stats avec sécurité
         const total = data.length;
         const enAttente = data.filter(s => s?.statut === "EN_ATTENTE").length;
         const enCours = data.filter(s => s?.statut === "EN_COURS").length;
@@ -198,10 +197,9 @@ export default function AdminDashboard() {
           resolus,
           tauxResolution,
           tempsMoyen: 2.5,
-          agentsActifs: prev.agentsActifs  // Garde la valeur existante
+          agentsActifs: prev.agentsActifs
         }));
         
-        // Derniers signalements (10 plus récents)
         const tousLesSignalementsRecents = [...data]
           .sort((a, b) => {
             const dateA = new Date(getCreationDate(a));
@@ -212,7 +210,6 @@ export default function AdminDashboard() {
         
         setDerniersSignalements(tousLesSignalementsRecents);
         
-        // Signalements urgents
         const urgents = data.filter(s => {
           const statut = s?.statut || "";
           return statut === "EN_ATTENTE" || statut === "NOUVEAU" || statut === "URGENT";
@@ -224,7 +221,6 @@ export default function AdminDashboard() {
         
         setSignalementsUrgents(urgents);
         
-        // Types de problèmes
         const typesCount = {};
         data.forEach(s => {
           const type = s?.type || "Autre";
@@ -236,7 +232,6 @@ export default function AdminDashboard() {
         showMessage("Impossible de récupérer les signalements", 'error');
       }
       
-      // Récupération des agents
       const agentsRes = await fetch("http://localhost:8081/api/users", {
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -257,60 +252,74 @@ export default function AdminDashboard() {
     }
   };
   
-  const exportToCSV = () => {
-    const headers = ["ID", "Titre", "Description", "Type", "Statut", "Localisation", "Date création"];
-    const rows = signalements.map(s => [
-      s.id,
-      `"${(s.titre || "").replace(/"/g, '""')}"`,
-      `"${(s.description || "").replace(/"/g, '""')}"`,
-      s.type || "Non défini",
-      getStatusLabel(s.statut),
-      s.ville || s.address || "Non spécifiée",
-      new Date(s.dateCreation).toLocaleDateString()
-    ]);
+  // ⭐ EXPORT WORD (format DOC)
+  const exportToWord = () => {
+    let html = `
+      <html>
+      <head><meta charset="UTF-8"><title>Export Word - SmartCity</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        h1 { color: #2c3e50; }
+        h2 { color: #34495e; margin-top: 30px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 15px; }
+        th { background: #4CAF50; color: white; padding: 10px; text-align: left; }
+        td { padding: 8px; border-bottom: 1px solid #ddd; }
+        .stat-card { background: #f5f5f5; padding: 15px; margin: 10px 0; border-radius: 10px; }
+        .footer { margin-top: 50px; text-align: center; color: #95a5a6; font-size: 12px; }
+      </style>
+      </head>
+      <body>
+        <h1>SmartCity - Rapport des signalements</h1>
+        <p>Exporté le ${new Date().toLocaleString()}</p>
+        <p>Période: ${periode === "semaine" ? "Cette semaine" : periode === "mois" ? "Ce mois" : "Cette année"}</p>
+        
+        <h2>Statistiques</h2>
+        <div class="stat-card"><strong>Total signalements:</strong> ${stats.total}</div>
+        <div class="stat-card"><strong>En attente:</strong> ${stats.enAttente}</div>
+        <div class="stat-card"><strong>En cours:</strong> ${stats.enCours}</div>
+        <div class="stat-card"><strong>Résolus:</strong> ${stats.resolus}</div>
+        <div class="stat-card"><strong>Taux de résolution:</strong> ${stats.tauxResolution}%</div>
+        
+        <h2>Liste des signalements</h2>
+        <table border="1">
+          <thead>
+            <tr><th>ID</th><th>Titre</th><th>Type</th><th>Statut</th><th>Localisation</th><th>Date</th></tr>
+          </thead>
+          <tbody>
+    `;
     
-    const csvContent = [headers, ...rows].map(row => row.join(",")).join("\n");
-    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    signalements.forEach(s => {
+      html += `<tr>
+        <td>${s.id}</td>
+        <td>${s.titre || "-"}</td>
+        <td>${s.type || "-"}</td>
+        <td>${getStatusLabel(s.statut)}</td>
+        <td>${s.ville || s.address || "-"}</td>
+        <td>${new Date(s.dateCreation).toLocaleDateString()}</td>
+      </tr>`;
+    });
+    
+    html += `
+          </tbody>
+        </table>
+        <div class="footer">
+          <p>Rapport généré automatiquement par SmartCity Platform</p>
+          <p>© ${new Date().getFullYear()} SmartCity - Tous droits réservés</p>
+        </div>
+      </body>
+      </html>
+    `;
+    
+    const blob = new Blob([html], { type: "application/msword" });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.href = url;
-    link.setAttribute("download", `signalements_${new Date().toISOString().split("T")[0]}.csv`);
+    link.setAttribute("download", `signalements_${new Date().toISOString().split("T")[0]}.doc`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    showMessage("Export CSV réussi", 'success');
-  };
-
-  const exportToJSON = () => {
-    const exportData = {
-      exportDate: new Date().toISOString(),
-      periode: periode,
-      stats: stats,
-      signalements: signalements.map(s => ({
-        id: s.id,
-        titre: s.titre,
-        description: s.description,
-        type: s.type,
-        statut: s.statut,
-        statutLabel: getStatusLabel(s.statut),
-        localisation: s.ville || s.address,
-        dateCreation: s.dateCreation
-      })),
-      signalementsParType: signalementsParType
-    };
-    
-    const jsonContent = JSON.stringify(exportData, null, 2);
-    const blob = new Blob([jsonContent], { type: "application/json" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.href = url;
-    link.setAttribute("download", `dashboard_export_${new Date().toISOString().split("T")[0]}.json`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    showMessage("Export JSON réussi", 'success');
+    showMessage("Export Word réussi", 'success');
   };
 
   const exportToExcel = () => {
@@ -329,11 +338,11 @@ export default function AdminDashboard() {
         <p>Période: ${periode === "semaine" ? "Cette semaine" : periode === "mois" ? "Ce mois" : "Cette année"}</p>
         <h2>Statistiques</h2>
         <table border="1">
-          <tr><th>Total signalements</th><td>${stats.total}</td></tr>
-          <tr><th>En attente</th><td>${stats.enAttente}</td></tr>
-          <tr><th>En cours</th><td>${stats.enCours}</td></tr>
-          <tr><th>Résolus</th><td>${stats.resolus}</td></tr>
-          <tr><th>Taux de résolution</th><td>${stats.tauxResolution}%</td></tr>
+          <tr><th>Total signalements</th><td>${stats.total}</tr>
+          <tr><th>En attente</th><td>${stats.enAttente}</tr>
+          <tr><th>En cours</th><td>${stats.enCours}</tr>
+          <tr><th>Résolus</th><td>${stats.resolus}</tr>
+          <tr><th>Taux de résolution</th><td>${stats.tauxResolution}%</tr>
         </table>
         <h2>Liste des signalements</h2>
         <table border="1">
@@ -395,7 +404,9 @@ export default function AdminDashboard() {
         
         <h2>Liste des signalements</h2>
         <table border="1">
-          <thead><tr><th>ID</th><th>Titre</th><th>Type</th><th>Statut</th><th>Localisation</th><th>Date</th></tr></thead>
+          <thead>
+            <tr><th>ID</th><th>Titre</th><th>Type</th><th>Statut</th><th>Localisation</th><th>Date</th></tr>
+          </thead>
           <tbody>
     `);
     
@@ -431,11 +442,10 @@ export default function AdminDashboard() {
     setIsExporting(true);
     setTimeout(() => {
       switch (exportFormat) {
-        case "csv": exportToCSV(); break;
-        case "json": exportToJSON(); break;
         case "excel": exportToExcel(); break;
+        case "word": exportToWord(); break;
         case "pdf": exportToPDF(); break;
-        default: exportToCSV();
+        default: exportToExcel();
       }
       setIsExporting(false);
       setShowExportModal(false);
@@ -508,69 +518,58 @@ export default function AdminDashboard() {
   };
 
   const addAgent = async () => {
-  if (!newAgent.nom || !newAgent.email || !newAgent.password) {
-    showMessage("Veuillez remplir tous les champs", 'warning');
-    return;
-  }
-
-  // Vérifier l'email Gmail
-  if (!newAgent.email.toLowerCase().endsWith("@gmail.com")) {
-    showMessage("L'email doit être une adresse @gmail.com", 'warning');
-    return;
-  }
-
-  // Vérifier la longueur du mot de passe
-  if (newAgent.password.length < 6) {
-    showMessage("Le mot de passe doit contenir au moins 6 caractères", 'warning');
-    return;
-  }
-
-  setIsAddingAgent(true);
-  try {
-    console.log("📤 Envoi de la requête d'ajout d'agent...");
-    
-    // 🔥 IMPORTANT: NE PAS inclure le header Authorization
-    // L'endpoint /api/auth/register est public (pas besoin de token)
-    const response = await fetch("http://localhost:8081/api/auth/register", {
-      method: "POST",
-      headers: { 
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        nom: newAgent.nom,
-        email: newAgent.email,
-        motDePasse: newAgent.password,  // ⚠️ Notez: 'motDePasse' pas 'password'
-        role: "AGENT"
-      })
-    });
-
-    console.log("📡 Statut réponse:", response.status);
-
-    if (response.ok) {
-      showMessage(`Agent ${newAgent.nom} ajouté avec succès`, 'success');
-      setShowAddAgentModal(false);
-      setNewAgent({ nom: "", email: "", password: "" });
-      
-      // Rafraîchir la liste des agents
-      fetchDashboardData();
-    } else {
-      let errorMessage = "Erreur lors de l'ajout";
-      try {
-        const errorText = await response.text();
-        errorMessage = errorText || `Erreur ${response.status}`;
-        console.error("❌ Erreur API:", errorText);
-      } catch (e) {
-        errorMessage = `Erreur ${response.status}: ${response.statusText}`;
-      }
-      showMessage(errorMessage, 'error');
+    if (!newAgent.nom || !newAgent.email || !newAgent.password) {
+      showMessage("Veuillez remplir tous les champs", 'warning');
+      return;
     }
-  } catch (error) {
-    console.error("❌ Erreur réseau:", error);
-    showMessage("Erreur réseau lors de l'ajout. Vérifiez que le serveur est démarré.", 'error');
-  } finally {
-    setIsAddingAgent(false);
-  }
-};
+
+    if (!newAgent.email.toLowerCase().endsWith("@gmail.com")) {
+      showMessage("L'email doit être une adresse @gmail.com", 'warning');
+      return;
+    }
+
+    if (newAgent.password.length < 6) {
+      showMessage("Le mot de passe doit contenir au moins 6 caractères", 'warning');
+      return;
+    }
+
+    setIsAddingAgent(true);
+    try {
+      const response = await fetch("http://localhost:8081/api/auth/register", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          nom: newAgent.nom,
+          email: newAgent.email,
+          motDePasse: newAgent.password,
+          role: "AGENT"
+        })
+      });
+
+      if (response.ok) {
+        showMessage(`Agent ${newAgent.nom} ajouté avec succès`, 'success');
+        setShowAddAgentModal(false);
+        setNewAgent({ nom: "", email: "", password: "" });
+        fetchDashboardData();
+      } else {
+        let errorMessage = "Erreur lors de l'ajout";
+        try {
+          const errorText = await response.text();
+          errorMessage = errorText || `Erreur ${response.status}`;
+        } catch (e) {
+          errorMessage = `Erreur ${response.status}: ${response.statusText}`;
+        }
+        showMessage(errorMessage, 'error');
+      }
+    } catch (error) {
+      console.error("❌ Erreur réseau:", error);
+      showMessage("Erreur réseau lors de l'ajout. Vérifiez que le serveur est démarré.", 'error');
+    } finally {
+      setIsAddingAgent(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -613,7 +612,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* MODAL D'EXPORTATION */}
+        {/* MODAL D'EXPORTATION - UNIQUEMENT PDF, WORD, EXCEL */}
         {showExportModal && (
           <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
             <div className="bg-[#1e1f22] rounded-2xl max-w-md w-full p-6 border border-white/20">
@@ -633,21 +632,15 @@ export default function AdminDashboard() {
               
               <div className="space-y-3 mb-6">
                 <label className="flex items-center gap-3 p-3 bg-white/5 rounded-xl cursor-pointer hover:bg-white/10 transition">
-                  <input type="radio" name="exportFormat" value="csv" checked={exportFormat === "csv"} onChange={(e) => setExportFormat(e.target.value)} className="w-4 h-4 text-emerald-500" />
-                  <FileText size={20} className="text-green-400" />
-                  <div><p className="text-white font-medium">CSV</p><p className="text-white/40 text-xs">Compatible Excel</p></div>
-                </label>
-                
-                <label className="flex items-center gap-3 p-3 bg-white/5 rounded-xl cursor-pointer hover:bg-white/10 transition">
                   <input type="radio" name="exportFormat" value="excel" checked={exportFormat === "excel"} onChange={(e) => setExportFormat(e.target.value)} className="w-4 h-4 text-emerald-500" />
                   <FileSpreadsheet size={20} className="text-green-400" />
                   <div><p className="text-white font-medium">Excel (XLS)</p><p className="text-white/40 text-xs">Microsoft Excel</p></div>
                 </label>
                 
                 <label className="flex items-center gap-3 p-3 bg-white/5 rounded-xl cursor-pointer hover:bg-white/10 transition">
-                  <input type="radio" name="exportFormat" value="json" checked={exportFormat === "json"} onChange={(e) => setExportFormat(e.target.value)} className="w-4 h-4 text-emerald-500" />
-                  <FileJson size={20} className="text-yellow-400" />
-                  <div><p className="text-white font-medium">JSON</p><p className="text-white/40 text-xs">Pour développeurs</p></div>
+                  <input type="radio" name="exportFormat" value="word" checked={exportFormat === "word"} onChange={(e) => setExportFormat(e.target.value)} className="w-4 h-4 text-emerald-500" />
+                  <FileText size={20} className="text-blue-400" />
+                  <div><p className="text-white font-medium">Word (DOC)</p><p className="text-white/40 text-xs">Microsoft Word</p></div>
                 </label>
                 
                 <label className="flex items-center gap-3 p-3 bg-white/5 rounded-xl cursor-pointer hover:bg-white/10 transition">
@@ -713,7 +706,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Graphiques et tableaux */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           
           <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 lg:col-span-1">
             <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
@@ -730,71 +723,7 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* SECTION TOP AGENTS */}
-          <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 lg:col-span-1">
-            <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
-              <Crown size={18} className="text-yellow-400" />
-              Top agents
-            </h3>
-            <div className="space-y-3">
-              {agentsWithStats.length > 0 ? (
-                agentsWithStats
-                  .sort((a, b) => b.signalementsTraites - a.signalementsTraites)
-                  .slice(0, 5)
-                  .map((agent, index) => (
-                    <div key={agent.id} className="flex items-center gap-3 p-2 bg-white/5 rounded-xl hover:bg-white/10 transition">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 flex items-center justify-center text-white font-bold text-sm">
-                        {index + 1}
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-white font-medium text-sm">{agent.nom}</p>
-                        <p className="text-white/40 text-xs">{agent.email}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-white font-bold text-lg">{agent.signalementsTraites}</p>
-                        <p className="text-white/40 text-xs">traités</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-emerald-400 text-sm font-semibold">{agent.signalementsResolus}</p>
-                        <p className="text-white/40 text-xs">résolus</p>
-                      </div>
-                    </div>
-                  ))
-              ) : (
-                <p className="text-white/40 text-center py-4">Aucun agent pour le moment</p>
-              )}
-            </div>
-            
-            {agentsWithStats.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-white/10">
-                <h4 className="text-white/60 text-xs font-medium mb-2 flex items-center gap-1">
-                  <Info size={12} />
-                  Détail par agent
-                </h4>
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {agentsWithStats.map(agent => (
-                    <div key={agent.id} className="flex justify-between items-center text-xs">
-                      <span className="text-white/50">{agent.nom}</span>
-                      <div className="flex gap-3">
-                        <span className="text-amber-400">{agent.signalementsEnAttente || 0} en attente</span>
-                        <span className="text-blue-400">{agent.signalementsEnCours || 0} en cours</span>
-                        <span className="text-emerald-400">{agent.signalementsResolus || 0} résolus</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            <button 
-              onClick={() => setShowAddAgentModal(true)}
-              className="w-full mt-4 bg-white/10 hover:bg-white/20 text-white py-2 rounded-xl text-sm flex items-center justify-center gap-2 transition"
-            >
-              <UserPlus size={16} /> Ajouter un agent
-            </button>
-          </div>
-
-          {/* SECTION SIGNALEMENTS URGENTS */}
+          {/* SECTION SIGNALEMENTS URGENTS - SANS BOUTON ASSIGNER */}
           <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 lg:col-span-1">
             <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 text-red-400" />
@@ -829,12 +758,7 @@ export default function AdminDashboard() {
                           </span>
                         </div>
                       </div>
-                      <button 
-                        onClick={() => openAssignModal(signalement)}
-                        className="text-white/50 hover:text-white text-sm px-2 py-1"
-                      >
-                        Assigner →
-                      </button>
+                      {/* ⭐ BOUTON ASSIGNER SUPPRIMÉ */}
                     </div>
                   </div>
                 ))}
@@ -865,7 +789,13 @@ export default function AdminDashboard() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-white/5">
-                <tr><th className="text-left p-4 text-white/50 text-sm">Titre</th><th className="text-left p-4 text-white/50 text-sm">Type</th><th className="text-left p-4 text-white/50 text-sm">Localisation</th><th className="text-left p-4 text-white/50 text-sm">Statut</th><th className="text-left p-4 text-white/50 text-sm">Date</th></tr>
+                <tr>
+                  <th className="text-left p-4 text-white/50 text-sm">Titre</th>
+                  <th className="text-left p-4 text-white/50 text-sm">Type</th>
+                  <th className="text-left p-4 text-white/50 text-sm">Localisation</th>
+                  <th className="text-left p-4 text-white/50 text-sm">Statut</th>
+                  <th className="text-left p-4 text-white/50 text-sm">Date</th>
+                </tr>
               </thead>
               <tbody>
                 {derniersSignalements.map((signalement) => (
@@ -883,7 +813,7 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* MODAL D'ASSIGNATION DES SIGNALEMENTS */}
+      {/* MODAL D'ASSIGNATION DES SIGNALEMENTS (gardé mais accessible ailleurs) */}
       {showAssignModal && selectedSignalement && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-[#1e1f22] rounded-2xl w-full max-w-md p-6 border border-white/20">

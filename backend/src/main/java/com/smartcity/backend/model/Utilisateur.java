@@ -7,7 +7,7 @@ import lombok.AllArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
-@Data  // Cette annotation génère tous les getters, setters, toString, equals, hashCode
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "utilisateurs")
@@ -26,13 +26,23 @@ public class Utilisateur {
     private String motDePasse;
     
     @Column(nullable = false)
-    private String role; // ADMIN, AGENT, CITOYEN
+    private String role;
     
     @Column(name = "date_creation")
     private LocalDateTime dateCreation;
     
     @Column(name = "telephone")
     private String telephone;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = true)
+    private DomaineAgent domaine;
+    
+    @Column(nullable = true)
+    private String metier;
+    
+    @Column(nullable = true, length = 500)
+    private String adresse;
     
     @PrePersist
     protected void onCreate() {
