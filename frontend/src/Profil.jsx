@@ -4,10 +4,11 @@ import {
   MapPin, Clock, MessageCircle, Share2, MoreHorizontal, 
   Construction, Lightbulb, Trash2, Droplets, TreePine, 
   Shield, HelpCircle, AlertTriangle, PlayCircle, CheckCircle2,
-  ChevronLeft, ChevronRight, Image, Road, Trash, Home
+  ChevronLeft, ChevronRight, Image, Road, Trash, Home,
+  Award, Calendar, Bell, Settings, LogOut, Star, Heart
 } from "lucide-react";
 
-// ✅ COMPOSANT INPUT AVEC VALIDATION
+// ✅ COMPOSANT INPUT AVEC VALIDATION - Style modernisé
 const ValidatedInput = ({ 
   label, 
   value, 
@@ -72,9 +73,9 @@ const ValidatedInput = ({
   const currentType = showPasswordToggle ? (showPassword ? "text" : "password") : type;
 
   return (
-    <div className="mb-3">
-      <label className="text-white/80 text-xs font-medium block mb-1">
-        {label} {required && <span className="text-red-400">*</span>}
+    <div className="mb-4">
+      <label className="text-gray-300 text-xs font-medium block mb-1.5">
+        {label} {required && <span className="text-rose-400">*</span>}
       </label>
       <div className="relative">
         <input
@@ -84,35 +85,35 @@ const ValidatedInput = ({
           onChange={handleChange}
           onBlur={handleBlur}
           onFocus={() => setTouched(true)}
-          className={`w-full bg-gray-700/50 border rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 transition-all ${
-            showPasswordToggle ? 'pr-10' : 'pr-8'
+          className={`w-full bg-white/5 border-2 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 transition-all ${
+            showPasswordToggle ? 'pr-12' : 'pr-10'
           } ${
             touched && error 
-              ? "border-red-500 focus:ring-red-500/20" 
+              ? "border-rose-500 focus:ring-rose-500/20" 
               : isValid && touched
               ? "border-emerald-500 focus:ring-emerald-500/20"
-              : "border-gray-600 focus:border-emerald-500 focus:ring-emerald-500/20"
+              : "border-white/10 focus:border-white/30 focus:ring-white/10"
           } ${className}`}
           placeholder={placeholder}
         />
         {touched && error && (
-          <AlertCircle className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-red-400" />
+          <AlertCircle className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-rose-400" />
         )}
         {touched && isValid && !error && !showPasswordToggle && (
-          <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-400" />
+          <Check className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-400" />
         )}
         {showPasswordToggle && (
           <button
             type="button"
             onClick={togglePassword}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300"
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300"
           >
-            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
         )}
       </div>
       {touched && error && (
-        <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+        <p className="text-rose-400 text-xs mt-1.5 flex items-center gap-1.5">
           <AlertCircle size={12} />
           {error}
         </p>
@@ -147,7 +148,6 @@ export default function Profil() {
   const [selectedImages, setSelectedImages] = useState(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   
-  // États de validation
   const [isNomValid, setIsNomValid] = useState(false);
   const [isEmailValid, setIsEmailValid] = useState(false);
   const [isAdresseValid, setIsAdresseValid] = useState(false);
@@ -158,7 +158,6 @@ export default function Profil() {
   const token = localStorage.getItem("token");
   const [currentUserId, setCurrentUserId] = useState(null);
 
-  // Validation adresse
   const validateAdresse = (value) => {
     if (!value.trim()) return "L'adresse est obligatoire";
     if (value.length < 4) return "L'adresse doit contenir au moins 4 caractères";
@@ -434,11 +433,11 @@ export default function Profil() {
   };
 
   const getTypeColor = (type) => {
-    if (type === "VOIRIE") return 'text-orange-400 bg-orange-500/20 border-orange-500/30';
-    if (type === "ECLAIRAGE") return 'text-yellow-400 bg-yellow-500/20 border-yellow-500/30';
-    if (type === "DECHETS") return 'text-red-400 bg-red-500/20 border-red-500/30';
-    if (type === "EAU") return 'text-blue-400 bg-blue-500/20 border-blue-500/30';
-    return 'text-gray-400 bg-gray-500/20 border-gray-500/30';
+    if (type === "VOIRIE") return 'text-orange-400 bg-orange-500/20';
+    if (type === "ECLAIRAGE") return 'text-yellow-400 bg-yellow-500/20';
+    if (type === "DECHETS") return 'text-rose-400 bg-rose-500/20';
+    if (type === "EAU") return 'text-blue-400 bg-blue-500/20';
+    return 'text-gray-400 bg-gray-500/20';
   };
 
   const getTypeLabel = (type) => {
@@ -448,12 +447,12 @@ export default function Profil() {
 
   const getStatusColor = (statut) => {
     const colors = {
-      'EN_ATTENTE': 'text-amber-400 bg-amber-500/20 border-amber-500/30',
-      'EN_COURS': 'text-blue-400 bg-blue-500/20 border-blue-500/30',
-      'RESOLU': 'text-emerald-400 bg-emerald-500/20 border-emerald-500/30',
-      'TRAITE': 'text-emerald-400 bg-emerald-500/20 border-emerald-500/30'
+      'EN_ATTENTE': 'text-amber-400 bg-amber-500/20',
+      'EN_COURS': 'text-blue-400 bg-blue-500/20',
+      'RESOLU': 'text-emerald-400 bg-emerald-500/20',
+      'TRAITE': 'text-emerald-400 bg-emerald-500/20'
     };
-    return colors[statut] || 'text-gray-400 bg-gray-500/20 border-gray-500/30';
+    return colors[statut] || 'text-gray-400 bg-gray-500/20';
   };
 
   const getStatusIcon = (statut) => {
@@ -504,438 +503,497 @@ export default function Profil() {
   const isPasswordFormValid = isCurrentPasswordValid && isNewPasswordValid && isConfirmPasswordValid;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      <header className="sticky top-0 z-30 bg-[#242526] border-b border-gray-700/50 shadow-lg">
-        <div className="container mx-auto max-w-3xl px-4 py-3">
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <User className="w-6 h-6 text-emerald-400" />
-            Mon profil
-          </h1>
+    <div className="min-h-screen bg-gradient-to-br from-[#0f0f1a] via-[#1a1a2e] to-[#0f0f1a]">
+      {/* Header modernisé */}
+      <header className="sticky top-0 z-30 bg-[#1a1a2e]/80 backdrop-blur-xl border-b border-white/5">
+        <div className="container mx-auto max-w-3xl px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500 to-blue-500 shadow-lg shadow-emerald-500/20">
+                <User className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-white">Mon profil</h1>
+                <p className="text-xs text-gray-400">Gérez vos informations</p>
+              </div>
+            </div>
+          </div>
         </div>
       </header>
 
       <main className="container mx-auto max-w-3xl px-4 py-6">
         {message.text && (
-          <div className={`mb-4 p-3 rounded-xl ${
+          <div className={`mb-6 p-4 rounded-2xl backdrop-blur-sm ${
             message.type === 'success' 
-              ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-300' 
-              : 'bg-red-500/20 border border-red-500/30 text-red-300'
+              ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-300' 
+              : 'bg-rose-500/10 border border-rose-500/20 text-rose-300'
           }`}>
-            {message.text}
+            <div className="flex items-center gap-2">
+              {message.type === 'success' ? <Check size={18} /> : <AlertCircle size={18} />}
+              {message.text}
+            </div>
           </div>
         )}
 
-        {/* Section Profil */}
-        <div className="bg-[#242526] rounded-xl shadow-lg overflow-hidden mb-6">
-          <div className="h-24 bg-gradient-to-r from-emerald-500 to-blue-500"></div>
+        {/* Section Profil - Style modernisé */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#1e1e32] to-[#16162a] border border-white/5 shadow-2xl mb-6">
+          {/* Décoration */}
+          <div className="absolute -top-24 -right-24 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl"></div>
+          <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl"></div>
           
-          <div className="px-6 pb-6">
-            <div className="flex flex-row items-end justify-between -mt-12">
+          <div className="relative p-6">
+            {/* En-tête avec dégradé */}
+            <div className="h-20 -mx-6 -mt-6 bg-gradient-to-r from-emerald-500/20 via-blue-500/20 to-emerald-500/20 rounded-t-3xl"></div>
+            
+            <div className="relative flex flex-col md:flex-row items-start md:items-end justify-between -mt-12">
               <div className="flex items-end gap-4">
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-emerald-500 to-green-600 border-4 border-[#242526] flex items-center justify-center flex-shrink-0">
-                  <span className="text-white text-3xl font-bold">
-                    {userInfo.nom?.[0]?.toUpperCase() || userInfo.email?.[0]?.toUpperCase() || 'U'}
-                  </span>
+                <div className="relative">
+                  <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-xl shadow-emerald-500/20 border-2 border-white/10">
+                    <span className="text-white text-3xl font-bold">
+                      {userInfo.nom?.[0]?.toUpperCase() || userInfo.email?.[0]?.toUpperCase() || 'U'}
+                    </span>
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 bg-emerald-500 rounded-full p-1 border-2 border-[#1e1e32]">
+                    <Award size={12} className="text-white" />
+                  </div>
                 </div>
-                <div className="pb-2">
-                  <h2 className="text-xl font-bold text-white">{userInfo.nom}</h2>
-                  <p className="text-emerald-400 text-sm">{getRoleLabel(userInfo.role)}</p>
+                <div className="pb-1">
+                  <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                    {userInfo.nom}
+                    <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2.5 py-0.5 rounded-full font-medium">
+                      {getRoleLabel(userInfo.role)}
+                    </span>
+                  </h2>
                   <p className="text-gray-400 text-sm">{userInfo.email}</p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <MapPin size={12} className="text-gray-500" />
+                    <p className="text-gray-500 text-xs">{userInfo.adresse || "Adresse non renseignée"}</p>
+                  </div>
                 </div>
               </div>
               
               {!isEditing && (
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center gap-2 text-sm mb-2"
+                  className="mt-3 md:mt-0 flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white text-sm font-medium transition-all hover:border-white/20"
                 >
-                  <Edit2 size={16} />
-                  Modifier profil
+                  <Edit2 size={15} />
+                  Modifier
                 </button>
               )}
             </div>
 
+            {/* Statistiques */}
+            <div className="grid grid-cols-3 gap-3 mt-6 pt-6 border-t border-white/5">
+              <div className="text-center p-3 rounded-xl bg-white/5">
+                <div className="text-2xl font-bold text-white">{signalements.length}</div>
+                <p className="text-xs text-gray-400">Signalements</p>
+              </div>
+              <div className="text-center p-3 rounded-xl bg-white/5">
+                <div className="text-2xl font-bold text-emerald-400">
+                  {signalements.filter(s => s.statut === "RESOLU" || s.statut === "TRAITE").length}
+                </div>
+                <p className="text-xs text-gray-400">Résolus</p>
+              </div>
+              <div className="text-center p-3 rounded-xl bg-white/5">
+                <div className="text-2xl font-bold text-amber-400">
+                  {signalements.filter(s => s.statut === "EN_ATTENTE").length}
+                </div>
+                <p className="text-xs text-gray-400">En attente</p>
+              </div>
+            </div>
+
             {isEditing && (
-              <div className="space-y-3 mt-4">
-                <ValidatedInput
-                  label="Nom complet"
-                  value={formData.nom}
-                  onChange={(val) => {
-                    setFormData({ ...formData, nom: val });
-                    const error = validateNom(val);
-                    setIsNomValid(!error);
-                  }}
-                  placeholder="Votre nom"
-                  required={true}
-                  minLength={2}
-                  errorMessage="Le nom doit contenir au moins 2 caractères"
-                  onValidChange={(valid) => setIsNomValid(valid)}
-                />
-
-                <ValidatedInput
-                  label="Email"
-                  value={formData.email}
-                  onChange={(val) => {
-                    setFormData({ ...formData, email: val });
-                    const error = validateEmail(val);
-                    setIsEmailValid(!error);
-                  }}
-                  type="email"
-                  placeholder="votre@email.com"
-                  required={true}
-                  pattern={/^[^\s@]+@[^\s@]+\.[^\s@]+$/}
-                  errorMessage="L'email doit être une adresse @gmail.com"
-                  onValidChange={(valid) => setIsEmailValid(valid)}
-                />
-
-                {/* ⭐ NOUVEAU - CHAMP ADRESSE */}
-                <ValidatedInput
-                  label="Adresse complète"
-                  value={formData.adresse}
-                  onChange={(val) => {
-                    setFormData({ ...formData, adresse: val });
-                    const error = validateAdresse(val);
-                    setIsAdresseValid(!error);
-                  }}
-                  placeholder="Votre adresse complète"
-                  required={true}
-                  minLength={4}
-                  errorMessage="L'adresse doit contenir au moins 4 caractères"
-                  onValidChange={(valid) => setIsAdresseValid(valid)}
-                />
-
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleUpdateProfile}
-                    disabled={isLoading || !isProfileFormValid}
-                    className={`flex-1 font-semibold py-2 rounded-lg transition text-sm ${
-                      !isProfileFormValid || isLoading
-                        ? 'bg-gray-600 cursor-not-allowed opacity-50'
-                        : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                    }`}
-                  >
-                    {isLoading ? "Chargement..." : "Enregistrer"}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setIsEditing(false);
-                      setFormData({ 
-                        nom: userInfo.nom, 
-                        email: userInfo.email,
-                        adresse: userInfo.adresse
-                      });
-                      setIsNomValid(true);
-                      setIsEmailValid(true);
-                      setIsAdresseValid(!!userInfo.adresse && userInfo.adresse.length >= 4);
+              <div className="mt-6 pt-6 border-t border-white/5">
+                <div className="space-y-3">
+                  <ValidatedInput
+                    label="Nom complet"
+                    value={formData.nom}
+                    onChange={(val) => {
+                      setFormData({ ...formData, nom: val });
+                      const error = validateNom(val);
+                      setIsNomValid(!error);
                     }}
-                    className="px-4 bg-gray-600 hover:bg-gray-500 text-white font-semibold py-2 rounded-lg transition text-sm"
-                  >
-                    Annuler
-                  </button>
+                    placeholder="Votre nom"
+                    required={true}
+                    minLength={2}
+                    errorMessage="Le nom doit contenir au moins 2 caractères"
+                    onValidChange={(valid) => setIsNomValid(valid)}
+                  />
+
+                  <ValidatedInput
+                    label="Email"
+                    value={formData.email}
+                    onChange={(val) => {
+                      setFormData({ ...formData, email: val });
+                      const error = validateEmail(val);
+                      setIsEmailValid(!error);
+                    }}
+                    type="email"
+                    placeholder="votre@email.com"
+                    required={true}
+                    pattern={/^[^\s@]+@[^\s@]+\.[^\s@]+$/}
+                    errorMessage="L'email doit être une adresse @gmail.com"
+                    onValidChange={(valid) => setIsEmailValid(valid)}
+                  />
+
+                  <ValidatedInput
+                    label="Adresse complète"
+                    value={formData.adresse}
+                    onChange={(val) => {
+                      setFormData({ ...formData, adresse: val });
+                      const error = validateAdresse(val);
+                      setIsAdresseValid(!error);
+                    }}
+                    placeholder="Votre adresse complète"
+                    required={true}
+                    minLength={4}
+                    errorMessage="L'adresse doit contenir au moins 4 caractères"
+                    onValidChange={(valid) => setIsAdresseValid(valid)}
+                  />
+
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      onClick={handleUpdateProfile}
+                      disabled={isLoading || !isProfileFormValid}
+                      className={`flex-1 font-medium py-3 rounded-xl transition text-sm ${
+                        !isProfileFormValid || isLoading
+                          ? 'bg-white/5 cursor-not-allowed text-gray-500'
+                          : 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-lg shadow-emerald-500/20'
+                      }`}
+                    >
+                      {isLoading ? "Chargement..." : "Enregistrer"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsEditing(false);
+                        setFormData({ 
+                          nom: userInfo.nom, 
+                          email: userInfo.email,
+                          adresse: userInfo.adresse
+                        });
+                        setIsNomValid(true);
+                        setIsEmailValid(true);
+                        setIsAdresseValid(!!userInfo.adresse && userInfo.adresse.length >= 4);
+                      }}
+                      className="px-6 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white transition-all border border-white/10"
+                    >
+                      Annuler
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
           </div>
         </div>
 
-        {/* Section Sécurité */}
-        <div className="bg-[#242526] rounded-xl shadow-lg overflow-hidden mb-6">
-          <div className="p-4 border-b border-gray-700/50">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Lock size={20} className="text-emerald-400" />
+        {/* Section Sécurité - Style modernisé */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#1e1e32] to-[#16162a] border border-white/5 shadow-2xl mb-6">
+          <div className="relative p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-emerald-500/20">
+                  <Lock size={18} className="text-emerald-400" />
+                </div>
                 <h2 className="font-semibold text-white">Sécurité</h2>
               </div>
               {!showPasswordForm && (
                 <button
                   onClick={() => setShowPasswordForm(true)}
-                  className="text-emerald-400 hover:text-emerald-300 text-sm font-medium"
+                  className="text-sm text-emerald-400 hover:text-emerald-300 font-medium px-4 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 transition-colors"
                 >
-                  Changer mot de passe
+                  Changer
                 </button>
               )}
             </div>
-          </div>
-          
-          {showPasswordForm ? (
-            <div className="p-4 space-y-3">
-              <ValidatedInput
-                label="Mot de passe actuel"
-                value={passwordData.currentPassword}
-                onChange={(val) => {
-                  setPasswordData({ ...passwordData, currentPassword: val });
-                  setIsCurrentPasswordValid(val.length >= 6);
-                }}
-                type="password"
-                placeholder="••••••••"
-                required={true}
-                minLength={6}
-                errorMessage="Le mot de passe doit contenir au moins 6 caractères"
-                onValidChange={(valid) => setIsCurrentPasswordValid(valid)}
-                showPasswordToggle={true}
-              />
-
-              <ValidatedInput
-                label="Nouveau mot de passe"
-                value={passwordData.newPassword}
-                onChange={(val) => {
-                  setPasswordData({ ...passwordData, newPassword: val });
-                  setIsNewPasswordValid(val.length >= 6);
-                }}
-                type="password"
-                placeholder="••••••••"
-                required={true}
-                minLength={6}
-                errorMessage="Le mot de passe doit contenir au moins 6 caractères"
-                onValidChange={(valid) => setIsNewPasswordValid(valid)}
-                showPasswordToggle={true}
-              />
-
-              <ValidatedInput
-                label="Confirmer le mot de passe"
-                value={passwordData.confirmPassword}
-                onChange={(val) => {
-                  setPasswordData({ ...passwordData, confirmPassword: val });
-                  setIsConfirmPasswordValid(val.length >= 6 && val === passwordData.newPassword);
-                }}
-                type="password"
-                placeholder="••••••••"
-                required={true}
-                minLength={6}
-                errorMessage={passwordData.confirmPassword !== passwordData.newPassword 
-                  ? "Les mots de passe ne correspondent pas" 
-                  : "Le mot de passe doit contenir au moins 6 caractères"}
-                onValidChange={(valid) => setIsConfirmPasswordValid(valid)}
-                showPasswordToggle={true}
-              />
-
-              <div className="flex gap-2">
-                <button
-                  onClick={handleChangePassword}
-                  disabled={isLoading || !isPasswordFormValid}
-                  className={`flex-1 font-semibold py-2 rounded-lg transition text-sm ${
-                    !isPasswordFormValid || isLoading
-                      ? 'bg-gray-600 cursor-not-allowed opacity-50'
-                      : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                  }`}
-                >
-                  {isLoading ? "Chargement..." : "Changer"}
-                </button>
-                <button
-                  onClick={() => {
-                    setShowPasswordForm(false);
-                    setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
-                    setIsCurrentPasswordValid(false);
-                    setIsNewPasswordValid(false);
-                    setIsConfirmPasswordValid(false);
+            
+            {showPasswordForm ? (
+              <div className="space-y-3">
+                <ValidatedInput
+                  label="Mot de passe actuel"
+                  value={passwordData.currentPassword}
+                  onChange={(val) => {
+                    setPasswordData({ ...passwordData, currentPassword: val });
+                    setIsCurrentPasswordValid(val.length >= 6);
                   }}
-                  className="px-4 bg-gray-600 hover:bg-gray-500 text-white font-semibold py-2 rounded-lg transition text-sm"
-                >
-                  Annuler
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="p-4">
-              <div className="bg-gray-700/30 rounded-lg p-3">
-                <p className="text-gray-400 text-sm">Mot de passe</p>
-                <p className="text-white">••••••••</p>
-              </div>
-            </div>
-          )}
-        </div>
+                  type="password"
+                  placeholder="••••••••"
+                  required={true}
+                  minLength={6}
+                  errorMessage="Le mot de passe doit contenir au moins 6 caractères"
+                  onValidChange={(valid) => setIsCurrentPasswordValid(valid)}
+                  showPasswordToggle={true}
+                />
 
-        {/* Section Mes signalements (inchangée) */}
-        <div className="bg-[#242526] rounded-xl shadow-lg overflow-hidden">
-          <div className="p-4 border-b border-gray-700/50">
-            <div className="flex items-center gap-2">
-              <MapPin className="w-5 h-5 text-emerald-400" />
-              <h2 className="font-semibold text-white">Mes signalements</h2>
-              <span className="bg-gray-700 text-gray-300 text-xs px-2 py-1 rounded-full">
-                {signalements.length}
-              </span>
-            </div>
-          </div>
+                <ValidatedInput
+                  label="Nouveau mot de passe"
+                  value={passwordData.newPassword}
+                  onChange={(val) => {
+                    setPasswordData({ ...passwordData, newPassword: val });
+                    setIsNewPasswordValid(val.length >= 6);
+                  }}
+                  type="password"
+                  placeholder="••••••••"
+                  required={true}
+                  minLength={6}
+                  errorMessage="Le mot de passe doit contenir au moins 6 caractères"
+                  onValidChange={(valid) => setIsNewPasswordValid(valid)}
+                  showPasswordToggle={true}
+                />
 
-          <div className="divide-y divide-gray-700/50">
-            {signalements.length === 0 ? (
-              <div className="p-8 text-center">
-                <div className="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <MapPin className="w-8 h-8 text-gray-400" />
+                <ValidatedInput
+                  label="Confirmer le mot de passe"
+                  value={passwordData.confirmPassword}
+                  onChange={(val) => {
+                    setPasswordData({ ...passwordData, confirmPassword: val });
+                    setIsConfirmPasswordValid(val.length >= 6 && val === passwordData.newPassword);
+                  }}
+                  type="password"
+                  placeholder="••••••••"
+                  required={true}
+                  minLength={6}
+                  errorMessage={passwordData.confirmPassword !== passwordData.newPassword 
+                    ? "Les mots de passe ne correspondent pas" 
+                    : "Le mot de passe doit contenir au moins 6 caractères"}
+                  onValidChange={(valid) => setIsConfirmPasswordValid(valid)}
+                  showPasswordToggle={true}
+                />
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={handleChangePassword}
+                    disabled={isLoading || !isPasswordFormValid}
+                    className={`flex-1 font-medium py-3 rounded-xl transition text-sm ${
+                      !isPasswordFormValid || isLoading
+                        ? 'bg-white/5 cursor-not-allowed text-gray-500'
+                        : 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-lg shadow-emerald-500/20'
+                    }`}
+                  >
+                    {isLoading ? "Chargement..." : "Changer"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowPasswordForm(false);
+                      setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
+                      setIsCurrentPasswordValid(false);
+                      setIsNewPasswordValid(false);
+                      setIsConfirmPasswordValid(false);
+                    }}
+                    className="px-6 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white transition-all border border-white/10"
+                  >
+                    Annuler
+                  </button>
                 </div>
-                <p className="text-gray-300">Aucun signalement</p>
-                <p className="text-gray-500 text-sm mt-1">Vous n'avez pas encore fait de signalement</p>
               </div>
             ) : (
-              signalements.map((s) => {
-                const TypeIcon = getTypeIcon(s.type);
-                const StatusIcon = getStatusIcon(s.statut);
-                const hasImages = s.images && s.images.length > 0;
-                const fullAddress = getFullAddress(s);
-                
-                return (
-                  <article key={s.id} className="p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-green-500 flex items-center justify-center text-white font-bold">
+              <div className="flex items-center gap-3 p-4 rounded-xl bg-white/5 border border-white/5">
+                <Lock size={16} className="text-gray-400" />
+                <div>
+                  <p className="text-xs text-gray-400">Mot de passe</p>
+                  <p className="text-white font-medium">••••••••</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Section Mes signalements - Style modernisé */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#1e1e32] to-[#16162a] border border-white/5 shadow-2xl">
+          <div className="relative p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-emerald-500/20">
+                  <MapPin className="w-5 h-5 text-emerald-400" />
+                </div>
+                <h2 className="font-semibold text-white">Mes signalements</h2>
+                <span className="bg-white/10 text-gray-300 text-xs px-3 py-1 rounded-full font-medium">
+                  {signalements.length}
+                </span>
+              </div>
+            </div>
+
+            <div className="divide-y divide-white/5">
+              {signalements.length === 0 ? (
+                <div className="py-12 text-center">
+                  <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                    <MapPin className="w-8 h-8 text-gray-500" />
+                  </div>
+                  <p className="text-gray-300 font-medium">Aucun signalement</p>
+                  <p className="text-gray-500 text-sm mt-1">Vous n'avez pas encore fait de signalement</p>
+                </div>
+              ) : (
+                signalements.map((s) => {
+                  const TypeIcon = getTypeIcon(s.type);
+                  const StatusIcon = getStatusIcon(s.statut);
+                  const hasImages = s.images && s.images.length > 0;
+                  const fullAddress = getFullAddress(s);
+                  
+                  return (
+                    <article key={s.id} className="py-5 first:pt-0 last:pb-0">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white font-bold flex-shrink-0 shadow-lg shadow-emerald-500/20">
                           {(s.utilisateur?.nom?.[0] || userInfo.nom?.[0] || 'C').toUpperCase()}
                         </div>
-                        <div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="font-semibold text-white text-sm">
-                              {s.utilisateur?.nom || userInfo.nom || 'Moi'}
-                            </h3>
-                            <span className="text-gray-500 text-xs">•</span>
-                            <div className="flex items-center gap-1 max-w-[300px]">
-                              <MapPin size={10} className="text-gray-400 flex-shrink-0" />
-                              <span className="text-xs text-gray-400 truncate" title={fullAddress}>
-                                {fullAddress}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1 mt-0.5">
-                            <Clock size={10} className="text-gray-500" />
-                            <span className="text-xs text-gray-500">
-                              {getRelativeTime(s.dateCreation)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 mb-3 flex-wrap">
-                      <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-full border ${getTypeColor(s.type)}`}>
-                        <TypeIcon size={12} />
-                        {getTypeLabel(s.type)}
-                      </span>
-                      <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-full border ${getStatusColor(s.statut)}`}>
-                        <StatusIcon size={12} />
-                        {getStatusText(s.statut)}
-                      </span>
-                      {hasImages && (
-                        <span className="text-xs text-gray-400 bg-gray-700/50 px-2.5 py-1.5 rounded-full flex items-center gap-1">
-                          <Image size={12} />
-                          {s.images.length} photo{s.images.length > 1 ? 's' : ''}
-                        </span>
-                      )}
-                    </div>
-
-                    <h4 className="text-white font-semibold mb-1">{s.titre || 'Sans titre'}</h4>
-                    <p className="text-gray-300 text-sm mb-3">{s.description || 'Aucune description'}</p>
-
-                    {hasImages && (
-                      <div className={`grid gap-1 mb-3 ${
-                        s.images.length === 1 ? 'grid-cols-1' :
-                        s.images.length === 2 ? 'grid-cols-2' : 'grid-cols-2'
-                      }`}>
-                        {s.images.slice(0, 4).map((img, index) => (
-                          <div 
-                            key={index}
-                            className={`relative bg-gray-800 rounded-lg overflow-hidden cursor-pointer group ${
-                              s.images.length === 3 && index === 0 ? 'row-span-2' : ''
-                            }`}
-                            onClick={() => openImageViewer(s.images, index)}
-                          >
-                            <img 
-                              src={img.url} 
-                              className={`w-full object-cover transition-transform group-hover:scale-105 ${
-                                s.images.length === 1 ? 'h-64' : 'h-48'
-                              }`}
-                              alt={`${s.titre} - image ${index + 1}`}
-                              onError={(e) => {
-                                e.target.src = "https://placehold.co/600x400/242526/808080?text=Image+non+disponible";
-                              }}
-                            />
-                            {s.images.length > 4 && index === 3 && (
-                              <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                                <span className="text-white text-xl font-bold">+{s.images.length - 4}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-semibold text-white text-sm">
+                                  {s.utilisateur?.nom || userInfo.nom || 'Moi'}
+                                </span>
+                                <span className="text-gray-500 text-xs">•</span>
+                                <div className="flex items-center gap-1 max-w-[200px]">
+                                  <MapPin size={10} className="text-gray-400 flex-shrink-0" />
+                                  <span className="text-xs text-gray-400 truncate" title={fullAddress}>
+                                    {fullAddress}
+                                  </span>
+                                </div>
                               </div>
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                <Clock size={10} className="text-gray-500" />
+                                <span className="text-xs text-gray-500">
+                                  {getRelativeTime(s.dateCreation)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                            <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${getTypeColor(s.type)}`}>
+                              <TypeIcon size={11} />
+                              {getTypeLabel(s.type)}
+                            </span>
+                            <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${getStatusColor(s.statut)}`}>
+                              <StatusIcon size={11} />
+                              {getStatusText(s.statut)}
+                            </span>
+                            {hasImages && (
+                              <span className="text-xs text-gray-400 bg-white/5 px-2.5 py-1 rounded-full flex items-center gap-1">
+                                <Image size={11} />
+                                {s.images.length}
+                              </span>
                             )}
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
                           </div>
-                        ))}
-                      </div>
-                    )}
 
-                    <div className="flex items-center justify-around pt-2 border-t border-gray-700/50">
-                      <button className="flex items-center gap-2 py-2 text-gray-400 hover:text-emerald-400 transition-colors text-sm">
-                        <MessageCircle size={16} />
-                        <span>Commenter</span>
-                      </button>
-                      <button className="flex items-center gap-2 py-2 text-gray-400 hover:text-emerald-400 transition-colors text-sm">
-                        <Share2 size={16} />
-                        <span>Partager</span>
-                      </button>
-                      <button 
-                        onClick={() => setShowDeleteConfirm(s.id)}
-                        className="flex items-center gap-2 py-2 text-gray-400 hover:text-red-400 transition-colors text-sm"
-                      >
-                        <Trash2 size={16} />
-                        <span>Supprimer</span>
-                      </button>
-                    </div>
+                          <h4 className="text-white font-semibold text-sm mt-2">{s.titre || 'Sans titre'}</h4>
+                          <p className="text-gray-400 text-sm">{s.description || 'Aucune description'}</p>
 
-                    {showDeleteConfirm === s.id && (
-                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-                        <div className="bg-[#242526] rounded-xl p-6 max-w-sm w-full mx-4 border border-gray-700">
-                          <div className="text-center">
-                            <div className="w-14 h-14 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                              <Trash2 size={28} className="text-red-400" />
+                          {hasImages && (
+                            <div className={`grid gap-1.5 mt-3 ${
+                              s.images.length === 1 ? 'grid-cols-1' :
+                              s.images.length === 2 ? 'grid-cols-2' : 'grid-cols-2'
+                            }`}>
+                              {s.images.slice(0, 4).map((img, index) => (
+                                <div 
+                                  key={index}
+                                  className={`relative bg-gray-800 rounded-xl overflow-hidden cursor-pointer group ${
+                                    s.images.length === 3 && index === 0 ? 'row-span-2' : ''
+                                  }`}
+                                  onClick={() => openImageViewer(s.images, index)}
+                                >
+                                  <img 
+                                    src={img.url} 
+                                    className={`w-full object-cover transition-transform group-hover:scale-105 ${
+                                      s.images.length === 1 ? 'h-56' : 'h-40'
+                                    }`}
+                                    alt={`${s.titre} - image ${index + 1}`}
+                                    onError={(e) => {
+                                      e.target.src = "https://placehold.co/600x400/1e1e32/64748b?text=Image";
+                                    }}
+                                  />
+                                  {s.images.length > 4 && index === 3 && (
+                                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                                      <span className="text-white text-lg font-bold">+{s.images.length - 4}</span>
+                                    </div>
+                                  )}
+                                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                                </div>
+                              ))}
                             </div>
-                            <h3 className="text-lg font-bold text-white mb-2">Supprimer le signalement</h3>
-                            <p className="text-gray-400 text-sm mb-6">
-                              Êtes-vous sûr de vouloir supprimer "{s.titre}" ? Cette action est irréversible.
-                            </p>
-                            <div className="flex gap-3">
-                              <button
-                                onClick={() => setShowDeleteConfirm(null)}
-                                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 rounded-lg transition"
-                              >
-                                Annuler
-                              </button>
-                              <button
-                                onClick={() => handleDeleteSignalement(s.id)}
-                                className="flex-1 bg-red-500 hover:bg-red-600 text-white font-semibold py-2 rounded-lg transition"
-                              >
-                                Supprimer
-                              </button>
-                            </div>
+                          )}
+
+                          <div className="flex items-center gap-4 mt-3 pt-3 border-t border-white/5">
+                            <button className="flex items-center gap-1.5 py-1 text-gray-400 hover:text-emerald-400 transition-colors text-xs">
+                              <MessageCircle size={14} />
+                              <span>Commenter</span>
+                            </button>
+                            <button className="flex items-center gap-1.5 py-1 text-gray-400 hover:text-emerald-400 transition-colors text-xs">
+                              <Share2 size={14} />
+                              <span>Partager</span>
+                            </button>
+                            <button 
+                              onClick={() => setShowDeleteConfirm(s.id)}
+                              className="flex items-center gap-1.5 py-1 text-gray-400 hover:text-rose-400 transition-colors text-xs ml-auto"
+                            >
+                              <Trash2 size={14} />
+                              <span>Supprimer</span>
+                            </button>
                           </div>
+
+                          {showDeleteConfirm === s.id && (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                              <div className="bg-[#1e1e32] rounded-3xl p-6 max-w-sm w-full mx-4 border border-white/10 shadow-2xl">
+                                <div className="text-center">
+                                  <div className="w-14 h-14 bg-rose-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                    <Trash2 size={28} className="text-rose-400" />
+                                  </div>
+                                  <h3 className="text-xl font-bold text-white mb-2">Supprimer le signalement</h3>
+                                  <p className="text-gray-400 text-sm mb-6">
+                                    Êtes-vous sûr de vouloir supprimer "{s.titre}" ? Cette action est irréversible.
+                                  </p>
+                                  <div className="flex gap-3">
+                                    <button
+                                      onClick={() => setShowDeleteConfirm(null)}
+                                      className="flex-1 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white transition-all border border-white/10 font-medium"
+                                    >
+                                      Annuler
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteSignalement(s.id)}
+                                      className="flex-1 py-3 rounded-xl bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white font-medium transition-all shadow-lg shadow-rose-500/20"
+                                    >
+                                      Supprimer
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
-                    )}
-                  </article>
-                );
-              })
-            )}
+                    </article>
+                  );
+                })
+              )}
+            </div>
           </div>
         </div>
       </main>
 
-      {/* Lightbox */}
+      {/* Lightbox modernisée */}
       {selectedImages && (
         <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center" onClick={closeImageViewer}>
-          <button className="absolute top-4 right-4 text-white hover:text-gray-300 p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors z-10" onClick={closeImageViewer}>
+          <button className="absolute top-4 right-4 text-white hover:text-gray-300 p-3 rounded-full bg-white/5 hover:bg-white/10 transition-colors z-10" onClick={closeImageViewer}>
             <X size={24} />
           </button>
-          <div className="absolute top-4 left-4 text-white text-sm bg-black/50 px-3 py-1.5 rounded-full z-10">
+          <div className="absolute top-4 left-4 text-white text-sm bg-white/10 px-4 py-2 rounded-full z-10 backdrop-blur-sm">
             {currentImageIndex + 1} / {selectedImages.length}
           </div>
           {currentImageIndex > 0 && (
-            <button className="absolute left-4 text-white hover:text-gray-300 p-3 rounded-full bg-black/50 hover:bg-black/70 transition-colors z-10" onClick={(e) => { e.stopPropagation(); prevImage(); }}>
+            <button className="absolute left-4 text-white hover:text-gray-300 p-3 rounded-full bg-white/5 hover:bg-white/10 transition-colors z-10" onClick={(e) => { e.stopPropagation(); prevImage(); }}>
               <ChevronLeft size={32} />
             </button>
           )}
           {currentImageIndex < selectedImages.length - 1 && (
-            <button className="absolute right-4 text-white hover:text-gray-300 p-3 rounded-full bg-black/50 hover:bg-black/70 transition-colors z-10" onClick={(e) => { e.stopPropagation(); nextImage(); }}>
+            <button className="absolute right-4 text-white hover:text-gray-300 p-3 rounded-full bg-white/5 hover:bg-white/10 transition-colors z-10" onClick={(e) => { e.stopPropagation(); nextImage(); }}>
               <ChevronRight size={32} />
             </button>
           )}
-          <img src={selectedImages[currentImageIndex]?.url} className="max-w-[90vw] max-h-[90vh] object-contain" alt={`Image ${currentImageIndex + 1}`} onClick={(e) => e.stopPropagation()} />
+          <img src={selectedImages[currentImageIndex]?.url} className="max-w-[90vw] max-h-[90vh] object-contain rounded-2xl" alt={`Image ${currentImageIndex + 1}`} onClick={(e) => e.stopPropagation()} />
           {selectedImages.length > 1 && (
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 bg-black/50 p-2 rounded-xl backdrop-blur-sm z-10">
               {selectedImages.map((img, index) => (
-                <button key={index} onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(index); }} className={`w-12 h-12 rounded-lg overflow-hidden border-2 transition-all ${index === currentImageIndex ? 'border-emerald-500 scale-105' : 'border-transparent opacity-60 hover:opacity-100'}`}>
+                <button key={index} onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(index); }} className={`w-12 h-12 rounded-xl overflow-hidden border-2 transition-all ${index === currentImageIndex ? 'border-emerald-500 scale-105' : 'border-transparent opacity-60 hover:opacity-100'}`}>
                   <img src={img.url} className="w-full h-full object-cover" alt={`Miniature ${index + 1}`} />
                 </button>
               ))}

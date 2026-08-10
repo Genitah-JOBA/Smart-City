@@ -17,7 +17,16 @@ export default function AgentDashboard() {
   const [signalementsAssignes, setSignalementsAssignes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showAllModal, setShowAllModal] = useState(false);
-  const [agentInfo, setAgentInfo] = useState({ nom: "", domaine: "", metier: "" });
+  const [agentInfo, setAgentInfo] = useState({ 
+    nom: "", 
+    prenom: "",
+    email: "",
+    domaine: "", 
+    metier: "",
+    role: "",
+    telephone: "",
+    service: ""
+  });
   const [actionLoading, setActionLoading] = useState(null);
   const [showProofModal, setShowProofModal] = useState(false);
   const [currentSignalementId, setCurrentSignalementId] = useState(null);
@@ -36,15 +45,63 @@ export default function AgentDashboard() {
   // Récupérer les informations de l'agent connecté
   const fetchAgentInfo = async () => {
     try {
-      const res = await fetch("http://localhost:8081/api/auth/me", {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
+      // Essayer plusieurs endpoints pour récupérer les infos
+      let userData = null;
+      const endpoints = [
+        "http://localhost:8081/api/auth/me",
+        "http://localhost:8081/api/users/me",
+        "http://localhost:8081/api/agent/me",
+        "http://localhost:8081/api/utilisateurs/me"
+      ];
+
+      for (const endpoint of endpoints) {
+        try {
+          const res = await fetch(endpoint, {
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data && (data.id || data._id || data.email)) {
+              userData = data;
+              console.log("✅ Données agent trouvées:", data);
+              break;
+            }
+          }
+        } catch (e) {
+          console.log(`Endpoint ${endpoint} échoué:`, e.message);
+        }
+      }
+
+      if (!userData) {
+        // Essayer de décoder le token JWT
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          userData = {
+            id: payload.userId || payload.id || payload.sub,
+            email: payload.sub || payload.email,
+            nom: payload.nom || payload.name || payload.username,
+            prenom: payload.prenom || payload.firstName || "",
+            role: payload.role || payload.roles?.[0] || "AGENT",
+            domaine: payload.domaine || payload.service || payload.department || "",
+            metier: payload.metier || payload.job || payload.profession || "",
+            telephone: payload.telephone || payload.phone || "",
+          };
+          console.log("📋 Données extraites du token:", userData);
+        } catch (e) {
+          console.error("Erreur décodage token:", e);
+        }
+      }
+
+      if (userData) {
         setAgentInfo({
-          nom: data.nom || "Agent",
-          domaine: data.domaine || "Non défini",
-          metier: data.metier || "Non défini"
+          nom: userData.nom || userData.username || userData.name || "Agent",
+          prenom: userData.prenom || userData.firstName || userData.firstname || "",
+          email: userData.email || userData.mail || "",
+          domaine: userData.domaine || userData.service || userData.department || "Non défini",
+          metier: userData.metier || userData.job || userData.profession || userData.role || "Non défini",
+          role: userData.role || userData.roles?.[0] || "AGENT",
+          telephone: userData.telephone || userData.phone || userData.tel || "",
+          service: userData.service || userData.departement || ""
         });
       }
     } catch (error) {
@@ -52,37 +109,142 @@ export default function AgentDashboard() {
     }
   };
 
+  // Fonction pour normaliser les données d'un signalement
+  const normalizeSignalement = (s) => {
+    return {
+      id: s.id || s._id,
+      titre: s.titre || s.title || "Sans titre",
+      description: s.description || s.content || "Aucune description",
+      type: s.type || s.category || "AUTRE",
+      statut: s.statut || s.status || "EN_ATTENTE",
+      address: s.address || s.adresse || s.location || s.lieu || "Localisation non spécifiée",
+      ville: s.ville || s.city || s.commune || "",
+      commune: s.commune || s.area || "",
+      quartier: s.quartier || s.district || s.neighborhood || "",
+      rue: s.rue || s.street || "",
+      dateCreation: s.dateCreation || s.createdAt || s.date || s.created_at || new Date().toISOString(),
+      images: s.images || s.photos || s.attachments || [],
+      agentId: s.agentId || s.assignedTo || s.agent_id,
+      priorite: s.priorite || s.priority || "MOYENNE",
+      latitude: s.latitude || s.lat || 0,
+      longitude: s.longitude || s.lng || 0,
+      _original: s
+    };
+  };
+
   // Récupérer les signalements assignés à l'agent
   const fetchAssignedSignalements = async () => {
+    setIsLoading(true);
     try {
-      const meRes = await fetch("http://localhost:8081/api/auth/me", {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      if (!meRes.ok) return;
-      
-      const userData = await meRes.json();
-      const agentId = userData.id;
-      
-      const res = await fetch(`http://localhost:8081/api/signalements/agent/${agentId}`, {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      
-      if (res.ok) {
-        const data = await res.json();
-        const actifs = data.filter(s => s.statut !== "RESOLU" && s.statut !== "TRAITE");
-        const tries = actifs.sort((a, b) => 
-          new Date(b.dateCreation || b.createdAt) - new Date(a.dateCreation || a.createdAt)
-        );
-        setSignalementsAssignes(tries);
-        setStats({
-          total: tries.length,
-          enAttente: tries.filter(s => s.statut === "EN_ATTENTE").length,
-          enCours: tries.filter(s => s.statut === "EN_COURS").length,
-          resolus: 0
-        });
+      // Récupérer l'ID de l'agent depuis le token
+      let agentId = null;
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        agentId = payload.userId || payload.id || payload.sub;
+        console.log("🔑 Agent ID depuis token:", agentId);
+      } catch (e) {
+        console.error("Erreur décodage token:", e);
       }
+
+      // Si pas d'ID, essayer de récupérer via /me
+      if (!agentId) {
+        try {
+          const meRes = await fetch("http://localhost:8081/api/auth/me", {
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+          if (meRes.ok) {
+            const data = await meRes.json();
+            agentId = data.id || data._id;
+            console.log("🔑 Agent ID depuis /me:", agentId);
+          }
+        } catch (e) {
+          console.error("Erreur récupération /me:", e);
+        }
+      }
+
+      let data = [];
+      let endpoints = [];
+
+      if (agentId) {
+        endpoints = [
+          `http://localhost:8081/api/signalements/agent/${agentId}`,
+          `http://localhost:8081/api/signalements/assignee/${agentId}`,
+          `http://localhost:8081/api/signalements?agentId=${agentId}`,
+          `http://localhost:8081/api/agent/${agentId}/signalements`
+        ];
+      } else {
+        endpoints = [
+          "http://localhost:8081/api/signalements/mes-signalements",
+          "http://localhost:8081/api/signalements/agent",
+          "http://localhost:8081/api/signalements/assigned",
+          "http://localhost:8081/api/signalements"
+        ];
+      }
+
+      for (const endpoint of endpoints) {
+        try {
+          const res = await fetch(endpoint, {
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const result = await res.json();
+            console.log(`📡 Réponse de ${endpoint}:`, result);
+            
+            if (Array.isArray(result)) {
+              data = result;
+            } else if (result.data && Array.isArray(result.data)) {
+              data = result.data;
+            } else if (result.signalements && Array.isArray(result.signalements)) {
+              data = result.signalements;
+            } else if (result.content && Array.isArray(result.content)) {
+              data = result.content;
+            }
+            if (data.length > 0) break;
+          }
+        } catch (e) {
+          console.log(`Endpoint ${endpoint} échoué:`, e.message);
+        }
+      }
+
+      console.log("📊 Données brutes:", data);
+
+      // Normaliser les données
+      const normalized = data.map(normalizeSignalement);
+      
+      // Filtrer les signalements actifs (non résolus)
+      const actifs = normalized.filter(s => {
+        const status = s.statut?.toUpperCase() || "";
+        return status !== "RESOLU" && 
+               status !== "TRAITE" && 
+               status !== "CLOS" &&
+               status !== "FERME";
+      });
+      
+      // Trier par date (plus récent d'abord)
+      const tries = actifs.sort((a, b) => 
+        new Date(b.dateCreation) - new Date(a.dateCreation)
+      );
+      
+      setSignalementsAssignes(tries);
+      
+      // Mettre à jour les statistiques
+      setStats({
+        total: tries.length,
+        enAttente: tries.filter(s => {
+          const status = s.statut?.toUpperCase() || "";
+          return status === "EN_ATTENTE" || status === "PENDING";
+        }).length,
+        enCours: tries.filter(s => {
+          const status = s.statut?.toUpperCase() || "";
+          return status === "EN_COURS" || status === "IN_PROGRESS";
+        }).length,
+        resolus: 0
+      });
+      
+      console.log("✅ Signalements chargés:", tries.length);
     } catch (error) {
-      console.error("Erreur:", error);
+      console.error("Erreur chargement signalements:", error);
+      showMessage("error", "Erreur", "Impossible de charger les signalements");
     } finally {
       setIsLoading(false);
     }
@@ -105,8 +267,13 @@ export default function AgentDashboard() {
         ));
         showMessage("success", "Succès", "Signalement pris en charge !");
         fetchAssignedSignalements();
+      } else {
+        const error = await res.text();
+        console.error("Erreur mise à jour:", error);
+        showMessage("error", "Erreur", "Impossible de prendre en charge");
       }
     } catch (error) {
+      console.error("Erreur:", error);
       showMessage("error", "Erreur", "Une erreur est survenue");
     } finally {
       setActionLoading(null);
@@ -191,9 +358,12 @@ export default function AgentDashboard() {
         setProofImages([]);
         showMessage("success", "Félicitations !", "Signalement résolu !");
         fetchAssignedSignalements();
+      } else {
+        throw new Error("Erreur lors de la mise à jour du statut");
       }
     } catch (error) {
-      showMessage("error", "Erreur", error.message);
+      console.error("Erreur:", error);
+      showMessage("error", "Erreur", error.message || "Une erreur est survenue");
     } finally {
       setActionLoading(null);
       setCurrentSignalementId(null);
@@ -206,59 +376,134 @@ export default function AgentDashboard() {
   }, [token]);
 
   const getTypeIcon = (type) => {
+    const typeUpper = type?.toUpperCase() || "AUTRE";
     const icons = {
-      'VOIRIE': Construction, 'ECLAIRAGE': Lightbulb, 'PROPRETE': Trash2,
-      'DECHETS': Trash2, 'EAU': Droplets, 'ESPACES_VERTS': TreePine,
-      'TRANSPORTS': MapPin, 'SECURITE': Shield, 'URBANISME': Building2,
+      'VOIRIE': Construction, 
+      'ECLAIRAGE': Lightbulb, 
+      'PROPRETE': Trash2,
+      'DECHETS': Trash2, 
+      'EAU': Droplets, 
+      'ESPACES_VERTS': TreePine,
+      'TRANSPORTS': MapPin, 
+      'SECURITE': Shield, 
+      'URBANISME': Building2,
       'AUTRE': AlertTriangle
     };
-    return icons[type] || MapPin;
+    return icons[typeUpper] || AlertTriangle;
   };
 
   const getTypeLabel = (type) => {
+    const typeUpper = type?.toUpperCase() || "AUTRE";
     const labels = {
-      'VOIRIE': 'Voirie', 'ECLAIRAGE': 'Éclairage', 'PROPRETE': 'Propreté',
-      'DECHETS': 'Déchets', 'EAU': 'Eau', 'ESPACES_VERTS': 'Espaces verts',
-      'TRANSPORTS': 'Transports', 'SECURITE': 'Sécurité', 'URBANISME': 'Urbanisme',
+      'VOIRIE': 'Voirie', 
+      'ECLAIRAGE': 'Éclairage', 
+      'PROPRETE': 'Propreté',
+      'DECHETS': 'Déchets', 
+      'EAU': 'Eau', 
+      'ESPACES_VERTS': 'Espaces verts',
+      'TRANSPORTS': 'Transports', 
+      'SECURITE': 'Sécurité', 
+      'URBANISME': 'Urbanisme',
       'AUTRE': 'Autre'
     };
-    return labels[type] || type;
+    return labels[typeUpper] || type || "Autre";
   };
 
   const getStatusColor = (statut) => {
+    const statusUpper = statut?.toUpperCase() || "";
     const colors = {
       'EN_ATTENTE': 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-      'EN_COURS': 'bg-blue-500/20 text-blue-300 border-blue-500/30'
+      'PENDING': 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+      'EN_COURS': 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+      'IN_PROGRESS': 'bg-blue-500/20 text-blue-300 border-blue-500/30'
     };
-    return colors[statut] || 'bg-gray-500/20 text-gray-300 border-gray-500/30';
+    return colors[statusUpper] || 'bg-gray-500/20 text-gray-300 border-gray-500/30';
   };
 
   const getStatusLabel = (statut) => {
-    const labels = { 'EN_ATTENTE': 'En attente', 'EN_COURS': 'En cours' };
-    return labels[statut] || statut;
+    const statusUpper = statut?.toUpperCase() || "";
+    const labels = { 
+      'EN_ATTENTE': 'En attente', 
+      'PENDING': 'En attente',
+      'EN_COURS': 'En cours',
+      'IN_PROGRESS': 'En cours'
+    };
+    return labels[statusUpper] || statut || "En attente";
   };
 
   const formatDate = (dateString) => {
     if (!dateString) return "Date inconnue";
-    const date = new Date(dateString);
-    return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return "Date inconnue";
+      return date.toLocaleDateString('fr-FR', { 
+        day: 'numeric', 
+        month: 'short', 
+        year: 'numeric', 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+    } catch (e) {
+      return "Date inconnue";
+    }
   };
 
   const getMetierLabel = (metierId) => {
+    if (!metierId || metierId === "Non défini") return "Agent terrain";
+    
     const metiers = {
-      'AGENT_VOIRIE': 'Agent de voirie', 'TECHNICIEN_GENIE_CIVIL': 'Technicien génie civil',
-      'CHEF_CHANTIER_VOIRIE': 'Chef de chantier', 'AGENT_SIGNALISATION': 'Agent signalisation',
-      'TECHNICIEN_ECLAIRAGE': 'Technicien éclairage', 'INGENIEUR_ECLAIRAGE': 'Ingénieur éclairage',
-      'AGENT_MAINTENANCE_ELEC': 'Agent maintenance', 'AGENT_COLLECTE': 'Agent de collecte',
-      'TECHNICIEN_NETTOIEMENT': 'Technicien nettoiement', 'RESPONSABLE_DECHETTERIE': 'Responsable déchetterie',
-      'JARDINIER_MUNICIPAL': 'Jardinier municipal', 'ELAGUEUR': 'Élagueur',
-      'PAYSAGISTE_URBAIN': 'Paysagiste urbain', 'AGENT_REGULATION': 'Agent régulation',
-      'CONTROLEUR_TRANSPORT': 'Contrôleur transport', 'TECHNICIEN_STATIONNEMENT': 'Technicien stationnement',
-      'AGENT_SECURITE_URBAINE': 'Agent sécurité', 'POLICE_MUNICIPALE': 'Police municipale',
-      'AGENT_MEDIATEUR': 'Agent médiateur', 'URBANISTE': 'Urbaniste',
-      'ARCHITECTE_CONSEIL': 'Architecte conseil', 'TECHNICIEN_URBANISME': 'Technicien urbanisme'
+      'AGENT_VOIRIE': 'Agent de voirie', 
+      'TECHNICIEN_GENIE_CIVIL': 'Technicien génie civil',
+      'CHEF_CHANTIER_VOIRIE': 'Chef de chantier', 
+      'AGENT_SIGNALISATION': 'Agent signalisation',
+      'TECHNICIEN_ECLAIRAGE': 'Technicien éclairage', 
+      'INGENIEUR_ECLAIRAGE': 'Ingénieur éclairage',
+      'AGENT_MAINTENANCE_ELEC': 'Agent maintenance', 
+      'AGENT_COLLECTE': 'Agent de collecte',
+      'TECHNICIEN_NETTOIEMENT': 'Technicien nettoiement', 
+      'RESPONSABLE_DECHETTERIE': 'Responsable déchetterie',
+      'JARDINIER_MUNICIPAL': 'Jardinier municipal', 
+      'ELAGUEUR': 'Élagueur',
+      'PAYSAGISTE_URBAIN': 'Paysagiste urbain', 
+      'AGENT_REGULATION': 'Agent régulation',
+      'CONTROLEUR_TRANSPORT': 'Contrôleur transport', 
+      'TECHNICIEN_STATIONNEMENT': 'Technicien stationnement',
+      'AGENT_SECURITE_URBAINE': 'Agent sécurité', 
+      'POLICE_MUNICIPALE': 'Police municipale',
+      'AGENT_MEDIATEUR': 'Agent médiateur', 
+      'URBANISTE': 'Urbaniste',
+      'ARCHITECTE_CONSEIL': 'Architecte conseil', 
+      'TECHNICIEN_URBANISME': 'Technicien urbanisme'
     };
-    return metiers[metierId] || metierId?.replace(/_/g, ' ').toLowerCase() || "Non défini";
+    
+    const label = metiers[metierId];
+    if (label) return label;
+    
+    // Si c'est un ID de métier non reconnu, essayer de formater
+    return metierId.replace(/_/g, ' ').toLowerCase()
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
+  const getDomaineLabel = (domaine) => {
+    if (!domaine || domaine === "Non défini") return "Service municipal";
+    
+    const domaines = {
+      'VOIRIE': 'Voirie',
+      'ECLAIRAGE': 'Éclairage public',
+      'PROPRETE': 'Propreté',
+      'EAU': 'Eau et assainissement',
+      'ESPACES_VERTS': 'Espaces verts',
+      'TRANSPORTS': 'Transports',
+      'SECURITE': 'Sécurité',
+      'URBANISME': 'Urbanisme',
+      'TECHNIQUE': 'Technique',
+      'ADMINISTRATIF': 'Administratif'
+    };
+    
+    const label = domaines[domaine.toUpperCase()];
+    return label || domaine;
   };
 
   if (isLoading) {
@@ -348,7 +593,7 @@ export default function AgentDashboard() {
       <div className="fixed bottom-4 right-4 z-[200] animate-slide-in-right">
         <div className={`rounded-xl shadow-2xl p-4 min-w-[300px] max-w-md flex items-start gap-3 ${messageBox.type === "success" ? "bg-emerald-500 text-white" : "bg-red-500 text-white"}`}>
           <div className="flex-shrink-0">
-            {messageBox.type === "success" ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
+            {messageBox.type === "success" ? <CheckCircle size={20} /> : <AlertTriangle size={20} />}
           </div>
           <div className="flex-1">
             <h4 className="font-bold text-sm">{messageBox.title}</h4>
@@ -362,7 +607,7 @@ export default function AgentDashboard() {
     );
   };
 
-  // Composant Modal pour afficher tous les signalements AVEC BOUTONS
+  // Modal pour afficher tous les signalements
   const AllSignalementsModal = () => {
     if (!showAllModal) return null;
 
@@ -412,7 +657,6 @@ export default function AgentDashboard() {
                           </span>
                         </div>
                         
-                        {/* BOUTONS D'ACTION DANS LE MODAL */}
                         <div className="flex gap-2">
                           {s.statut === "EN_ATTENTE" && (
                             <button 
@@ -444,7 +688,7 @@ export default function AgentDashboard() {
                         </div>
                         <div className="flex items-center gap-1">
                           <Calendar size={12} />
-                          <span>Créé le {formatDate(s.dateCreation || s.createdAt)}</span>
+                          <span>Créé le {formatDate(s.dateCreation)}</span>
                         </div>
                         {s.quartier && (
                           <div className="flex items-center gap-1">
@@ -463,7 +707,7 @@ export default function AgentDashboard() {
                       {s.images && s.images.length > 0 && (
                         <div className="flex gap-2 mt-2">
                           {s.images.slice(0, 3).map((img, idx) => (
-                            <img key={idx} src={img.url} className="w-12 h-12 rounded-lg object-cover border border-white/20" alt={`Image ${idx + 1}`} />
+                            <img key={idx} src={img.url || img} className="w-12 h-12 rounded-lg object-cover border border-white/20" alt={`Image ${idx + 1}`} />
                           ))}
                           {s.images.length > 3 && (
                             <div className="w-12 h-12 rounded-lg bg-white/10 flex items-center justify-center text-white/40 text-xs">
@@ -505,11 +749,23 @@ export default function AgentDashboard() {
                 <User className="w-6 h-6 text-blue-400" />
               </div>
               <div>
-                <p className="text-white font-semibold">{agentInfo.nom}</p>
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="text-blue-400">{agentInfo.domaine}</span>
+                <p className="text-white font-semibold text-lg">
+                  {agentInfo.prenom || agentInfo.nom || "Agent"}
+                </p>
+                <div className="flex items-center gap-2 text-xs flex-wrap">
+                  <span className="text-blue-400">
+                    {getDomaineLabel(agentInfo.domaine)}
+                  </span>
                   <span className="text-white/30">•</span>
-                  <span className="text-emerald-400">{getMetierLabel(agentInfo.metier)}</span>
+                  <span className="text-emerald-400">
+                    {getMetierLabel(agentInfo.metier)}
+                  </span>
+                  {agentInfo.email && (
+                    <>
+                      <span className="text-white/30">•</span>
+                      <span className="text-white/40">{agentInfo.email}</span>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -596,7 +852,7 @@ export default function AgentDashboard() {
                         <p className="text-white/60 text-sm line-clamp-1 mb-2">{s.description || "Aucune description"}</p>
                         <div className="flex items-center gap-4 text-xs text-white/40">
                           <span className="flex items-center gap-1"><MapPin size={12} /> {s.ville || s.commune || "Localisation"}</span>
-                          <span className="flex items-center gap-1"><Calendar size={12} /> {formatDate(s.dateCreation || s.createdAt)}</span>
+                          <span className="flex items-center gap-1"><Calendar size={12} /> {formatDate(s.dateCreation)}</span>
                         </div>
                       </div>
                     </div>

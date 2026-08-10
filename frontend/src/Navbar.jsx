@@ -5,7 +5,9 @@ import {
   Shield, Bell, Settings, PlusCircle, LayoutDashboard, 
   ClipboardList, Wrench, Users, BarChart3, ChevronDown,
   CheckCircle, Clock, MessageSquare, Loader2, UserCheck,
-  Share2, ChevronRight, Brain
+  Share2, ChevronRight, Brain, Sparkles, Crown,
+  Search, Filter, Grid3x3, List, Sun, Moon,
+  Star, Gift, Heart, Award, Gem, Flower2
 } from "lucide-react";
 
 export default function Navbar() {
@@ -25,6 +27,29 @@ export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const token = localStorage.getItem("token");
+
+  // Fermer le menu mobile lors du redimensionnement
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768 && isOpen) {
+        setIsOpen(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isOpen]);
+
+  // Bloquer le scroll quand le menu est ouvert
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
@@ -72,123 +97,73 @@ export default function Navbar() {
     }
   };
 
-  // ⭐ Fonction pour extraire l'ID du signalement depuis le message ou le lien
   const extractSignalementId = (notif) => {
-    // Méthode 1: direct via signalementId
-    if (notif.signalementId) {
-      return notif.signalementId;
-    }
-    
-    // Méthode 2: depuis le lien (ex: "/signalement/123")
+    if (notif.signalementId) return notif.signalementId;
     if (notif.lien) {
       const match = notif.lien.match(/\/signalement\/(\d+)/);
-      if (match) {
-        return parseInt(match[1]);
-      }
+      if (match) return parseInt(match[1]);
     }
-    
-    // Méthode 3: depuis le message (ex: "signalement #123")
     if (notif.message) {
       const match = notif.message.match(/#(\d+)/);
-      if (match) {
-        return parseInt(match[1]);
-      }
+      if (match) return parseInt(match[1]);
     }
-    
-    // Méthode 4: depuis le titre
     if (notif.title) {
       const match = notif.title.match(/#(\d+)/);
-      if (match) {
-        return parseInt(match[1]);
-      }
+      if (match) return parseInt(match[1]);
     }
-    
     return null;
   };
 
-  // ⭐ Fonction pour déterminer la redirection selon le type de notification
-  const getRedirectPath = (notif) => {
-    const signalementId = extractSignalementId(notif);
-    
-    // Si on a un ID, rediriger vers le détail
-    if (signalementId) {
-      return `/signalement/${signalementId}`;
-    }
-    
-    // Sinon, utiliser le lien s'il existe
-    if (notif.lien) {
-      return notif.lien;
-    }
-    
-    // Fallback selon le rôle
-    if (userRole === "AGENT") {
-      return "/agent/signalements-assignes";
-    } else if (userRole === "ADMIN") {
-      return "/admin/signalement";
-    }
-    return "/signalements";
-  };
-
   const handleNotificationClick = async (notif) => {
-  console.log("🔔 Notification cliquée:", notif);
-  
-  // Marquer comme lu
-  try {
-    const response = await fetch(`http://localhost:8081/api/notifications/${notif.id}/read`, {
-      method: "PUT",
-      headers: { "Authorization": `Bearer ${token}` }
-    });
+    console.log("🔔 Notification cliquée:", notif);
     
-    if (response.ok) {
-      setNotifications(prev => prev.map(n => 
-        n.id === notif.id ? { ...n, lu: true } : n
-      ));
-      setUnreadCount(prev => Math.max(0, prev - 1));
+    try {
+      const response = await fetch(`http://localhost:8081/api/notifications/${notif.id}/read`, {
+        method: "PUT",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        setNotifications(prev => prev.map(n => 
+          n.id === notif.id ? { ...n, lu: true } : n
+        ));
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      }
+    } catch (error) {
+      console.error("Erreur markAsRead:", error);
     }
-  } catch (error) {
-    console.error("Erreur markAsRead:", error);
-  }
-  
-  setShowNotifications(false);
-  
-  // ⭐ Extraire l'ID du signalement
-  let signalementId = notif.signalementId;
-  
-  // Essayer d'extraire depuis le message
-  if (!signalementId && notif.message) {
-    const match = notif.message.match(/#(\d+)/);
-    if (match) signalementId = match[1];
-  }
-  
-  // Essayer d'extraire depuis le titre
-  if (!signalementId && notif.title) {
-    const match = notif.title.match(/#(\d+)/);
-    if (match) signalementId = match[1];
-  }
-  
-  // Essayer d'extraire depuis le lien
-  if (!signalementId && notif.lien) {
-    const match = notif.lien.match(/\/(\d+)/);
-    if (match) signalementId = match[1];
-  }
-  
-  console.log("📌 signalementId extrait:", signalementId);
-  
-  // Redirection
-  if (signalementId) {
-    navigate(`/signalement/${signalementId}`);
-  } else {
-    // Fallback selon le rôle
-    const role = localStorage.getItem("userRole");
-    if (role === "ADMIN") {
-      navigate("/admin/signalement");  // ⭐ Singulier
-    } else if (role === "AGENT") {
-      navigate("/agent/signalements-assignes");
+    
+    setShowNotifications(false);
+    
+    let signalementId = notif.signalementId;
+    if (!signalementId && notif.message) {
+      const match = notif.message.match(/#(\d+)/);
+      if (match) signalementId = match[1];
+    }
+    if (!signalementId && notif.title) {
+      const match = notif.title.match(/#(\d+)/);
+      if (match) signalementId = match[1];
+    }
+    if (!signalementId && notif.lien) {
+      const match = notif.lien.match(/\/(\d+)/);
+      if (match) signalementId = match[1];
+    }
+    
+    console.log("📌 signalementId extrait:", signalementId);
+    
+    if (signalementId) {
+      navigate(`/signalement/${signalementId}`);
     } else {
-      navigate("/signalements");
+      const role = localStorage.getItem("userRole");
+      if (role === "ADMIN") {
+        navigate("/admin/signalement");
+      } else if (role === "AGENT") {
+        navigate("/agent/signalements-assignes");
+      } else {
+        navigate("/signalements");
+      }
     }
-  }
-};
+  };
 
   const markAllAsRead = async () => {
     try {
@@ -266,23 +241,23 @@ export default function Navbar() {
     const role = userRole;
     if (role === "ADMIN") {
       return [
-        { path: "/admin/dashboard", name: "Dashboard", icon: LayoutDashboard },
-        { path: "/admin/assignation-ia", name: "Assignation IA", icon: Brain },
-        { path: "/admin/signalement", name: "Signalements", icon: ClipboardList },
-        { path: "/admin/users", name: "Utilisateurs", icon: Users },
-        { path: "/admin/profil", name: "Profil", icon: User },
+        { path: "/admin/dashboard", name: "Dashboard", icon: LayoutDashboard, description: "Vue d'ensemble" },
+        { path: "/admin/assignation-ia", name: "Assignation IA", icon: Brain, description: "Intelligence artificielle" },
+        { path: "/admin/signalement", name: "Signalements", icon: ClipboardList, description: "Gestion" },
+        { path: "/admin/users", name: "Utilisateurs", icon: Users, description: "Gestion" },
+        { path: "/admin/profil", name: "Profil", icon: User, description: "Paramètres" },
       ];
     } else if (role === "AGENT") {
       return [
-        { path: "/agent/dashboard", name: "Dashboard", icon: LayoutDashboard },
-        { path: "/agent/signalements-assignes", name: "Signalements", icon: AlertTriangle },
-        { path: "/agent/profil", name: "Profil", icon: User },
+        { path: "/agent/dashboard", name: "Dashboard", icon: LayoutDashboard, description: "Vue d'ensemble" },
+        { path: "/agent/signalements-assignes", name: "Signalements", icon: AlertTriangle, description: "Mes missions" },
+        { path: "/agent/profil", name: "Profil", icon: User, description: "Paramètres" },
       ];
     } else {
       return [
-        { path: "/signalements", name: "Accueil", icon: Home },
-        { path: "/signaler", name: "Signaler", icon: PlusCircle },
-        { path: "/profil", name: "Profil", icon: User },
+        { path: "/signalements", name: "Accueil", icon: Home, description: "Explorer" },
+        { path: "/signaler", name: "Signaler", icon: PlusCircle, description: "Nouveau" },
+        { path: "/profil", name: "Profil", icon: User, description: "Mon compte" },
       ];
     }
   };
@@ -290,12 +265,14 @@ export default function Navbar() {
   const navLinks = getNavLinks();
   const isActive = (path) => location.pathname === path;
 
-  const getPageTitle = () => {
-    const role = userRole;
-    if (role === "ADMIN") return "Administration";
-    if (role === "AGENT") return "Espace Agent";
-    return "SmartCity";
+  const getRoleBadge = () => {
+    if (userRole === "ADMIN") return { label: "Admin", icon: Crown, color: "text-amber-400" };
+    if (userRole === "AGENT") return { label: "Agent", icon: Shield, color: "text-blue-400" };
+    return { label: "Citoyen", icon: Star, color: "text-emerald-400" };
   };
+
+  const roleBadge = getRoleBadge();
+  const RoleIcon = roleBadge.icon;
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -310,17 +287,27 @@ export default function Navbar() {
     <>
       {/* Modal de déconnexion */}
       {showLogoutModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
-          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-white/10 transform animate-modal-pop">
             <div className="text-center">
-              <div className="mx-auto w-14 h-14 rounded-full flex items-center justify-center mb-4 bg-red-100 text-red-600">
-                <LogOut className="w-7 h-7" />
+              <div className="mx-auto w-16 h-16 rounded-2xl flex items-center justify-center mb-4 bg-gradient-to-br from-red-500/20 to-red-600/10 border-2 border-red-500/30">
+                <LogOut className="w-8 h-8 text-red-500" />
               </div>
-              <h3 className="text-lg font-bold mb-2 text-gray-900">Déconnexion</h3>
-              <p className="text-gray-600 text-sm mb-6">Êtes-vous sûr de vouloir vous déconnecter ?</p>
+              <h3 className="text-xl font-bold mb-2 text-slate-800 dark:text-white">Déconnexion</h3>
+              <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">Êtes-vous sûr de vouloir vous déconnecter ?</p>
               <div className="flex gap-3">
-                <button onClick={() => setShowLogoutModal(false)} className="flex-1 py-2.5 rounded-xl font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition">Annuler</button>
-                <button onClick={handleLogout} className="flex-1 py-2.5 rounded-xl font-medium text-white bg-red-500 hover:bg-red-600 transition">Déconnexion</button>
+                <button 
+                  onClick={() => setShowLogoutModal(false)} 
+                  className="flex-1 py-2.5 rounded-xl font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition"
+                >
+                  Annuler
+                </button>
+                <button 
+                  onClick={handleLogout} 
+                  className="flex-1 py-2.5 rounded-xl font-medium text-white bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 transition shadow-lg shadow-red-500/30"
+                >
+                  Déconnexion
+                </button>
               </div>
             </div>
           </div>
@@ -333,30 +320,33 @@ export default function Navbar() {
           ? "bg-slate-900/95 backdrop-blur-xl shadow-2xl border-b border-white/10" 
           : "bg-slate-900/90 border-b border-white/5"
       }`}>
-        <div className="px-3 sm:px-4 lg:px-6">
-          <div className="flex items-center justify-between h-14 sm:h-16">
+        <div className="px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
             
             {/* Logo */}
             <Link 
               to={userRole === "ADMIN" ? "/admin/dashboard" : userRole === "AGENT" ? "/agent/dashboard" : "/signalements"} 
-              className="flex items-center gap-2 sm:gap-3 flex-shrink-0"
+              className="flex items-center gap-3 flex-shrink-0 group"
             >
               <div className="relative">
-                <div className="absolute inset-0 bg-emerald-500 rounded-lg blur-md opacity-50"></div>
-                <div className="relative w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-lg flex items-center justify-center shadow-lg">
-                  <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                <div className="absolute inset-0 bg-emerald-500 rounded-xl blur-xl opacity-60 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <div className="relative w-10 h-10 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/30 group-hover:scale-105 transition-transform duration-300">
+                  <MapPin className="w-5 h-5 text-white" strokeWidth={2.5} />
                 </div>
               </div>
-              <div className="hidden xs:block">
-                <h1 className="text-base sm:text-lg md:text-xl font-bold tracking-tight">
+              <div className="hidden sm:block">
+                <h1 className="text-lg font-bold tracking-tight">
                   <span className="bg-gradient-to-r from-white to-emerald-400 bg-clip-text text-transparent">SmartCity</span>
                 </h1>
-                <p className="text-[8px] sm:text-[9px] text-emerald-400/70 font-medium -mt-0.5">{getPageTitle()}</p>
+                <p className="text-[10px] text-emerald-400/60 font-medium -mt-0.5 tracking-wider flex items-center gap-1.5">
+                  <span className="w-1 h-1 bg-emerald-400 rounded-full animate-pulse"></span>
+                  Plateforme citoyenne
+                </p>
               </div>
             </Link>
 
             {/* Navigation Desktop */}
-            <div className="hidden sm:flex items-center gap-1 md:gap-2">
+            <div className="hidden md:flex items-center gap-1 bg-white/5 rounded-2xl p-1 border border-white/5">
               {navLinks.map((link) => {
                 const Icon = link.icon;
                 const active = isActive(link.path);
@@ -364,17 +354,17 @@ export default function Navbar() {
                   <Link 
                     key={link.path} 
                     to={link.path} 
-                    className={`relative flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 rounded-lg transition-all duration-200 ${
+                    className={`relative flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-300 ${
                       active 
-                        ? "text-emerald-400 bg-emerald-500/10" 
-                        : "text-white/70 hover:text-white hover:bg-white/5"
+                        ? "bg-gradient-to-r from-emerald-500/20 to-emerald-600/10 text-emerald-400 shadow-lg shadow-emerald-500/10" 
+                        : "text-white/60 hover:text-white hover:bg-white/5"
                     }`}
                   >
-                    <Icon size={16} className="md:w-[18px] md:h-[18px]" />
-                    <span className="text-xs md:text-sm font-medium whitespace-nowrap">{link.name}</span>
+                    <Icon size={18} className={active ? "text-emerald-400" : ""} />
+                    <span className="text-sm font-medium">{link.name}</span>
                     {active && (
                       <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2">
-                        <div className="w-4 md:w-5 h-0.5 bg-gradient-to-r from-emerald-400 to-emerald-500 rounded-full"></div>
+                        <div className="w-6 h-0.5 bg-gradient-to-r from-emerald-400 to-emerald-500 rounded-full"></div>
                       </div>
                     )}
                   </Link>
@@ -382,8 +372,8 @@ export default function Navbar() {
               })}
             </div>
 
-            {/* Actions utilisateur Desktop */}
-            <div className="flex items-center gap-2 sm:gap-3">
+            {/* Actions utilisateur */}
+            <div className="flex items-center gap-3">
               
               {/* Notifications */}
               <div className="relative notifications-menu">
@@ -392,33 +382,44 @@ export default function Navbar() {
                     setShowNotifications(!showNotifications);
                     if (!showNotifications) fetchNotifications();
                   }}
-                  className="relative p-1.5 sm:p-2 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition"
+                  className="relative p-2 rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition-all duration-300"
                 >
-                  <Bell size={18} className="sm:w-[20px] sm:h-[20px]" />
+                  <Bell size={20} />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] bg-red-500 rounded-full text-[9px] flex items-center justify-center text-white px-1">
+                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-gradient-to-r from-red-500 to-red-600 rounded-full text-[9px] flex items-center justify-center text-white px-1 font-bold shadow-lg shadow-red-500/30">
                       {unreadCount > 9 ? "9+" : unreadCount}
                     </span>
                   )}
                 </button>
                 
                 {showNotifications && (
-                  <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-slate-800/95 backdrop-blur-xl rounded-xl border border-white/20 shadow-2xl overflow-hidden z-50">
-                    <div className="p-3 border-b border-white/10 flex justify-between items-center">
-                      <h3 className="text-white font-semibold text-sm">Notifications</h3>
-                      <div className="flex gap-2">
-                        <button onClick={fetchNotifications} className="text-xs text-emerald-400 hover:text-emerald-300">Rafraîchir</button>
+                  <div className="absolute right-0 mt-2 w-80 bg-slate-800/95 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden z-50">
+                    <div className="p-4 border-b border-white/10 flex justify-between items-center bg-white/5">
+                      <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+                        <Bell size={16} className="text-emerald-400" />
+                        Notifications
+                      </h3>
+                      <div className="flex gap-3">
+                        <button onClick={fetchNotifications} className="text-xs text-emerald-400 hover:text-emerald-300 transition">
+                          Rafraîchir
+                        </button>
                         {notifications.length > 0 && (
-                          <button onClick={markAllAsRead} className="text-xs text-emerald-400 hover:text-emerald-300">Tout lire</button>
+                          <button onClick={markAllAsRead} className="text-xs text-emerald-400 hover:text-emerald-300 transition">
+                            Tout lire
+                          </button>
                         )}
                       </div>
                     </div>
-                    <div className="max-h-80 overflow-y-auto">
+                    <div className="max-h-80 overflow-y-auto custom-scrollbar">
                       {isLoadingNotifications ? (
-                        <div className="p-4 text-center"><Loader2 size={24} className="animate-spin text-emerald-400 mx-auto" /></div>
+                        <div className="p-6 text-center">
+                          <Loader2 size={28} className="animate-spin text-emerald-400 mx-auto" />
+                        </div>
                       ) : notifications.length === 0 ? (
                         <div className="p-8 text-center">
-                          <Bell size={32} className="text-white/20 mx-auto mb-2" />
+                          <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-3">
+                            <Bell size={24} className="text-white/20" />
+                          </div>
                           <p className="text-white/40 text-sm">Aucune notification</p>
                         </div>
                       ) : (
@@ -426,16 +427,25 @@ export default function Navbar() {
                           <div 
                             key={notif.id} 
                             onClick={() => handleNotificationClick(notif)}
-                            className={`p-3 border-b border-white/5 hover:bg-white/5 transition cursor-pointer ${!notif.lu ? 'bg-emerald-500/5 border-l-2 border-l-emerald-500' : ''}`}
+                            className={`p-4 border-b border-white/5 hover:bg-white/5 transition cursor-pointer ${
+                              !notif.lu ? 'bg-emerald-500/10 border-l-2 border-l-emerald-500' : ''
+                            }`}
                           >
-                            <div className="flex items-start gap-2">
-                              {getNotificationIcon(notif.type)}
-                              <div className="flex-1 min-w-0">
-                                <p className="text-white/80 text-xs sm:text-sm font-medium truncate">{notif.title}</p>
-                                <p className="text-white/60 text-xs mt-0.5 line-clamp-2">{formatNotificationMessage(notif)}</p>
-                                <p className="text-white/30 text-[10px] mt-1">{new Date(notif.dateCreation).toLocaleString()}</p>
+                            <div className="flex items-start gap-3">
+                              <div className={`p-1.5 rounded-lg ${!notif.lu ? 'bg-emerald-500/20' : 'bg-white/5'}`}>
+                                {getNotificationIcon(notif.type)}
                               </div>
-                              {!notif.lu && <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1"></div>}
+                              <div className="flex-1 min-w-0">
+                                <p className="text-white/90 text-sm font-medium">{notif.title}</p>
+                                <p className="text-white/50 text-xs mt-0.5 line-clamp-2">{formatNotificationMessage(notif)}</p>
+                                <div className="flex items-center gap-2 mt-1.5">
+                                  <Clock size={10} className="text-white/30" />
+                                  <p className="text-white/20 text-[10px]">{new Date(notif.dateCreation).toLocaleString()}</p>
+                                </div>
+                              </div>
+                              {!notif.lu && (
+                                <div className="w-2 h-2 rounded-full bg-emerald-500 mt-1 shadow-lg shadow-emerald-500/50"></div>
+                              )}
                             </div>
                           </div>
                         ))
@@ -445,33 +455,60 @@ export default function Navbar() {
                 )}
               </div>
               
-              {/* Menu utilisateur */}
-              <div className="relative user-menu">
+              {/* Menu utilisateur Desktop */}
+              <div className="relative user-menu hidden md:block">
                 <button 
                   onClick={() => setShowUserMenu(!showUserMenu)} 
-                  className="flex items-center gap-2 pl-2 sm:pl-3 border-l border-white/20 hover:opacity-80 transition"
+                  className="flex items-center gap-3 pl-3 border-l border-white/10 hover:opacity-80 transition group"
                 >
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full blur-md opacity-50"></div>
-                    <div className="relative w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center shadow-lg">
-                      <User className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full blur-md opacity-60 group-hover:opacity-100 transition-opacity"></div>
+                      <div className="relative w-8 h-8 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/30 group-hover:scale-105 transition-transform">
+                        <User className="w-4 h-4 text-white" />
+                      </div>
+                    </div>
+                    <div className="hidden lg:block text-left">
+                      <p className="text-white/90 text-sm font-medium capitalize leading-tight">{userName || "Utilisateur"}</p>
+                      <div className="flex items-center gap-1">
+                        <RoleIcon size={10} className={roleBadge.color} />
+                        <span className={`text-[10px] font-medium ${roleBadge.color}`}>{roleBadge.label}</span>
+                      </div>
                     </div>
                   </div>
-                  <span className="hidden md:inline text-white/80 text-sm font-medium capitalize">{userName || "Utilisateur"}</span>
-                  <ChevronDown size={14} className="text-white/60 hidden sm:block" />
+                  <ChevronDown size={16} className="text-white/40 hidden lg:block group-hover:text-white/60 transition" />
                 </button>
 
                 {showUserMenu && (
-                  <div className="absolute right-0 mt-2 w-48 bg-slate-800/95 backdrop-blur-xl rounded-xl border border-white/20 shadow-2xl overflow-hidden z-50">
-                    <div className="p-3 border-b border-white/10 bg-white/5">
-                      <p className="text-white text-sm font-medium capitalize truncate">{userName || "Utilisateur"}</p>
-                      <p className="text-emerald-400 text-xs">
-                        {userRole === "ADMIN" ? "Administrateur" : userRole === "AGENT" ? "Agent terrain" : "Citoyen"}
-                      </p>
+                  <div className="absolute right-0 mt-2 w-56 bg-slate-800/95 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden z-50">
+                    <div className="p-4 border-b border-white/10 bg-gradient-to-r from-emerald-500/10 to-transparent">
+                      <div className="flex items-center gap-3">
+                        <div className="relative">
+                          <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full blur-md opacity-50"></div>
+                          <div className="relative w-10 h-10 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center">
+                            <User className="w-5 h-5 text-white" />
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-white text-sm font-medium capitalize">{userName || "Utilisateur"}</p>
+                          <div className="flex items-center gap-1.5">
+                            <RoleIcon size={12} className={roleBadge.color} />
+                            <p className={`text-xs font-medium ${roleBadge.color}`}>
+                              {userRole === "ADMIN" ? "Administrateur" : userRole === "AGENT" ? "Agent terrain" : "Citoyen"}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                     <div className="p-1">
-                      <button onClick={openLogoutModal} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition text-sm">
-                        <LogOut size={16} /> Déconnexion
+                      <button 
+                        onClick={openLogoutModal} 
+                        className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-red-400 hover:bg-red-500/10 transition text-sm group"
+                      >
+                        <div className="p-1 rounded-lg bg-red-500/10 group-hover:bg-red-500/20 transition">
+                          <LogOut size={16} />
+                        </div>
+                        Déconnexion
                       </button>
                     </div>
                   </div>
@@ -481,70 +518,94 @@ export default function Navbar() {
               {/* Bouton menu mobile */}
               <button 
                 onClick={() => setIsOpen(!isOpen)} 
-                className="sm:hidden relative w-8 h-8 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center"
+                className="md:hidden relative w-10 h-10 rounded-xl bg-white/10 backdrop-blur-sm border border-white/10 hover:bg-white/20 transition flex items-center justify-center z-50"
+                aria-label="Toggle menu"
               >
-                {isOpen ? <X size={16} className="text-white" /> : <Menu size={16} className="text-white" />}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Navigation Mobile */}
-        <div className={`fixed inset-x-0 top-14 bottom-0 bg-slate-900/98 backdrop-blur-xl transition-all duration-300 z-40 ${
-          isOpen ? "translate-x-0" : "translate-x-full"
-        }`}>
-          <div className="flex flex-col h-full overflow-y-auto p-4">
-            <div className="space-y-1">
-              {navLinks.map((link) => {
-                const Icon = link.icon;
-                const active = isActive(link.path);
-                return (
-                  <Link 
-                    key={link.path} 
-                    to={link.path} 
-                    onClick={() => setIsOpen(false)} 
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                      active 
-                        ? "bg-gradient-to-r from-emerald-500/20 to-emerald-600/10 text-emerald-400" 
-                        : "text-white/70 hover:text-white hover:bg-white/10"
-                    }`}
-                  >
-                    <Icon size={20} />
-                    <span className="font-medium flex-1">{link.name}</span>
-                    {active && <ChevronRight size={16} className="text-emerald-400" />}
-                  </Link>
-                );
-              })}
-            </div>
-            
-            <div className="pt-6 mt-4 border-t border-white/10">
-              <div className="flex items-center gap-3 px-4 py-3 bg-white/5 rounded-xl">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full blur-md opacity-50"></div>
-                  <div className="relative w-10 h-10 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center">
-                    <User className="w-5 h-5 text-white" />
-                  </div>
-                </div>
-                <div className="flex-1">
-                  <p className="text-white font-medium capitalize">{userName || "Citoyen"}</p>
-                  <p className="text-emerald-400 text-xs">
-                    {userRole === "ADMIN" ? "Administrateur" : userRole === "AGENT" ? "Agent terrain" : "Citoyen"}
-                  </p>
-                </div>
-              </div>
-              <button 
-                onClick={openLogoutModal} 
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 mt-3 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 transition border border-red-500/20"
-              >
-                <LogOut size={18} /> Déconnexion
+                {isOpen ? <X size={20} className="text-white" /> : <Menu size={20} className="text-white" />}
               </button>
             </div>
           </div>
         </div>
       </nav>
 
+      {/* Overlay pour fermer le menu - CORRIGÉ */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 top-16 bg-black/60 backdrop-blur-sm z-40 md:hidden"
+          onClick={() => setIsOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Navigation Mobile - CORRIGÉ */}
+      <div 
+        className={`fixed top-16 bottom-0 right-0 w-full max-w-sm bg-slate-900/98 backdrop-blur-xl shadow-2xl z-40 md:hidden transition-all duration-300 ease-in-out ${
+          isOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
+        <div className="flex flex-col h-full overflow-y-auto p-4">
+          {/* En-tête du menu mobile */}
+          <div className="flex items-center gap-3 px-4 py-4 mb-4 bg-white/5 rounded-xl border border-white/5">
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full blur-md opacity-50"></div>
+              <div className="relative w-12 h-12 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center shadow-lg">
+                <User className="w-6 h-6 text-white" />
+              </div>
+            </div>
+            <div className="flex-1">
+              <p className="text-white font-medium capitalize">{userName || "Citoyen"}</p>
+              <div className="flex items-center gap-1.5">
+                <RoleIcon size={12} className={roleBadge.color} />
+                <p className={`text-xs font-medium ${roleBadge.color}`}>
+                  {userRole === "ADMIN" ? "Administrateur" : userRole === "AGENT" ? "Agent terrain" : "Citoyen"}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Liens de navigation mobile */}
+          <div className="space-y-1 flex-1">
+            {navLinks.map((link) => {
+              const Icon = link.icon;
+              const active = isActive(link.path);
+              return (
+                <Link 
+                  key={link.path} 
+                  to={link.path} 
+                  onClick={() => setIsOpen(false)} 
+                  className={`flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all ${
+                    active 
+                      ? "bg-gradient-to-r from-emerald-500/20 to-emerald-600/10 text-emerald-400 border border-emerald-500/20" 
+                      : "text-white/70 hover:text-white hover:bg-white/5"
+                  }`}
+                >
+                  <div className={`p-1.5 rounded-lg ${active ? 'bg-emerald-500/20' : 'bg-white/5'}`}>
+                    <Icon size={20} />
+                  </div>
+                  <div className="flex-1">
+                    <span className="font-medium">{link.name}</span>
+                    <p className="text-[10px] text-white/40">{link.description}</p>
+                  </div>
+                  {active && <ChevronRight size={16} className="text-emerald-400" />}
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* Bouton déconnexion mobile */}
+          <div className="mt-auto pt-4 border-t border-white/10">
+            <button 
+              onClick={openLogoutModal} 
+              className="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 transition border border-red-500/20"
+            >
+              <LogOut size={18} /> Déconnexion
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Espace pour compenser la navbar fixe */}
-      <div className="h-14 sm:h-16"></div>
+      <div className="h-16"></div>
 
       <style>{`
         @keyframes slide-in {
@@ -563,10 +624,26 @@ export default function Navbar() {
           -webkit-box-orient: vertical;
           overflow: hidden;
         }
-        @media (min-width: 480px) {
-          .xs\\:block {
-            display: block;
-          }
+        @keyframes modal-pop {
+          0% { transform: scale(0.9); opacity: 0; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-modal-pop {
+          animation: modal-pop 0.3s ease-out;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(16, 185, 129, 0.3);
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(16, 185, 129, 0.5);
         }
       `}</style>
     </>

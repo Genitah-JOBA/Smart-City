@@ -4,7 +4,8 @@ import {
   Lightbulb, Trash, Droplets, Search, Filter, Calendar, User,
   Clock, CheckCircle, RefreshCw, Maximize2, ChevronLeft, ChevronRight,
   TreePine, Bus, Shield as ShieldIcon, Building2 as BuildingIcon,
-  AlertTriangle, PlayCircle, Loader, Navigation2, Building2, Home, Target, LocateFixed, CheckCircle as CheckCircleIcon
+  AlertTriangle, PlayCircle, Loader, Navigation2, Building2, Home, Target, LocateFixed, CheckCircle as CheckCircleIcon,
+  Grid, List, Plus, Image as ImageIcon, FolderOpen
 } from "lucide-react";
 
 export default function Signaler() {
@@ -36,52 +37,47 @@ export default function Signaler() {
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [locationAccuracy, setLocationAccuracy] = useState(null);
   
-  // États pour la saisie manuelle
   const [isManualLocation, setIsManualLocation] = useState(false);
   const [manualAddress, setManualAddress] = useState("");
   const [manualQuartier, setManualQuartier] = useState("");
   const [manualRue, setManualRue] = useState("");
   const [manualVille, setManualVille] = useState("");
   
-  // État pour le modal de détail
   const [selectedSignalement, setSelectedSignalement] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   
-  // États pour le filtrage
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("TOUS");
   const [filterStatus, setFilterStatus] = useState("TOUS");
   const [showFilters, setShowFilters] = useState(false);
+  const [viewMode, setViewMode] = useState("grid");
   
-  // Récupérer l'utilisateur connecté
   const [currentUserId, setCurrentUserId] = useState(null);
   const [currentUserRole, setCurrentUserRole] = useState(null);
 
-  // État pour annuler les modifications
   const [originalFormData, setOriginalFormData] = useState(null);
   const [originalImages, setOriginalImages] = useState([]);
 
   const categories = [
-    { id: "VOIRIE", name: "Voirie / Routes", icon: Road, color: "from-green-800 to-green-400", iconColor: "text-green-400" },
-    { id: "ECLAIRAGE", name: "Éclairage Public", icon: Lightbulb, color: "from-slate-600 to-slate-400", iconColor: "text-amber-400" },
-    { id: "PROPRETE", name: "Propreté / Déchets", icon: Trash, color: "from-red-400 to-red-300", iconColor: "text-red-400" },
-    { id: "EAU", name: "Eau / Assainissement", icon: Droplets, color: "from-blue-400 to-blue-300", iconColor: "text-blue-400" },
-    { id: "ESPACES_VERTS", name: "Espaces verts", icon: TreePine, color: "from-emerald-400 to-emerald-700", iconColor: "text-emerald-400" },
-    { id: "TRANSPORTS", name: "Transports / Mobilité", icon: Bus, color: "from-slate-400 to-slate-800", iconColor: "text-purple-400" },
-    { id: "SECURITE", name: "Sécurité / Prévention", icon: Shield, color: "from-red-300 to-red-500", iconColor: "text-slate-400" },
-    { id: "URBANISME", name: "Urbanisme", icon: Building2, color: "from-blue-300 to-blue-500", iconColor: "text-cyan-400" }
+    { id: "VOIRIE", name: "Voirie / Routes", icon: Road, color: "from-orange-500 to-orange-400", iconColor: "text-orange-400" },
+    { id: "ECLAIRAGE", name: "Éclairage Public", icon: Lightbulb, color: "from-yellow-500 to-yellow-400", iconColor: "text-yellow-400" },
+    { id: "PROPRETE", name: "Propreté / Déchets", icon: Trash, color: "from-red-500 to-red-400", iconColor: "text-red-400" },
+    { id: "EAU", name: "Eau / Assainissement", icon: Droplets, color: "from-blue-500 to-blue-400", iconColor: "text-blue-400" },
+    { id: "ESPACES_VERTS", name: "Espaces verts", icon: TreePine, color: "from-emerald-500 to-emerald-400", iconColor: "text-emerald-400" },
+    { id: "TRANSPORTS", name: "Transports / Mobilité", icon: Bus, color: "from-purple-500 to-purple-400", iconColor: "text-purple-400" },
+    { id: "SECURITE", name: "Sécurité / Prévention", icon: Shield, color: "from-slate-500 to-slate-400", iconColor: "text-slate-400" },
+    { id: "URBANISME", name: "Urbanisme", icon: Building2, color: "from-cyan-500 to-cyan-400", iconColor: "text-cyan-400" }
   ];
 
-  // Obtenir la couleur du statut
   const getStatusColor = (statut) => {
     const colors = {
-      'EN_ATTENTE': 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-      'EN_COURS': 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-      'RESOLU': 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-      'TRAITE': 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+      'EN_ATTENTE': 'text-amber-400 bg-amber-500/10 border-amber-500/20',
+      'EN_COURS': 'text-blue-400 bg-blue-500/10 border-blue-500/20',
+      'RESOLU': 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
+      'TRAITE': 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
     };
-    return colors[statut] || 'bg-gray-500/20 text-gray-300 border-gray-500/30';
+    return colors[statut] || 'text-gray-400 bg-gray-500/10 border-gray-500/20';
   };
 
   const getStatusIcon = (statut) => {
@@ -106,14 +102,13 @@ export default function Signaler() {
 
   const getStatusBadgeStyle = (statut) => {
     const styles = {
-      'EN_ATTENTE': 'bg-amber-500/20 text-amber-300',
-      'EN_COURS': 'bg-blue-500/20 text-blue-300',
-      'RESOLU': 'bg-green-500/20 text-green-300'
+      'EN_ATTENTE': 'bg-amber-500/10 text-amber-400',
+      'EN_COURS': 'bg-blue-500/10 text-blue-400',
+      'RESOLU': 'bg-emerald-500/10 text-emerald-400'
     };
-    return styles[statut] || 'bg-gray-500/20 text-gray-300';
+    return styles[statut] || 'bg-gray-500/10 text-gray-400';
   };
 
-  // Fonction pour extraire le quartier à partir des données Nominatim
   const extractQuartierInfo = (data) => {
     const quartierKeywords = [
       '67ha', '67 hectares', 'Isotry', 'Tsaralalana', 'Mahamasina',
@@ -154,7 +149,6 @@ export default function Signaler() {
     return { quartier, fokontany, lieuDit };
   };
 
-  // Fonction de géocodage inverse améliorée avec quartier
   const getDetailedAddressFromCoordinates = async (lat, lng) => {
     setIsLoadingAddress(true);
     try {
@@ -165,8 +159,6 @@ export default function Signaler() {
         { headers: { 'User-Agent': 'SmartCityApp/1.0' } }
       );
       const data = await response.json();
-      
-      console.log("📍 Données Nominatim détaillées:", data);
       
       if (data && data.address) {
         const addr = data.address;
@@ -225,7 +217,6 @@ export default function Signaler() {
     }
   };
 
-  // Fonction de géolocalisation améliorée avec précision maximale
   const getGeolocation = () => {
     setIsGettingLocation(true);
     setLocationAccuracy(null);
@@ -299,7 +290,6 @@ export default function Signaler() {
     );
   };
 
-  // Fonctions pour la saisie manuelle
   const activateManualMode = () => {
     setIsManualLocation(true);
     if (formData.address) {
@@ -430,7 +420,6 @@ export default function Signaler() {
     fetchCurrentUser();
   }, []);
 
-  // Fonction de filtrage
   useEffect(() => {
     let filtered = [...signalements];
     
@@ -542,8 +531,6 @@ export default function Signaler() {
       statut: "EN_ATTENTE",
       images: images.map(img => ({ url: img.url }))
     };
-
-    console.log("📤 Payload envoyé:", payload);
 
     try {
       const res = await fetch(url, { 
@@ -694,40 +681,41 @@ export default function Signaler() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 relative overflow-hidden">
-      
+    <div className="min-h-screen bg-[#0f0f1a]">
       {/* Modal de confirmation */}
       {showModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl">
+          <div className="bg-[#1a1a2e] rounded-2xl p-6 max-w-sm w-full border border-white/10">
             <div className="text-center">
-              <div className={`mx-auto w-14 h-14 rounded-full flex items-center justify-center mb-4 ${isSuccess ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
+              <div className={`mx-auto w-14 h-14 rounded-full flex items-center justify-center mb-4 ${
+                isSuccess ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
+              }`}>
                 {isSuccess ? <Shield className="w-7 h-7" /> : deleteConfirmId ? <div className="text-2xl font-bold">?</div> : <div className="text-2xl font-bold">!</div>}
               </div>
-              <h3 className={`text-lg font-bold mb-2 ${isSuccess ? 'text-slate-900' : deleteConfirmId ? 'text-amber-600' : 'text-red-600'}`}>
+              <h3 className={`text-lg font-bold mb-2 ${isSuccess ? 'text-emerald-400' : deleteConfirmId ? 'text-amber-400' : 'text-red-400'}`}>
                 {isSuccess ? "Succès" : deleteConfirmId ? "Confirmation" : "Information"}
               </h3>
-              <p className="text-slate-600 text-sm mb-6 whitespace-pre-line">{message}</p>
+              <p className="text-white/60 text-sm mb-6 whitespace-pre-line">{message}</p>
               {deleteConfirmId ? (
                 <div className="flex gap-3">
-                  <button onClick={() => { setDeleteConfirmId(null); setShowModal(false); }} className="flex-1 py-2 rounded-xl font-semibold bg-slate-100">Annuler</button>
-                  <button onClick={handleDelete} className="flex-1 py-2 rounded-xl font-semibold text-white bg-red-500">Supprimer</button>
+                  <button onClick={() => { setDeleteConfirmId(null); setShowModal(false); }} className="flex-1 py-2 rounded-xl font-semibold bg-white/5 text-white/60 hover:bg-white/10 transition">Annuler</button>
+                  <button onClick={handleDelete} className="flex-1 py-2 rounded-xl font-semibold text-white bg-red-500/80 hover:bg-red-500 transition">Supprimer</button>
                 </div>
               ) : (
-                <button onClick={() => setShowModal(false)} className={`w-full py-2 rounded-xl font-semibold text-white ${isSuccess ? 'bg-emerald-500' : 'bg-slate-800'}`}>Fermer</button>
+                <button onClick={() => setShowModal(false)} className={`w-full py-2 rounded-xl font-semibold text-white ${isSuccess ? 'bg-emerald-500/80 hover:bg-emerald-500' : 'bg-white/10 hover:bg-white/20'} transition`}>Fermer</button>
               )}
             </div>
           </div>
         </div>
       )}
 
-      {/* Modal de détail du signalement avec carrousel */}
+      {/* Modal de détail */}
       {showDetailModal && selectedSignalement && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md animate-fade-in">
-          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-white/20 animate-modal-pop custom-scrollbar">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl animate-fade-in">
+          <div className="bg-[#1a1a2e] rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-white/10 animate-modal-pop custom-scrollbar">
             
             {selectedSignalement.images && selectedSignalement.images.length > 0 && (
-              <div className="relative h-64 md:h-96 overflow-hidden rounded-t-2xl bg-slate-900/50">
+              <div className="relative h-64 md:h-96 overflow-hidden rounded-t-2xl bg-[#0f0f1a]">
                 <img 
                   src={selectedSignalement.images[currentImageIndex].url} 
                   className="w-full h-full object-contain transition-opacity duration-300" 
@@ -736,10 +724,10 @@ export default function Signaler() {
                 
                 {selectedSignalement.images.length > 1 && (
                   <>
-                    <button onClick={prevImage} className="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-black/50 rounded-full hover:bg-black/70 transition text-white z-20">
+                    <button onClick={prevImage} className="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-black/50 rounded-full hover:bg-black/70 transition text-white/60 hover:text-white z-20">
                       <ChevronLeft size={24} />
                     </button>
-                    <button onClick={nextImage} className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-black/50 rounded-full hover:bg-black/70 transition text-white z-20">
+                    <button onClick={nextImage} className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-black/50 rounded-full hover:bg-black/70 transition text-white/60 hover:text-white z-20">
                       <ChevronRight size={24} />
                     </button>
                     
@@ -750,8 +738,8 @@ export default function Signaler() {
                           onClick={() => setCurrentImageIndex(idx)}
                           className={`w-2 h-2 rounded-full transition-all ${
                             idx === currentImageIndex 
-                              ? 'bg-emerald-500 w-6' 
-                              : 'bg-white/50 hover:bg-white/70'
+                              ? 'bg-blue-400 w-6' 
+                              : 'bg-white/30 hover:bg-white/50'
                           }`}
                         />
                       ))}
@@ -759,7 +747,7 @@ export default function Signaler() {
                   </>
                 )}
                 
-                <button onClick={closeDetailModal} className="absolute top-4 right-4 p-2 bg-black/50 rounded-full hover:bg-black/70 transition text-white z-20">
+                <button onClick={closeDetailModal} className="absolute top-4 right-4 p-2 bg-black/50 rounded-full hover:bg-black/70 transition text-white/60 hover:text-white z-20">
                   <X size={20} />
                 </button>
               </div>
@@ -774,7 +762,7 @@ export default function Signaler() {
                       return <Icon size={20} className="text-white" />;
                     })()}
                   </div>
-                  <span className="text-emerald-400 font-medium">{selectedSignalement.type}</span>
+                  <span className="text-white/60 text-sm font-medium">{selectedSignalement.type}</span>
                 </div>
                 <span className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border ${getStatusColor(selectedSignalement.statut)}`}>
                   {(() => {
@@ -788,57 +776,47 @@ export default function Signaler() {
               <h2 className="text-2xl font-bold text-white">{selectedSignalement.titre}</h2>
               
               <div>
-                <h3 className="text-white/70 text-sm font-medium mb-2">Description</h3>
-                <p className="text-white/80 text-sm leading-relaxed">{selectedSignalement.description}</p>
+                <h3 className="text-white/40 text-xs font-medium mb-2 uppercase tracking-wider">Description</h3>
+                <p className="text-white/60 text-sm leading-relaxed">{selectedSignalement.description}</p>
               </div>
               
-              {/* Section localisation détaillée */}
               <div>
-                <h3 className="text-white/70 text-sm font-medium mb-2 flex items-center gap-2">
+                <h3 className="text-white/40 text-xs font-medium mb-2 uppercase tracking-wider flex items-center gap-2">
                   <MapPin size={14} />
-                  Localisation détaillée
+                  Localisation
                 </h3>
-                <div className="bg-white/5 rounded-lg p-3 space-y-2">
+                <div className="bg-white/5 rounded-lg p-3 space-y-2 border border-white/5">
                   {selectedSignalement.quartier && (
                     <div className="flex items-start gap-2">
-                      <Building2 size={14} className="text-emerald-400 mt-0.5" />
+                      <Building2 size={14} className="text-blue-400 mt-0.5" />
                       <div>
-                        <span className="text-white/40 text-xs">Quartier</span>
+                        <span className="text-white/30 text-[10px]">Quartier</span>
                         <p className="text-white text-sm">{selectedSignalement.quartier}</p>
                       </div>
                     </div>
                   )}
                   {selectedSignalement.rue && (
                     <div className="flex items-start gap-2">
-                      <MapPin size={14} className="text-emerald-400 mt-0.5" />
+                      <MapPin size={14} className="text-blue-400 mt-0.5" />
                       <div>
-                        <span className="text-white/40 text-xs">Rue/Route</span>
+                        <span className="text-white/30 text-[10px]">Rue/Route</span>
                         <p className="text-white text-sm">{selectedSignalement.rue}</p>
                       </div>
                     </div>
                   )}
-                  {selectedSignalement.lieuDit && (
-                    <div className="flex items-start gap-2">
-                      <Home size={14} className="text-emerald-400 mt-0.5" />
-                      <div>
-                        <span className="text-white/40 text-xs">Lieu-dit</span>
-                        <p className="text-white text-sm">{selectedSignalement.lieuDit}</p>
-                      </div>
-                    </div>
-                  )}
                   <div className="flex items-start gap-2">
-                    <MapPin size={14} className="text-emerald-400 mt-0.5" />
+                    <MapPin size={14} className="text-blue-400 mt-0.5" />
                     <div>
-                      <span className="text-white/40 text-xs">Ville/Commune</span>
+                      <span className="text-white/30 text-[10px]">Ville</span>
                       <p className="text-white text-sm">{selectedSignalement.ville || selectedSignalement.commune || "Fianarantsoa"}</p>
                     </div>
                   </div>
                   {selectedSignalement.latitude && selectedSignalement.longitude && (
-                    <div className="flex items-start gap-2 pt-2 border-t border-white/10">
+                    <div className="flex items-start gap-2 pt-2 border-t border-white/5">
                       <Target size={14} className="text-blue-400 mt-0.5" />
                       <div>
-                        <span className="text-white/40 text-xs">Coordonnées GPS</span>
-                        <p className="text-white/60 text-xs font-mono">
+                        <span className="text-white/30 text-[10px]">Coordonnées GPS</span>
+                        <p className="text-white/40 text-xs font-mono">
                           {parseFloat(selectedSignalement.latitude).toFixed(6)}, {parseFloat(selectedSignalement.longitude).toFixed(6)}
                         </p>
                       </div>
@@ -848,31 +826,31 @@ export default function Signaler() {
               </div>
               
               <div className="grid grid-cols-2 gap-3">
-                <div className="bg-white/5 rounded-lg p-3">
-                  <div className="flex items-center gap-2 text-white/50 text-xs mb-1">
+                <div className="bg-white/5 rounded-lg p-3 border border-white/5">
+                  <div className="flex items-center gap-2 text-white/30 text-[10px] uppercase tracking-wider mb-1">
                     <Calendar size={12} />
-                    <span>Date de publication</span>
+                    <span>Date</span>
                   </div>
                   <p className="text-white text-sm">{formatDate(selectedSignalement.dateCreation)}</p>
                 </div>
-                <div className="bg-white/5 rounded-lg p-3">
-                  <div className="flex items-center gap-2 text-white/50 text-xs mb-1">
+                <div className="bg-white/5 rounded-lg p-3 border border-white/5">
+                  <div className="flex items-center gap-2 text-white/30 text-[10px] uppercase tracking-wider mb-1">
                     <User size={12} />
-                    <span>Publié par</span>
+                    <span>Auteur</span>
                   </div>
                   <p className="text-white text-sm">{selectedSignalement.utilisateur?.nom || "Anonyme"}</p>
                 </div>
               </div>
               
               {(canEdit(selectedSignalement) || canDelete(selectedSignalement)) && (
-                <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
+                <div className="flex justify-end gap-3 pt-4 border-t border-white/5">
                   {canEdit(selectedSignalement) && (
-                    <button onClick={() => { closeDetailModal(); handleEdit(selectedSignalement); }} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white transition">
+                    <button onClick={() => { closeDetailModal(); handleEdit(selectedSignalement); }} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 transition text-sm font-medium">
                       <Edit2 size={16} /> Modifier
                     </button>
                   )}
                   {canDelete(selectedSignalement) && (
-                    <button onClick={() => { closeDetailModal(); confirmDelete(selectedSignalement.id); }} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-400 hover:bg-red-500 text-white transition">
+                    <button onClick={() => { closeDetailModal(); confirmDelete(selectedSignalement.id); }} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 transition text-sm font-medium">
                       <Trash2 size={16} /> Supprimer
                     </button>
                   )}
@@ -883,20 +861,20 @@ export default function Signaler() {
         </div>
       )}
       
-      <div className="relative z-10 container mx-auto max-w-6xl">
+      <div className="container mx-auto max-w-6xl px-4 py-6">
         
         {/* Formulaire de signalement */}
-        <div className="relative bg-white/10 backdrop-blur-xl rounded-2xl border border-white/30 overflow-hidden mb-8">
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-600 to-teal-500" />
+        <div className="relative bg-[#1a1a2e] rounded-2xl border border-white/5 overflow-hidden mb-8">
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-blue-500 to-emerald-500" />
           
-          <div className="relative p-6 md:p-10">
-            <form onSubmit={handleSubmit} className="relative z-10 space-y-4">
+          <div className="relative p-6 md:p-8">
+            <form onSubmit={handleSubmit} className="relative space-y-5">
               <div className="text-center">
-                <h2 className="text-2xl font-bold text-white flex items-center justify-center gap-2">
-                  {editingId ? <Edit2 size={24} className="text-emerald-400" /> : <Camera size={24} className="text-emerald-400" />}
+                <h2 className="text-xl font-bold text-white flex items-center justify-center gap-2">
+                  {editingId ? <Edit2 size={22} className="text-blue-400" /> : <Camera size={22} className="text-blue-400" />}
                   {editingId ? "Modifier le signalement" : "Nouveau signalement"}
                 </h2>
-                <p className="text-white/60 text-sm">Signalez un problème à Madagascar</p>
+                <p className="text-white/30 text-sm">Signalez un problème à Madagascar</p>
               </div>
 
               <div>
@@ -905,7 +883,7 @@ export default function Signaler() {
                   placeholder="Titre du signalement *" 
                   value={formData.titre || ""} 
                   onChange={(e) => handleFieldChange('titre', e.target.value)} 
-                  className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/50 focus:outline-none focus:border-emerald-500" 
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50 transition" 
                 />
                 {errors.titre && <p className="text-red-400 text-xs mt-1">{errors.titre}</p>}
               </div>
@@ -919,11 +897,15 @@ export default function Signaler() {
                       key={category.id} 
                       type="button" 
                       onClick={() => setFormData({...formData, type: category.id})} 
-                      className={`p-3 rounded-xl transition ${isSelected ? `bg-gradient-to-r ${category.color} text-white shadow-lg` : 'bg-white/10 border border-white/20 text-white/70'}`}
+                      className={`p-3 rounded-xl transition-all duration-300 ${
+                        isSelected 
+                          ? `bg-gradient-to-r ${category.color} text-white shadow-lg scale-[1.02]` 
+                          : 'bg-white/5 border border-white/10 text-white/40 hover:bg-white/10'
+                      }`}
                     >
                       <div className="flex flex-col items-center gap-1">
-                        <Icon size={20} />
-                        <span className="text-xs">{category.name.split(' ')[0]}</span>
+                        <Icon size={18} className={isSelected ? "text-white" : category.iconColor} />
+                        <span className="text-[10px]">{category.name.split(' ')[0]}</span>
                       </div>
                     </button>
                   );
@@ -936,25 +918,25 @@ export default function Signaler() {
                   value={formData.description || ""} 
                   onChange={(e) => handleFieldChange('description', e.target.value)} 
                   rows="3" 
-                  className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/50 focus:outline-none focus:border-emerald-500" 
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50 transition" 
                 />
                 {errors.description && <p className="text-red-400 text-xs mt-1">{errors.description}</p>}
               </div>
 
-              {/* Localisation avec saisie manuelle */}
+              {/* Localisation */}
               <div className="space-y-3">
-                <label className="text-white/80 text-sm flex items-center gap-2">
-                  <LocateFixed size={16} className="text-emerald-400" />
+                <label className="text-white/40 text-xs uppercase tracking-wider flex items-center gap-2">
+                  <LocateFixed size={14} className="text-blue-400" />
                   Localisation précise *
                 </label>
                 
                 {!isManualLocation ? (
-                  <>
+                  <div className="space-y-2">
                     <button 
                       type="button" 
                       onClick={getGeolocation}
                       disabled={isGettingLocation}
-                      className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-bold py-3 rounded-xl transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full flex items-center justify-center gap-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 font-medium py-3 rounded-xl transition border border-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isGettingLocation ? (
                         <>
@@ -972,93 +954,88 @@ export default function Signaler() {
                     <button
                       type="button"
                       onClick={activateManualMode}
-                      className="w-full flex items-center justify-center gap-2 bg-white/10 border border-white/20 hover:bg-white/20 text-white font-medium py-2 rounded-xl transition"
+                      className="w-full flex items-center justify-center gap-2 bg-white/5 border border-white/10 hover:bg-white/10 text-white/60 font-medium py-2.5 rounded-xl transition"
                     >
                       <MapPin size={16} />
                       Saisir manuellement l'adresse
                     </button>
-                  </>
+                  </div>
                 ) : (
-                  <div className="bg-gradient-to-r from-amber-600/20 to-orange-600/20 rounded-xl p-4 border border-amber-500/30">
+                  <div className="bg-amber-500/10 rounded-xl p-4 border border-amber-500/20">
                     <div className="flex justify-between items-center mb-3">
                       <p className="text-amber-400 text-sm flex items-center gap-2 font-medium">
                         <MapPin size={16} />
-                        Saisie manuelle de l'adresse :
+                        Saisie manuelle
                       </p>
                       <button
                         type="button"
                         onClick={reactivateGpsMode}
-                        className="text-emerald-400 hover:text-emerald-300 text-xs flex items-center gap-1"
+                        className="text-blue-400 hover:text-blue-300 text-xs flex items-center gap-1"
                       >
                         <LocateFixed size={12} />
-                        Réactiver GPS
+                        GPS
                       </button>
                     </div>
                     
                     <div className="space-y-3">
                       <div>
-                        <label className="text-white/60 text-xs mb-1 block">Quartier *</label>
+                        <label className="text-white/40 text-[10px] uppercase tracking-wider mb-1 block">Quartier *</label>
                         <input
                           type="text"
-                          placeholder="Ex: Soanierana, 67ha, Isotry..."
+                          placeholder="Ex: Soanierana, 67ha..."
                           value={manualQuartier}
                           onChange={(e) => setManualQuartier(e.target.value)}
-                          className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-white text-sm placeholder-white/30 focus:outline-none focus:border-amber-500"
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white text-sm placeholder-white/20 focus:outline-none focus:border-amber-500/50"
                         />
                       </div>
                       
                       <div>
-                        <label className="text-white/60 text-xs mb-1 block">Rue / Route</label>
+                        <label className="text-white/40 text-[10px] uppercase tracking-wider mb-1 block">Rue / Route</label>
                         <input
                           type="text"
-                          placeholder="Nom de la rue ou route"
+                          placeholder="Nom de la rue"
                           value={manualRue}
                           onChange={(e) => setManualRue(e.target.value)}
-                          className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-white text-sm placeholder-white/30 focus:outline-none focus:border-amber-500"
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white text-sm placeholder-white/20 focus:outline-none focus:border-amber-500/50"
                         />
                       </div>
                       
                       <div>
-                        <label className="text-white/60 text-xs mb-1 block">Ville *</label>
+                        <label className="text-white/40 text-[10px] uppercase tracking-wider mb-1 block">Ville *</label>
                         <input
                           type="text"
-                          placeholder="Ex: Fianarantsoa, Antananarivo..."
+                          placeholder="Ex: Fianarantsoa"
                           value={manualVille}
                           onChange={(e) => setManualVille(e.target.value)}
-                          className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-white text-sm placeholder-white/30 focus:outline-none focus:border-amber-500"
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="text-white/60 text-xs mb-1 block">Adresse complète (optionnel)</label>
-                        <textarea
-                          placeholder="Description complète de l'adresse..."
-                          value={manualAddress}
-                          onChange={(e) => setManualAddress(e.target.value)}
-                          rows="2"
-                          className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-white text-sm placeholder-white/30 focus:outline-none focus:border-amber-500"
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white text-sm placeholder-white/20 focus:outline-none focus:border-amber-500/50"
                         />
                       </div>
                       
                       <button
                         type="button"
                         onClick={updateManualAddress}
-                        className="w-full bg-amber-600 hover:bg-amber-500 text-white font-medium py-2 rounded-xl transition flex items-center justify-center gap-2"
+                        className="w-full bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 font-medium py-2 rounded-xl transition"
                       >
-                        <CheckCircleIcon size={16} />
+                        <CheckCircleIcon size={16} className="inline mr-2" />
                         Valider l'adresse
                       </button>
                     </div>
                   </div>
                 )}
                 
-                {/* Affichage de la localisation détectée ou saisie */}
-                {formData.address && !isManualLocation && (
-                  <div className="bg-gradient-to-r from-emerald-600/20 to-blue-600/20 rounded-xl p-4 border border-emerald-500/30">
-                    <div className="flex justify-between items-start mb-3">
-                      <p className="text-emerald-400 text-sm flex items-center gap-2 font-medium">
-                        <MapPin size={16} />
-                        Localisation détectée :
+                {/* Affichage localisation */}
+                {formData.address && (
+                  <div className={`rounded-xl p-4 border ${
+                    isManualLocation 
+                      ? 'bg-amber-500/5 border-amber-500/20' 
+                      : 'bg-blue-500/5 border-blue-500/20'
+                  }`}>
+                    <div className="flex justify-between items-start mb-2">
+                      <p className={`text-sm flex items-center gap-2 font-medium ${
+                        isManualLocation ? 'text-amber-400' : 'text-blue-400'
+                      }`}>
+                        <MapPin size={14} />
+                        {isManualLocation ? 'Adresse saisie' : 'Localisation détectée'}
                       </p>
                       <button
                         type="button"
@@ -1074,144 +1051,32 @@ export default function Signaler() {
                             lieuDit: "",
                             rue: ""
                           });
+                          if (isManualLocation) {
+                            setManualAddress("");
+                            setManualQuartier("");
+                            setManualRue("");
+                            setManualVille("");
+                          }
                         }}
-                        className="text-red-400 hover:text-red-300 text-xs"
+                        className="text-red-400/60 hover:text-red-400 text-[10px]"
                       >
                         Effacer
                       </button>
                     </div>
                     
-                    <div className="space-y-2">
+                    <div className="space-y-1 text-sm">
                       {formData.quartier && (
-                        <div className="flex items-start gap-2">
-                          <Building2 size={14} className="text-emerald-400 mt-0.5" />
-                          <div>
-                            <span className="text-white/40 text-[10px]">Quartier</span>
-                            <p className="text-white text-sm font-medium">{formData.quartier}</p>
-                          </div>
-                        </div>
+                        <p className="text-white"><span className="text-white/30">Quartier:</span> {formData.quartier}</p>
                       )}
-                      
                       {formData.rue && (
-                        <div className="flex items-start gap-2">
-                          <MapPin size={14} className="text-emerald-400 mt-0.5" />
-                          <div>
-                            <span className="text-white/40 text-[10px]">Rue/Route</span>
-                            <p className="text-white text-sm">{formData.rue}</p>
-                          </div>
-                        </div>
+                        <p className="text-white"><span className="text-white/30">Rue:</span> {formData.rue}</p>
                       )}
-                      
-                      {formData.lieuDit && (
-                        <div className="flex items-start gap-2">
-                          <Home size={14} className="text-emerald-400 mt-0.5" />
-                          <div>
-                            <span className="text-white/40 text-[10px]">Lieu-dit</span>
-                            <p className="text-white text-sm">{formData.lieuDit}</p>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {formData.fokontany && (
-                        <div className="flex items-start gap-2">
-                          <Navigation2 size={14} className="text-emerald-400 mt-0.5" />
-                          <div>
-                            <span className="text-white/40 text-[10px]">Fokontany</span>
-                            <p className="text-white text-sm">{formData.fokontany}</p>
-                          </div>
-                        </div>
-                      )}
-                      
-                      <div className="flex items-start gap-2">
-                        <MapPin size={14} className="text-blue-400 mt-0.5" />
-                        <div>
-                          <span className="text-white/40 text-[10px]">Ville/Commune</span>
-                          <p className="text-white text-sm">{formData.ville} {formData.commune && `(${formData.commune})`}</p>
-                        </div>
-                      </div>
-                      
+                      <p className="text-white"><span className="text-white/30">Ville:</span> {formData.ville}</p>
                       {formData.latitude && formData.longitude && (
-                        <div className="flex items-start gap-2 pt-2 border-t border-white/10">
-                          <Target size={14} className="text-blue-400 mt-0.5" />
-                          <div>
-                            <span className="text-white/40 text-[10px]">Coordonnées GPS</span>
-                            <p className="text-white/60 text-xs font-mono">
-                              {parseFloat(formData.latitude).toFixed(6)}°, {parseFloat(formData.longitude).toFixed(6)}°
-                              {locationAccuracy && <span className="ml-2 text-emerald-400">(précision: ±{Math.round(locationAccuracy)}m)</span>}
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-                
-                {/* Affichage de l'adresse saisie manuellement */}
-                {formData.address && isManualLocation && (
-                  <div className="bg-gradient-to-r from-amber-600/20 to-orange-600/20 rounded-xl p-4 border border-amber-500/30">
-                    <div className="flex justify-between items-start mb-3">
-                      <p className="text-amber-400 text-sm flex items-center gap-2 font-medium">
-                        <MapPin size={16} />
-                        Adresse saisie :
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFormData({
-                            ...formData,
-                            address: "",
-                            quartier: "",
-                            rue: "",
-                            ville: "Fianarantsoa"
-                          });
-                          setManualAddress("");
-                          setManualQuartier("");
-                          setManualRue("");
-                          setManualVille("");
-                        }}
-                        className="text-red-400 hover:text-red-300 text-xs"
-                      >
-                        Effacer
-                      </button>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      {formData.quartier && (
-                        <div className="flex items-start gap-2">
-                          <Building2 size={14} className="text-amber-400 mt-0.5" />
-                          <div>
-                            <span className="text-white/40 text-[10px]">Quartier</span>
-                            <p className="text-white text-sm font-medium">{formData.quartier}</p>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {formData.rue && (
-                        <div className="flex items-start gap-2">
-                          <MapPin size={14} className="text-amber-400 mt-0.5" />
-                          <div>
-                            <span className="text-white/40 text-[10px]">Rue/Route</span>
-                            <p className="text-white text-sm">{formData.rue}</p>
-                          </div>
-                        </div>
-                      )}
-                      
-                      <div className="flex items-start gap-2">
-                        <MapPin size={14} className="text-blue-400 mt-0.5" />
-                        <div>
-                          <span className="text-white/40 text-[10px]">Ville</span>
-                          <p className="text-white text-sm">{formData.ville}</p>
-                        </div>
-                      </div>
-                      
-                      {formData.address && (
-                        <div className="flex items-start gap-2 pt-2 border-t border-white/10">
-                          <Target size={14} className="text-blue-400 mt-0.5" />
-                          <div>
-                            <span className="text-white/40 text-[10px]">Adresse complète</span>
-                            <p className="text-white/60 text-xs">{formData.address}</p>
-                          </div>
-                        </div>
+                        <p className="text-white/40 text-xs font-mono">
+                          {parseFloat(formData.latitude).toFixed(6)}°, {parseFloat(formData.longitude).toFixed(6)}°
+                          {locationAccuracy && <span className="ml-2 text-emerald-400">(±{Math.round(locationAccuracy)}m)</span>}
+                        </p>
                       )}
                     </div>
                   </div>
@@ -1220,10 +1085,10 @@ export default function Signaler() {
 
               {/* Images */}
               <div className="space-y-3">
-                <label className="text-white/80 text-sm flex items-center gap-2">
-                  <Camera size={16} className="text-emerald-400" />
+                <label className="text-white/40 text-xs uppercase tracking-wider flex items-center gap-2">
+                  <Camera size={14} className="text-blue-400" />
                   Images *
-                  <span className="text-white/40 text-xs">(au moins 1 image requise)</span>
+                  <span className="text-white/20 text-[10px]">(au moins 1)</span>
                 </label>
                 
                 <div className="flex gap-2">
@@ -1232,14 +1097,14 @@ export default function Signaler() {
                     placeholder="URL de l'image" 
                     value={formData.imageUrl || ""} 
                     onChange={(e) => setFormData({...formData, imageUrl: e.target.value})} 
-                    className="flex-1 bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/50 focus:outline-none focus:border-emerald-500"
+                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50 transition"
                   />
                   <button 
                     type="button" 
                     onClick={addImage} 
-                    className="bg-emerald-600 hover:bg-emerald-500 text-white px-5 rounded-xl transition"
+                    className="bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 px-5 rounded-xl transition font-medium"
                   >
-                    Ajouter
+                    <Plus size={18} />
                   </button>
                 </div>
               </div>
@@ -1252,11 +1117,11 @@ export default function Signaler() {
                 <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar">
                   {images.map((img, i) => (
                     <div key={i} className="relative flex-shrink-0 group">
-                      <img src={img.url} className="w-20 h-20 object-cover rounded-lg border border-white/20" alt={`Image ${i+1}`} />
+                      <img src={img.url} className="w-20 h-20 object-cover rounded-lg border border-white/10" alt={`Image ${i+1}`} />
                       <button 
                         type="button" 
                         onClick={() => removeImage(i)} 
-                        className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1 hover:bg-red-600 transition opacity-0 group-hover:opacity-100"
+                        className="absolute -top-2 -right-2 bg-red-500/80 rounded-full p-1 hover:bg-red-500 transition opacity-0 group-hover:opacity-100"
                       >
                         <X size={12} className="text-white" />
                       </button>
@@ -1265,19 +1130,19 @@ export default function Signaler() {
                 </div>
               )}
 
-              <div className="flex gap-3 pt-4">
+              <div className="flex gap-3 pt-4 border-t border-white/5">
                 <button 
                   type="submit" 
-                  className="flex-1 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 hover:shadow-lg hover:scale-[1.02] transform duration-200"
+                  className="flex-1 bg-gradient-to-r from-blue-500/20 to-emerald-500/20 hover:from-blue-500/30 hover:to-emerald-500/30 text-white font-medium py-3 rounded-xl transition flex items-center justify-center gap-2 border border-white/10"
                 >
-                  <Send size={18}/> {editingId ? "Mettre à jour" : "Envoyer le signalement"}
+                  <Send size={18}/> {editingId ? "Mettre à jour" : "Envoyer"}
                 </button>
                 
                 {editingId && (
                   <button
                     type="button"
                     onClick={handleCancelEdit}
-                    className="flex-1 bg-gray-600/50 hover:bg-gray-600 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2"
+                    className="flex-1 bg-white/5 hover:bg-white/10 text-white/60 font-medium py-3 rounded-xl transition flex items-center justify-center gap-2"
                   >
                     <X size={18} /> Annuler
                   </button>
@@ -1291,40 +1156,66 @@ export default function Signaler() {
         <div className="mb-6 space-y-3">
           <div className="flex gap-3">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/40 w-4 h-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/20 w-4 h-4" />
               <input
                 type="text"
-                placeholder="Rechercher par titre, description, quartier ou localisation..."
+                placeholder="Rechercher un signalement..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-white/10 border border-white/20 rounded-xl pl-10 pr-4 py-3 text-white placeholder-white/50 focus:outline-none focus:border-emerald-500"
+                className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50 transition"
               />
             </div>
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white hover:bg-white/20 transition flex items-center gap-2"
-            >
-              <Filter size={18} />
-              <span className="hidden sm:inline">Filtres</span>
-            </button>
+            
+            <div className="flex gap-2">
+              <div className="flex bg-white/5 rounded-xl p-0.5 border border-white/5">
+                <button
+                  onClick={() => setViewMode("grid")}
+                  className={`p-2 rounded-lg transition-all ${
+                    viewMode === "grid" ? 'bg-blue-500/20 text-blue-400' : 'text-white/20 hover:text-white/40'
+                  }`}
+                >
+                  <Grid size={16} />
+                </button>
+                <button
+                  onClick={() => setViewMode("list")}
+                  className={`p-2 rounded-lg transition-all ${
+                    viewMode === "list" ? 'bg-blue-500/20 text-blue-400' : 'text-white/20 hover:text-white/40'
+                  }`}
+                >
+                  <List size={16} />
+                </button>
+              </div>
+              
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`p-2.5 rounded-xl border transition-all ${
+                  showFilters 
+                    ? 'bg-blue-500/10 border-blue-500/20 text-blue-400' 
+                    : 'bg-white/5 border-white/10 text-white/20 hover:text-white/40'
+                }`}
+              >
+                <Filter size={16} />
+              </button>
+            </div>
           </div>
           
           {showFilters && (
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-5 border border-white/20">
+            <div className="bg-white/5 rounded-xl p-5 border border-white/10">
               <div className="mb-5">
-                <label className="text-white/70 text-xs font-medium block mb-3 flex items-center gap-2">
-                  <div className="w-1 h-4 bg-emerald-500 rounded-full"></div>
-                  Type de problème
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                <label className="text-white/30 text-[10px] uppercase tracking-wider block mb-3">Type de problème</label>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                   <button
                     onClick={() => setFilterType("TOUS")}
-                    className={`group relative flex flex-col items-center gap-2 p-3 transition-all duration-300 rounded-xl ${filterType === "TOUS" ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-lg scale-[1.02]' : 'bg-white/5 border border-white/20 text-white/70 hover:bg-white/15'}`}
+                    className={`p-3 rounded-xl transition-all ${
+                      filterType === "TOUS" 
+                        ? 'bg-blue-500/20 text-blue-400 border border-blue-500/20' 
+                        : 'bg-white/5 text-white/40 hover:bg-white/10 border border-transparent'
+                    }`}
                   >
-                    <div className={`p-2 rounded-full transition-all ${filterType === "TOUS" ? 'bg-white/20' : 'bg-white/5'}`}>
-                      <Filter size={18} className={filterType === "TOUS" ? "text-white" : "text-emerald-400"} />
+                    <div className="flex flex-col items-center gap-1">
+                      <Filter size={16} />
+                      <span className="text-[10px]">Tous</span>
                     </div>
-                    <span className="text-xs font-medium">Tous</span>
                   </button>
                   {categories.map((cat) => {
                     const Icon = cat.icon;
@@ -1333,12 +1224,16 @@ export default function Signaler() {
                       <button
                         key={cat.id}
                         onClick={() => setFilterType(cat.id)}
-                        className={`group relative flex flex-col items-center gap-2 p-3 transition-all duration-300 rounded-xl ${isSelected ? `bg-gradient-to-r ${cat.color} text-white shadow-lg scale-[1.02]` : 'bg-white/5 border border-white/20 text-white/70 hover:bg-white/15'}`}
+                        className={`p-3 rounded-xl transition-all ${
+                          isSelected 
+                            ? `bg-gradient-to-r ${cat.color} text-white border border-transparent` 
+                            : 'bg-white/5 text-white/40 hover:bg-white/10 border border-transparent'
+                        }`}
                       >
-                        <div className={`p-2 rounded-full transition-all ${isSelected ? 'bg-white/20 scale-110' : 'bg-white/5 group-hover:scale-110'}`}>
-                          <Icon size={18} className={isSelected ? "text-white" : cat.iconColor} />
+                        <div className="flex flex-col items-center gap-1">
+                          <Icon size={16} className={isSelected ? "text-white" : cat.iconColor} />
+                          <span className="text-[10px]">{cat.name.split(' ')[0]}</span>
                         </div>
-                        <span className="text-xs font-medium text-center">{cat.name.split(' ')[0]}</span>
                       </button>
                     );
                   })}
@@ -1346,39 +1241,53 @@ export default function Signaler() {
               </div>
 
               <div className="mb-4">
-                <label className="text-white/70 text-xs font-medium block mb-3 flex items-center gap-2">
-                  <div className="w-1 h-4 bg-emerald-500 rounded-full"></div>
-                  Statut
-                </label>
-                <div className="grid grid-cols-4 gap-3">
-                  <button onClick={() => setFilterStatus("TOUS")} className={`flex items-center justify-center gap-2 py-3 px-4 transition-all duration-300 rounded-xl ${filterStatus === "TOUS" ? 'bg-gradient-to-r from-gray-600 to-gray-500 text-white shadow-lg scale-[1.02]' : 'bg-white/5 border border-white/20 text-white/70 hover:bg-white/15'}`}>
-                    <Filter size={14} />
-                    <span className="text-sm font-medium">Tous</span>
-                  </button>
-                  <button onClick={() => setFilterStatus("EN_ATTENTE")} className={`flex items-center justify-center gap-2 py-3 px-4 transition-all duration-300 rounded-xl ${filterStatus === "EN_ATTENTE" ? 'bg-gradient-to-r from-amber-600 to-amber-500 text-white shadow-lg scale-[1.02]' : 'bg-white/5 border border-white/20 text-white/70 hover:bg-white/15'}`}>
-                    <AlertTriangle size={14} />
-                    <span className="text-sm font-medium">En attente</span>
-                  </button>
-                  <button onClick={() => setFilterStatus("EN_COURS")} className={`flex items-center justify-center gap-2 py-3 px-4 transition-all duration-300 rounded-xl ${filterStatus === "EN_COURS" ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg scale-[1.02]' : 'bg-white/5 border border-white/20 text-white/70 hover:bg-white/15'}`}>
-                    <PlayCircle size={14} />
-                    <span className="text-sm font-medium">En cours</span>
-                  </button>
-                  <button onClick={() => setFilterStatus("RESOLU")} className={`flex items-center justify-center gap-2 py-3 px-4 transition-all duration-300 rounded-xl ${filterStatus === "RESOLU" ? 'bg-gradient-to-r from-green-600 to-green-500 text-white shadow-lg scale-[1.02]' : 'bg-white/5 border border-white/20 text-white/70 hover:bg-white/15'}`}>
-                    <CheckCircle size={14} />
-                    <span className="text-sm font-medium">Résolu</span>
-                  </button>
+                <label className="text-white/30 text-[10px] uppercase tracking-wider block mb-3">Statut</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {['TOUS', 'EN_ATTENTE', 'EN_COURS', 'RESOLU'].map((status) => {
+                    const isSelected = filterStatus === status;
+                    const labels = {
+                      'TOUS': 'Tous',
+                      'EN_ATTENTE': 'En attente',
+                      'EN_COURS': 'En cours',
+                      'RESOLU': 'Résolu'
+                    };
+                    const icons = {
+                      'TOUS': Filter,
+                      'EN_ATTENTE': AlertTriangle,
+                      'EN_COURS': PlayCircle,
+                      'RESOLU': CheckCircle
+                    };
+                    const Icon = icons[status];
+                    const colors = {
+                      'TOUS': 'text-blue-400 border-blue-500/20',
+                      'EN_ATTENTE': 'text-amber-400 border-amber-500/20',
+                      'EN_COURS': 'text-blue-400 border-blue-500/20',
+                      'RESOLU': 'text-emerald-400 border-emerald-500/20'
+                    };
+                    return (
+                      <button
+                        key={status}
+                        onClick={() => setFilterStatus(status)}
+                        className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl transition-all ${
+                          isSelected 
+                            ? `bg-white/10 ${colors[status]} border` 
+                            : 'bg-white/5 text-white/30 hover:bg-white/10 border border-transparent'
+                        }`}
+                      >
+                        <Icon size={14} />
+                        <span className="text-xs">{labels[status]}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
               {(filterType !== "TOUS" || filterStatus !== "TOUS" || searchTerm) && (
-                <div className="mt-4 pt-3 border-t border-white/10 flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                    <span className="text-white/50 text-xs">{filteredSignalements.length} résultat(s) trouvé(s)</span>
-                  </div>
-                  <button onClick={() => { setSearchTerm(""); setFilterType("TOUS"); setFilterStatus("TOUS"); }} className="text-emerald-400 text-xs hover:text-emerald-300 transition-all duration-300 flex items-center gap-1 hover:gap-2">
+                <div className="mt-4 pt-3 border-t border-white/5 flex justify-between items-center">
+                  <span className="text-white/30 text-xs">{filteredSignalements.length} résultat(s)</span>
+                  <button onClick={() => { setSearchTerm(""); setFilterType("TOUS"); setFilterStatus("TOUS"); }} className="text-blue-400/60 hover:text-blue-400 text-xs flex items-center gap-1">
                     <RefreshCw size={12} />
-                    Réinitialiser les filtres
+                    Réinitialiser
                   </button>
                 </div>
               )}
@@ -1389,40 +1298,45 @@ export default function Signaler() {
         {/* Liste des signalements */}
         <div className="space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="text-xl font-bold text-white flex items-center gap-2">
-              <MapPin size={18} />
+            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              <FolderOpen size={18} className="text-blue-400" />
               Tous les signalements
             </h3>
-            <span className="bg-emerald-600/30 text-emerald-300 px-3 py-1 rounded-full text-sm">
-              {filteredSignalements.length} signalement(s)
+            <span className="bg-white/5 text-white/40 px-3 py-1 rounded-full text-xs border border-white/5">
+              {filteredSignalements.length}
             </span>
           </div>
           
           {filteredSignalements.length === 0 ? (
-            <div className="bg-white/10 rounded-2xl p-12 text-center">
-              <p className="text-white/70">Aucun signalement trouvé</p>
+            <div className="bg-white/5 rounded-2xl p-16 text-center border border-white/5">
+              <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Search className="w-8 h-8 text-white/20" />
+              </div>
+              <p className="text-white/30 text-sm">Aucun signalement trouvé</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className={`grid gap-4 ${
+              viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"
+            }`}>
               {filteredSignalements.map((s) => {
                 const category = categories.find(c => c.id === s.type);
                 const Icon = category?.icon || Road;
                 const StatusIcon = getStatusIcon(s.statut);
                 
                 return (
-                  <div key={s.id} className="bg-[#242526] backdrop-blur-xl rounded-2xl border border-white/30 overflow-hidden hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] cursor-pointer group">
+                  <div key={s.id} className="group bg-[#1a1a2e] rounded-xl overflow-hidden border border-white/5 hover:border-white/10 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/5 cursor-pointer">
                     {s.images && s.images[0] && (
                       <div className="relative h-48 overflow-hidden" onClick={() => openDetailModal(s)}>
-                        <img src={s.images[0].url} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" alt={s.titre} />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center">
-                          <span className="text-white bg-emerald-600/80 rounded-xl px-4 py-2 text-sm font-medium opacity-0 group-hover:opacity-100 transition-all duration-300">
+                        <img src={s.images[0].url} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" alt={s.titre} />
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center">
+                          <span className="text-white bg-blue-500/30 backdrop-blur-sm rounded-xl px-4 py-2 text-sm font-medium opacity-0 group-hover:opacity-100 transition-all duration-300 border border-white/10">
                             Voir plus
                           </span>
                         </div>
                         {s.images.length > 1 && (
-                          <div className="absolute bottom-2 right-2 bg-black/60 rounded-full px-2 py-1 text-xs text-white flex items-center gap-1">
-                            <Camera size={10} />
-                            {s.images.length} photos
+                          <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-sm rounded-full px-2 py-1 text-[10px] text-white/60 flex items-center gap-1 border border-white/10">
+                            <ImageIcon size={10} />
+                            {s.images.length}
                           </div>
                         )}
                       </div>
@@ -1432,39 +1346,39 @@ export default function Signaler() {
                       <div className="flex justify-between items-start">
                         <div className="flex items-center gap-2">
                           <div className={`p-1.5 rounded-lg bg-gradient-to-r ${category?.color || 'from-emerald-500 to-green-600'}`}>
-                            <Icon size={14} className="text-white" />
+                            <Icon size={12} className="text-white" />
                           </div>
-                          <span className="text-xs text-emerald-300">{category?.name.split(' ')[0] || s.type}</span>
+                          <span className="text-[10px] text-white/40">{category?.name.split(' ')[0] || s.type}</span>
                         </div>
-                        <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${getStatusBadgeStyle(s.statut)}`}>
+                        <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full ${getStatusBadgeStyle(s.statut)}`}>
                           <StatusIcon size={10} />
                           {getStatusText(s.statut)}
                         </span>
                       </div>
                       
-                      <h4 className="font-bold text-white text-lg line-clamp-1">{s.titre}</h4>
+                      <h4 className="font-bold text-white text-base line-clamp-1 group-hover:text-blue-400 transition-colors">{s.titre}</h4>
                       
                       {s.quartier && (
-                        <div className="flex items-center gap-1 text-emerald-400 text-xs">
+                        <div className="flex items-center gap-1 text-blue-400/60 text-[10px]">
                           <Building2 size={10} />
                           <span>{s.quartier}</span>
                         </div>
                       )}
                       
-                      <p className="text-white/60 text-sm line-clamp-2">{s.description}</p>
+                      <p className="text-white/40 text-sm line-clamp-2">{s.description}</p>
                       
-                      <div className="flex items-start gap-2 text-white/40 text-xs">
+                      <div className="flex items-start gap-2 text-white/20 text-[10px]">
                         <MapPin size={12} className="mt-0.5 flex-shrink-0" />
                         <span className="line-clamp-1">{s.rue || s.address || s.ville || "Fianarantsoa"}</span>
                       </div>
                       
-                      <div className="flex items-center gap-3 text-white/40 text-xs pt-1">
+                      <div className="flex items-center gap-3 text-white/20 text-[10px] pt-1 border-t border-white/5">
                         <div className="flex items-center gap-1">
-                          <Calendar size={12} />
+                          <Calendar size={10} />
                           <span>{formatDate(s.dateCreation)}</span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <User size={12} />
+                          <User size={10} />
                           <span>{s.utilisateur?.nom || "Anonyme"}</span>
                         </div>
                       </div>
@@ -1479,12 +1393,12 @@ export default function Signaler() {
 
       <style>{`
         @keyframes fade-in {
-          from { opacity: 0; }
-          to { opacity: 1; }
+          from { opacity: 0; transform: scale(0.95); }
+          to { opacity: 1; transform: scale(1); }
         }
         @keyframes modal-pop {
-          0% { transform: scale(0.9); opacity: 0; }
-          100% { transform: scale(1); opacity: 1; }
+          0% { transform: scale(0.9) translateY(20px); opacity: 0; }
+          100% { transform: scale(1) translateY(0); opacity: 1; }
         }
         .animate-fade-in { animation: fade-in 0.2s ease-out; }
         .animate-modal-pop { animation: modal-pop 0.3s ease-out; }
@@ -1503,35 +1417,35 @@ export default function Signaler() {
         }
         
         .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-          height: 6px;
+          width: 4px;
+          height: 4px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
-          background: rgba(255, 255, 255, 0.05);
+          background: rgba(255, 255, 255, 0.02);
           border-radius: 10px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(16, 185, 129, 0.4);
+          background: rgba(59, 130, 246, 0.2);
           border-radius: 10px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(16, 185, 129, 0.6);
+          background: rgba(59, 130, 246, 0.4);
         }
         
         *::-webkit-scrollbar {
-          width: 8px;
-          height: 8px;
+          width: 6px;
+          height: 6px;
         }
         *::-webkit-scrollbar-track {
-          background: rgba(255, 255, 255, 0.05);
+          background: rgba(255, 255, 255, 0.02);
           border-radius: 10px;
         }
         *::-webkit-scrollbar-thumb {
-          background: rgba(16, 185, 129, 0.4);
+          background: rgba(59, 130, 246, 0.2);
           border-radius: 10px;
         }
         *::-webkit-scrollbar-thumb:hover {
-          background: rgba(16, 185, 129, 0.6);
+          background: rgba(59, 130, 246, 0.4);
         }
       `}</style>
     </div>

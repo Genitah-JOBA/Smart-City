@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { 
   MapPin, Clock, MessageCircle, Share2, MoreHorizontal, 
   Construction, Lightbulb, Trash2, Droplets, TreePine, 
-  Shield, HelpCircle, X, ChevronLeft, ChevronRight, Image,
+  Shield, HelpCircle, X, ChevronLeft, ChevronRight,
   BarChart3, TrendingUp, CheckCircle2, Activity,
-  AlertTriangle, PlayCircle, Send, Users, Search, Check
+  AlertTriangle, PlayCircle, Send, Users, Search, Check,
+  Sparkles, Eye, Layers, Award, Zap, Camera, 
+  LayoutGrid, List, Grid3x3, Grid
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -14,14 +16,13 @@ export default function Signalements() {
   const [selectedImages, setSelectedImages] = useState(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showStats, setShowStats] = useState(true);
+  const [viewMode, setViewMode] = useState("grid");
 
-  // États pour les commentaires
   const [comments, setComments] = useState({});
   const [showComments, setShowComments] = useState(null);
   const [newComments, setNewComments] = useState({});
   const [shares, setShares] = useState({});
   
-  // États pour le partage
   const [showShareModal, setShowShareModal] = useState(false);
   const [selectedSignalementToShare, setSelectedSignalementToShare] = useState(null);
   const [users, setUsers] = useState([]);
@@ -34,7 +35,6 @@ export default function Signalements() {
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
   const currentUserId = currentUser.id;
 
-  // Récupérer l'utilisateur connecté
   const getCurrentUser = () => {
     try {
       const userStr = localStorage.getItem("user");
@@ -47,11 +47,9 @@ export default function Signalements() {
     return { nom: "Citoyen", prenom: "Anonyme", id: null };
   };
 
-  // Récupérer les utilisateurs depuis la base de données
   const fetchUsers = async () => {
     if (!token) return;
     try {
-      console.log("🔍 Récupération des utilisateurs depuis /api/users...");
       const response = await fetch("http://localhost:8081/api/users", {
         headers: { 
           "Authorization": `Bearer ${token}`,
@@ -61,13 +59,9 @@ export default function Signalements() {
       
       if (response.ok) {
         const data = await response.json();
-        console.log("📋 Utilisateurs récupérés:", data);
-        
         const filteredUsers = data.filter(user => user.id !== currentUserId);
         setUsers(filteredUsers);
-        console.log("👥 Utilisateurs après filtrage:", filteredUsers);
       } else {
-        console.error("Erreur API /api/users:", response.status);
         setUsers([]);
       }
     } catch (error) {
@@ -120,7 +114,6 @@ export default function Signalements() {
     fetchUsers();
   }, []);
 
-  // Charger les données sauvegardées
   useEffect(() => {
     const savedComments = localStorage.getItem("signalements_comments");
     const savedShares = localStorage.getItem("signalements_shares");
@@ -136,7 +129,6 @@ export default function Signalements() {
     }
   }, []);
 
-  // Sauvegarder les commentaires et partages
   useEffect(() => {
     if (Object.keys(comments).length > 0) {
       localStorage.setItem("signalements_comments", JSON.stringify(comments));
@@ -149,7 +141,6 @@ export default function Signalements() {
     }
   }, [shares]);
 
-  // Ajouter un commentaire
   const addComment = (signalementId) => {
     const commentText = newComments[signalementId] || "";
     if (!commentText.trim()) return;
@@ -177,7 +168,6 @@ export default function Signalements() {
     }));
   };
 
-  // Supprimer un commentaire (vérification des droits)
   const deleteComment = (signalementId, commentId, commentUserId) => {
     const signalement = signalements.find(s => s.id === signalementId);
     const isSignalementOwner = signalement && (signalement.utilisateur?.id === currentUserId || signalement.citoyen?.id === currentUserId);
@@ -201,7 +191,6 @@ export default function Signalements() {
     }));
   };
 
-  // Ouvrir la modale de partage
   const openShareModal = (signalement) => {
     setSelectedSignalementToShare(signalement);
     setSelectedUsers([]);
@@ -209,7 +198,6 @@ export default function Signalements() {
     setShowShareModal(true);
   };
 
-  // Ajouter/retirer un utilisateur de la sélection
   const toggleUserSelection = (user) => {
     setSelectedUsers(prev => {
       const isSelected = prev.find(u => u.id === user.id);
@@ -221,11 +209,7 @@ export default function Signalements() {
     });
   };
 
-  // Envoyer le partage via le backend
   const sendSharedMessage = async () => {
-    console.log("🚀 Début de sendSharedMessage");
-    console.log("selectedUsers:", selectedUsers);
-    
     if (selectedUsers.length === 0) {
       alert("Veuillez sélectionner au moins un destinataire");
       return;
@@ -239,8 +223,6 @@ export default function Signalements() {
     
     for (const user of selectedUsers) {
       try {
-        console.log(`📤 Envoi du partage à ${user.email} (ID: ${user.id})`);
-        
         const shareData = {
           signalementId: selectedSignalementToShare.id,
           recipientUserId: user.id,
@@ -259,8 +241,6 @@ export default function Signalements() {
         });
         
         if (response.ok) {
-          const result = await response.json();
-          console.log(`✅ Partagé avec ${user.email}:`, result);
           successCount++;
           
           const share = {
@@ -281,13 +261,11 @@ export default function Signalements() {
           }));
           
         } else {
-          const error = await response.text();
-          console.error(`❌ Erreur pour ${user.email}:`, error);
           alert(`Erreur lors du partage avec ${user.email}`);
         }
         
       } catch (error) {
-        console.error(`❌ Erreur pour ${user.email}:`, error);
+        console.error(`Erreur pour ${user.email}:`, error);
         alert(`Erreur réseau lors du partage avec ${user.email}`);
       }
     }
@@ -310,13 +288,11 @@ export default function Signalements() {
     return comments[signalementId]?.length || 0;
   };
 
-  // Filtrer les utilisateurs par recherche
   const filteredUsers = users.filter(user => {
     const fullName = `${user.prenom || ""} ${user.nom || ""}`.toLowerCase();
     return fullName.includes(searchUserTerm.toLowerCase());
   });
 
-  // Calcul des statistiques
   const stats = {
     total: signalements.length,
     enAttente: signalements.filter(s => s.statut === 'EN_ATTENTE').length,
@@ -337,7 +313,6 @@ export default function Signalements() {
   const tauxResolution = stats.total > 0 ? Math.round((stats.resolus / stats.total) * 100) : 0;
   const tauxPriseEnCharge = stats.total > 0 ? Math.round(((stats.enCours + stats.resolus) / stats.total) * 100) : 0;
 
-  // Gestion de la galerie d'images
   const openImageViewer = (images, startIndex = 0) => {
     setSelectedImages(images);
     setCurrentImageIndex(startIndex);
@@ -452,7 +427,6 @@ export default function Signalements() {
     return texts[statut] || statut;
   };
 
-  // Composant de commentaires avec gestion des droits de suppression
   const CommentsSection = ({ signalementId }) => {
     const signalComments = comments[signalementId] || [];
     const currentComment = newComments[signalementId] || "";
@@ -460,40 +434,40 @@ export default function Signalements() {
     const isSignalementOwner = signalement && (signalement.utilisateur?.id === currentUserId || signalement.citoyen?.id === currentUserId);
     
     return (
-      <div className="border-t border-gray-700/50 mt-3 pt-3">
+      <div className="border-t border-white/5 mt-3 pt-3">
         <div className="space-y-3 max-h-60 overflow-y-auto mb-3 px-1">
           {signalComments.map(comment => {
             const canDelete = comment.userId === currentUserId || isSignalementOwner;
             return (
               <div key={comment.id} className="flex gap-2 group">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-emerald-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500/40 to-emerald-500/40 flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">
                   {comment.avatar}
                 </div>
-                <div className="flex-1 bg-gray-700/30 rounded-lg p-2">
+                <div className="flex-1 bg-white/5 rounded-lg p-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-white text-xs font-medium">{comment.user}</span>
-                    <span className="text-gray-500 text-[10px]">{getRelativeTime(comment.date)}</span>
+                    <span className="text-white/60 text-[10px] font-medium">{comment.user}</span>
+                    <span className="text-white/20 text-[9px]">{getRelativeTime(comment.date)}</span>
                   </div>
-                  <p className="text-gray-300 text-sm mt-1">{comment.text}</p>
+                  <p className="text-white/40 text-xs mt-0.5">{comment.text}</p>
                 </div>
                 {canDelete && (
                   <button 
                     onClick={() => deleteComment(signalementId, comment.id, comment.userId)} 
-                    className="text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition p-1"
+                    className="text-white/20 hover:text-red-400 opacity-0 group-hover:opacity-100 transition p-1"
                   >
-                    <X size={14} />
+                    <X size={12} />
                   </button>
                 )}
               </div>
             );
           })}
           {signalComments.length === 0 && (
-            <p className="text-gray-500 text-xs text-center py-2">Aucun commentaire. Soyez le premier à réagir !</p>
+            <p className="text-white/20 text-[10px] text-center py-2">Aucun commentaire</p>
           )}
         </div>
         
         <div className="flex gap-2 mt-2">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-emerald-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500/40 to-emerald-500/40 flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">
             {getCurrentUser().prenom?.[0] || getCurrentUser().nom?.[0] || "C"}
           </div>
           <div className="flex-1 flex gap-2">
@@ -503,11 +477,10 @@ export default function Signalements() {
               value={currentComment}
               onChange={(e) => updateCommentText(signalementId, e.target.value)}
               onKeyPress={(e) => { if (e.key === 'Enter') addComment(signalementId); }}
-              className="flex-1 bg-gray-700/50 rounded-full px-4 py-2 text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              autoFocus
+              className="flex-1 bg-white/5 rounded-full px-3 py-1.5 text-white text-xs placeholder-white/20 focus:outline-none focus:ring-1 focus:ring-blue-500/30"
             />
-            <button onClick={() => addComment(signalementId)} className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-full text-sm font-medium transition flex items-center gap-1">
-              <Send size={14} /> Envoyer
+            <button onClick={() => addComment(signalementId)} className="bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 px-3 py-1.5 rounded-full text-[10px] font-medium transition">
+              <Send size={12} />
             </button>
           </div>
         </div>
@@ -517,188 +490,119 @@ export default function Signalements() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-10 h-10 border-3 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-400">Chargement des signalements...</p>
+      <div className="min-h-screen bg-[#0f0f1a] flex items-center justify-center">
+        <div className="relative">
+          <div className="w-16 h-16 border-3 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-emerald-500 rounded-full animate-ping opacity-75"></div>
+          </div>
+          <p className="text-blue-400/40 mt-4 text-xs font-medium tracking-[0.3em] text-center animate-pulse">
+            CHARGEMENT
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      {/* Modal de partage */}
-      {showShareModal && selectedSignalementToShare && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => setShowShareModal(false)}>
-          <div className="bg-[#242526] rounded-2xl max-w-md w-full max-h-[85vh] overflow-hidden shadow-2xl border border-gray-700 flex flex-col" onClick={(e) => e.stopPropagation()}>
-            <div className="p-4 border-b border-gray-700 flex justify-between items-center flex-shrink-0">
-              <div className="flex items-center gap-2">
-                <Share2 size={20} className="text-blue-400" />
-                <h2 className="text-white font-bold">Partager le signalement</h2>
+    <div className="min-h-screen bg-[#0f0f1a]">
+      {/* En-tête */}
+      <header className="sticky top-0 z-40 bg-[#1a1a2e]/90 backdrop-blur-xl border-b border-white/5">
+        <div className="container mx-auto max-w-6xl px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-br from-blue-500/20 to-emerald-500/20 rounded-xl border border-blue-500/20">
+                <MapPin className="w-4 h-4 text-blue-400" />
               </div>
-              <button onClick={() => setShowShareModal(false)} className="text-gray-400 hover:text-white p-1 rounded-full hover:bg-gray-700 transition">
-                <X size={20} />
-              </button>
-            </div>
-            
-            <div className="p-4 bg-gray-800/30 border-b border-gray-700">
-              <p className="text-gray-400 text-xs mb-1">Signalement à partager :</p>
-              <p className="text-white font-medium text-sm">{selectedSignalementToShare.titre}</p>
-              <p className="text-gray-400 text-xs mt-1">{selectedSignalementToShare.ville || selectedSignalementToShare.commune || "Localisation"}</p>
-            </div>
-            
-            <div className="p-4 border-b border-gray-700">
-              <div className="relative">
-                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Rechercher un utilisateur..."
-                  value={searchUserTerm}
-                  onChange={(e) => setSearchUserTerm(e.target.value)}
-                  className="w-full bg-gray-800/50 border border-gray-700 rounded-lg pl-10 pr-4 py-2 text-white text-sm placeholder-gray-400 focus:outline-none focus:border-blue-500"
-                />
+              <div>
+                <h1 className="text-base font-bold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
+                  Signalements
+                </h1>
+                <p className="text-white/20 text-[10px] tracking-wider">
+                  {signalements.length} signalement{signalements.length > 1 ? 's' : ''}
+                </p>
               </div>
             </div>
-            
-            <div className="flex-1 overflow-y-auto max-h-80 p-2">
-              {users.length === 0 ? (
-                <div className="text-center py-8">
-                  <Users size={32} className="text-gray-600 mx-auto mb-2" />
-                  <p className="text-gray-500 text-sm">Chargement des utilisateurs...</p>
-                </div>
-              ) : filteredUsers.length === 0 ? (
-                <div className="text-center py-8">
-                  <Users size={32} className="text-gray-600 mx-auto mb-2" />
-                  <p className="text-gray-500 text-sm">Aucun utilisateur trouvé</p>
-                </div>
-              ) : (
-                filteredUsers.map(user => {
-                  const isSelected = selectedUsers.some(u => u.id === user.id);
-                  return (
-                    <button
-                      key={user.id}
-                      onClick={() => toggleUserSelection(user)}
-                      className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all mb-1 ${
-                        isSelected ? 'bg-blue-600/20 border border-blue-500/50' : 'hover:bg-gray-700/50'
-                      }`}
-                    >
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-emerald-500 flex items-center justify-center text-white font-bold">
-                        {(user.prenom?.[0] || user.nom?.[0] || "U").toUpperCase()}
-                      </div>
-                      <div className="flex-1 text-left">
-                        <p className="text-white text-sm font-medium">
-                          {user.prenom || ""} {user.nom || "Utilisateur"}
-                        </p>
-                        <p className="text-gray-500 text-xs">
-                          {user.role === "ADMIN" ? "👑 Administrateur" : user.role === "AGENT" ? "👔 Agent" : "👤 Citoyen"}
-                        </p>
-                      </div>
-                      {isSelected && (
-                        <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center">
-                          <Check size={12} className="text-white" />
-                        </div>
-                      )}
-                    </button>
-                  );
-                })
-              )}
-            </div>
-            
-            <div className="p-4 border-t border-gray-700 flex-shrink-0">
-              <div className="flex justify-between items-center mb-3">
-                <span className="text-gray-400 text-sm">
-                  {selectedUsers.length} utilisateur{selectedUsers.length > 1 ? 's' : ''} sélectionné{selectedUsers.length > 1 ? 's' : ''}
-                </span>
+
+            <div className="flex items-center gap-2">
+              <div className="flex bg-white/5 rounded-xl p-0.5 border border-white/5">
+                {['grid', 'list', 'compact'].map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => setViewMode(mode)}
+                    className={`p-1.5 rounded-lg transition-all duration-300 ${
+                      viewMode === mode 
+                        ? 'bg-blue-500/20 text-blue-400' 
+                        : 'text-white/20 hover:text-white/40 hover:bg-white/5'
+                    }`}
+                  >
+                    {mode === 'grid' && <Grid size={14} />}
+                    {mode === 'list' && <List size={14} />}
+                    {mode === 'compact' && <Grid3x3 size={14} />}
+                  </button>
+                ))}
               </div>
+              
               <button
-                onClick={sendSharedMessage}
-                disabled={isSharing || selectedUsers.length === 0}
-                className={`w-full font-medium py-3 rounded-xl transition flex items-center justify-center gap-2 ${
-                  isSharing || selectedUsers.length === 0
-                    ? 'bg-gray-600 cursor-not-allowed text-white/70'
-                    : 'bg-blue-600 hover:bg-blue-500 text-white'
+                onClick={() => setShowStats(!showStats)}
+                className={`p-1.5 rounded-xl border transition-all duration-300 ${
+                  showStats 
+                    ? 'bg-blue-500/10 border-blue-500/20 text-blue-400' 
+                    : 'bg-white/5 border-white/5 text-white/20 hover:text-white/40'
                 }`}
               >
-                {isSharing ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Envoi en cours...
-                  </>
-                ) : (
-                  <>
-                    <Send size={16} />
-                    Envoyer à {selectedUsers.length} utilisateur{selectedUsers.length > 1 ? 's' : ''}
-                  </>
-                )}
+                <Activity size={14} />
               </button>
             </div>
           </div>
         </div>
-      )}
+      </header>
 
-      {/* Main content */}
-      <main className="container mx-auto max-w-3xl px-4 py-6">
+      <main className="container mx-auto max-w-6xl px-4 py-6">
         {/* Statistiques */}
         {showStats && signalements.length > 0 && (
-          <div className="mb-6 space-y-4">
-            <div className="flex items-center gap-2">
-              <Activity className="w-5 h-5 text-blue-400" />
-              <h2 className="text-lg font-semibold text-white">Vue globale</h2>
+          <div className="mb-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              {[
+                { label: 'Total', value: stats.total, icon: BarChart3, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
+                { label: 'En attente', value: stats.enAttente, icon: AlertTriangle, color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20' },
+                { label: 'En cours', value: stats.enCours, icon: PlayCircle, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
+                { label: 'Résolus', value: stats.resolus, icon: CheckCircle2, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' }
+              ].map((stat, idx) => {
+                const Icon = stat.icon;
+                return (
+                  <div key={idx} className={`bg-white/3 rounded-xl p-3 border ${stat.border}`}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-white/20 text-[9px] font-medium tracking-wider uppercase">{stat.label}</span>
+                      <div className={`p-1.5 rounded-lg ${stat.bg}`}>
+                        <Icon className={`w-3 h-3 ${stat.color}`} />
+                      </div>
+                    </div>
+                    <p className={`text-xl font-bold mt-1 ${stat.color}`}>{stat.value}</p>
+                  </div>
+                );
+              })}
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="bg-[#242526] rounded-xl p-4 border border-gray-700/30">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-gray-400 text-xs">Total</span>
-                  <BarChart3 className="w-4 h-4 text-blue-400" />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+              <div className="bg-white/3 rounded-xl p-3 border border-white/5">
+                <div className="flex items-center justify-between">
+                  <span className="text-white/20 text-[9px] font-medium tracking-wider uppercase">Prise en charge</span>
+                  <span className="text-blue-400 font-bold text-xs">{tauxPriseEnCharge}%</span>
                 </div>
-                <p className="text-2xl font-bold text-white">{stats.total}</p>
-                <p className="text-gray-500 text-xs mt-1">signalements</p>
-              </div>
-              <div className="bg-[#242526] rounded-xl p-4 border border-amber-500/30">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-gray-400 text-xs">En attente</span>
-                  <AlertTriangle className="w-4 h-4 text-amber-400" />
-                </div>
-                <p className="text-2xl font-bold text-amber-400">{stats.enAttente}</p>
-                <p className="text-gray-500 text-xs mt-1">à traiter</p>
-              </div>
-              <div className="bg-[#242526] rounded-xl p-4 border border-blue-500/30">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-gray-400 text-xs">En cours</span>
-                  <PlayCircle className="w-4 h-4 text-blue-400" />
-                </div>
-                <p className="text-2xl font-bold text-blue-400">{stats.enCours}</p>
-                <p className="text-gray-500 text-xs mt-1">en traitement</p>
-              </div>
-              <div className="bg-[#242526] rounded-xl p-4 border border-emerald-500/30">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-gray-400 text-xs">Résolus</span>
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                </div>
-                <p className="text-2xl font-bold text-emerald-400">{stats.resolus}</p>
-                <p className="text-gray-500 text-xs mt-1">traités</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-[#242526] rounded-xl p-4 border border-gray-700/30">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-gray-400 text-xs">Taux de prise en charge</span>
-                  <TrendingUp className="w-4 h-4 text-blue-400" />
-                </div>
-                <p className="text-2xl font-bold text-blue-400">{tauxPriseEnCharge}%</p>
-                <div className="w-full h-1.5 bg-gray-700 rounded-full overflow-hidden mt-2">
-                  <div className="h-full bg-gradient-to-r from-blue-500 to-cyan-400" style={{ width: `${tauxPriseEnCharge}%` }} />
+                <div className="mt-1.5 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full transition-all duration-1000" 
+                       style={{ width: `${tauxPriseEnCharge}%` }} />
                 </div>
               </div>
-              <div className="bg-[#242526] rounded-xl p-4 border border-gray-700/30">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-gray-400 text-xs">Taux de résolution</span>
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              <div className="bg-white/3 rounded-xl p-3 border border-white/5">
+                <div className="flex items-center justify-between">
+                  <span className="text-white/20 text-[9px] font-medium tracking-wider uppercase">Résolution</span>
+                  <span className="text-emerald-400 font-bold text-xs">{tauxResolution}%</span>
                 </div>
-                <p className="text-2xl font-bold text-emerald-400">{tauxResolution}%</p>
-                <div className="w-full h-1.5 bg-gray-700 rounded-full overflow-hidden mt-2">
-                  <div className="h-full bg-gradient-to-r from-emerald-500 to-green-400" style={{ width: `${tauxResolution}%` }} />
+                <div className="mt-1.5 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-emerald-500 to-green-400 rounded-full transition-all duration-1000" 
+                       style={{ width: `${tauxResolution}%` }} />
                 </div>
               </div>
             </div>
@@ -706,96 +610,181 @@ export default function Signalements() {
         )}
 
         {/* Liste des signalements */}
-        <div className="space-y-4">
+        <div className={`grid gap-3 ${
+          viewMode === "grid" ? "grid-cols-1 md:grid-cols-2" :
+          viewMode === "list" ? "grid-cols-1" :
+          "grid-cols-1 md:grid-cols-3"
+        }`}>
           {signalements.length === 0 ? (
-            <div className="bg-[#242526] rounded-xl p-12 text-center">
-              <div className="w-20 h-20 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                <MapPin className="w-10 h-10 text-gray-400" />
+            <div className="col-span-full bg-white/3 rounded-2xl p-12 text-center border border-white/5">
+              <div className="relative w-20 h-20 mx-auto mb-4">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-emerald-500/20 rounded-full animate-pulse"></div>
+                <div className="relative w-20 h-20 bg-gradient-to-br from-blue-500/10 to-emerald-500/10 rounded-full flex items-center justify-center border border-white/10">
+                  <MapPin className="w-8 h-8 text-white/20" />
+                </div>
               </div>
-              <p className="text-gray-300 text-lg font-medium mb-2">Aucun signalement</p>
-              <p className="text-gray-500 text-sm">Soyez le premier à signaler un problème dans votre quartier !</p>
+              <p className="text-white/30 text-sm font-medium mb-1">Aucun signalement</p>
+              <p className="text-white/20 text-xs">Soyez le premier à signaler un problème</p>
             </div>
           ) : (
-            signalements.map((s) => {
+            signalements.map((s, index) => {
               const TypeIcon = getTypeIcon(s.type);
               const StatusIcon = getStatusIcon(s.statut);
               
               return (
-                <article key={s.id} className="bg-[#242526] rounded-xl shadow-lg overflow-hidden">
-                  {/* En-tête */}
-                  <div className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-11 h-11 rounded-full bg-gradient-to-br from-blue-500 to-emerald-500 flex items-center justify-center text-white font-bold text-lg">
-                          {(s.citoyen?.nom?.[0] || s.utilisateur?.nom?.[0] || 'C').toUpperCase()}
+                <article 
+                  key={s.id} 
+                  className={`group relative bg-white/3 rounded-xl overflow-hidden border border-white/5 hover:border-white/10 transition-all duration-300 ${
+                    viewMode === "compact" ? "p-2" : "p-4"
+                  }`}
+                >
+                  {/* Ligne de catégorie */}
+                  <div className={`absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r ${
+                    s.type === 'VOIRIE' ? 'from-orange-500 to-orange-400' :
+                    s.type === 'ECLAIRAGE' ? 'from-yellow-500 to-yellow-400' :
+                    s.type === 'DECHETS' ? 'from-red-500 to-red-400' :
+                    s.type === 'EAU' ? 'from-blue-500 to-blue-400' :
+                    s.type === 'ESPACES_VERTS' ? 'from-green-500 to-green-400' :
+                    s.type === 'SECURITE' ? 'from-purple-500 to-purple-400' :
+                    'from-gray-500 to-gray-400'
+                  }`} />
+
+                  <div className={`${viewMode === "compact" ? "p-2" : "p-3"}`}>
+                    {/* En-tête */}
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="relative flex-shrink-0">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500/30 to-emerald-500/30 flex items-center justify-center text-blue-400 font-bold text-xs border border-white/10">
+                            {(s.citoyen?.nom?.[0] || s.utilisateur?.nom?.[0] || 'C').toUpperCase()}
+                          </div>
+                          <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500/60 rounded-full border-2 border-[#0f0f1a]"></div>
                         </div>
-                        <div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="font-semibold text-white">{s.citoyen?.nom || s.utilisateur?.nom || 'Citoyen anonyme'}</h3>
-                            <span className="text-xs text-gray-500">•</span>
-                            <span className="text-xs text-gray-500 flex items-center gap-1">
-                              <Clock size={12} /> {getRelativeTime(s.dateCreation || s.createdAt || s.dateSignalement)}
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <h3 className="font-medium text-white/60 text-xs truncate max-w-[80px]">
+                              {s.citoyen?.nom || s.utilisateur?.nom || 'Anonyme'}
+                            </h3>
+                            <span className="text-white/10 text-[10px]">•</span>
+                            <span className="text-white/20 text-[9px] flex items-center gap-0.5 whitespace-nowrap">
+                              <Clock size={8} /> {getRelativeTime(s.dateCreation || s.createdAt || s.dateSignalement)}
                             </span>
                           </div>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-xs text-gray-400 flex items-center gap-1">
-                              <MapPin size={12} /> {s.ville || s.commune || s.address || 'Localisation'}
+                          <div className="flex items-center gap-0.5 mt-0.5">
+                            <MapPin size={8} className="text-white/20" />
+                            <span className="text-white/20 text-[9px] truncate">
+                              {s.ville || s.commune || s.address || 'Localisation'}
                             </span>
                           </div>
                         </div>
                       </div>
-                      <button className="text-gray-400 hover:text-gray-300 p-1 rounded-full hover:bg-gray-700/50">
-                        <MoreHorizontal size={18} />
+                      <button className="text-white/20 hover:text-white/40 p-1 rounded-lg hover:bg-white/5 transition-all flex-shrink-0">
+                        <MoreHorizontal size={12} />
                       </button>
                     </div>
-                  </div>
 
-                  {/* Contenu */}
-                  <div className="px-4 pb-3">
-                    <div className="flex items-center gap-2 mb-3 flex-wrap">
-                      <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-full border ${getTypeColor(s.type)}`}>
-                        <TypeIcon size={14} /> {getTypeLabel(s.type)}
-                      </span>
-                      <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-full border ${getStatusColor(s.statut)}`}>
-                        <StatusIcon size={14} /> {getStatusText(s.statut)}
-                      </span>
-                      {s.images && s.images.length > 0 && (
-                        <span className="text-xs text-gray-400 bg-gray-700/50 px-2.5 py-1.5 rounded-full flex items-center gap-1">
-                          <Image size={12} /> {s.images.length} photo{s.images.length > 1 ? 's' : ''}
+                    {/* Contenu */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className={`inline-flex items-center gap-0.5 text-[8px] font-medium px-1.5 py-0.5 rounded-full border ${getTypeColor(s.type)}`}>
+                          <TypeIcon size={8} /> {getTypeLabel(s.type)}
                         </span>
+                        <span className={`inline-flex items-center gap-0.5 text-[8px] font-medium px-1.5 py-0.5 rounded-full border ${getStatusColor(s.statut)}`}>
+                          <StatusIcon size={8} /> {getStatusText(s.statut)}
+                        </span>
+                        {s.images && s.images.length > 0 && (
+                          <span className="text-[8px] text-white/20 bg-white/5 px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                            <Camera size={8} /> {s.images.length}
+                          </span>
+                        )}
+                      </div>
+                      
+                      <h2 className={`font-bold text-white/80 leading-tight group-hover:text-white transition-colors ${
+                        viewMode === "compact" ? "text-xs" : "text-base"
+                      } line-clamp-2`}>
+                        {s.titre || 'Sans titre'}
+                      </h2>
+                      
+                      {viewMode !== "compact" && (
+                        <p className="text-white/20 text-xs leading-relaxed line-clamp-2">
+                          {s.description || 'Aucune description fournie'}
+                        </p>
                       )}
                     </div>
-                    <h2 className="text-xl font-bold text-white mb-2">{s.titre || 'Sans titre'}</h2>
-                    <p className="text-gray-300 text-sm leading-relaxed mb-3">{s.description || 'Aucune description fournie'}</p>
                   </div>
 
                   {/* Images */}
-                  {s.images && s.images.length > 0 && (
-                    <div className={`grid gap-1 ${s.images.length === 1 ? 'grid-cols-1' : s.images.length === 2 ? 'grid-cols-2' : s.images.length === 3 ? 'grid-cols-2' : 'grid-cols-2'}`}>
-                      {s.images.slice(0, 4).map((img, index) => (
-                        <div key={index} className={`relative bg-black/30 cursor-pointer group ${s.images.length === 3 && index === 0 ? 'row-span-2' : ''}`} onClick={() => openImageViewer(s.images, index)}>
-                          <img src={img.url} className="w-full h-48 object-cover group-hover:opacity-90 transition-opacity" alt={`${s.titre} - image ${index + 1}`} onError={(e) => { e.target.src = "https://via.placeholder.com/400x300/242526/808080?text=Image+non+disponible"; }} />
-                          {s.images.length > 4 && index === 3 && (
-                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                              <span className="text-white text-2xl font-bold">+{s.images.length - 4}</span>
+                  {s.images && s.images.length > 0 && viewMode !== "compact" && (
+                    <div className="px-3 pb-2">
+                      <div className={`grid gap-0.5 ${
+                        s.images.length === 1 ? 'grid-cols-1' : 
+                        s.images.length === 2 ? 'grid-cols-2' : 'grid-cols-2'
+                      }`}>
+                        {s.images.slice(0, 4).map((img, index) => (
+                          <div 
+                            key={index} 
+                            className={`relative bg-black/50 cursor-pointer group/image overflow-hidden ${
+                              s.images.length === 3 && index === 0 ? 'row-span-2' : ''
+                            }`} 
+                            onClick={() => openImageViewer(s.images, index)}
+                          >
+                            <img 
+                              src={img.url} 
+                              className="w-full h-28 object-cover transition-transform duration-500 group-hover/image:scale-105" 
+                              alt={`${s.titre} - image ${index + 1}`} 
+                              onError={(e) => { 
+                                e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect width='400' height='300' fill='%231a1a2e'/%3E%3Ctext x='50%25' y='50%25' font-size='12' fill='%23333' text-anchor='middle' font-family='sans-serif'%3ENo image%3C/text%3E%3C/svg%3E"; 
+                              }} 
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover/image:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                              <Eye className="w-4 h-4 text-white/60" />
                             </div>
-                          )}
-                        </div>
-                      ))}
+                            {s.images.length > 4 && index === 3 && (
+                              <div className="absolute inset-0 bg-black/70 flex items-center justify-center backdrop-blur-sm">
+                                <span className="text-white font-bold text-sm">+{s.images.length - 4}</span>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
 
                   {/* Actions */}
-                  <div className="px-2 py-1 border-t border-gray-700/50">
-                    <div className="flex items-center justify-around">
-                      <button onClick={() => setShowComments(showComments === s.id ? null : s.id)} className="flex-1 flex items-center justify-center gap-2 py-2.5 text-gray-400 hover:bg-gray-700/30 rounded-lg transition-colors text-sm font-medium">
-                        <MessageCircle size={18} /> Commenter {getCommentCount(s.id) > 0 && `(${getCommentCount(s.id)})`}
+                  <div className={`border-t border-white/5 ${
+                    viewMode === "compact" ? "px-2 py-1.5" : "px-3 py-2"
+                  }`}>
+                    <div className="flex items-center gap-1">
+                      <button 
+                        onClick={() => setShowComments(showComments === s.id ? null : s.id)} 
+                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-white/20 hover:text-blue-400 hover:bg-blue-500/5 rounded-lg transition-all group/btn text-[10px] font-medium"
+                      >
+                        <MessageCircle size={12} className="group-hover/btn:scale-110 transition-transform" /> 
+                        <span className="hidden sm:inline">Commenter</span>
+                        {getCommentCount(s.id) > 0 && (
+                          <span className="bg-blue-500/10 text-blue-400/60 text-[8px] px-1 py-0.5 rounded-full">
+                            {getCommentCount(s.id)}
+                          </span>
+                        )}
                       </button>
-                      <button onClick={() => openShareModal(s)} className="flex-1 flex items-center justify-center gap-2 py-2.5 text-gray-400 hover:bg-gray-700/30 rounded-lg transition-colors text-sm font-medium">
-                        <Share2 size={18} /> Partager {getShareCount(s.id) > 0 && `(${getShareCount(s.id)})`}
+                      <button 
+                        onClick={() => openShareModal(s)} 
+                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-white/20 hover:text-emerald-400 hover:bg-emerald-500/5 rounded-lg transition-all group/btn text-[10px] font-medium"
+                      >
+                        <Share2 size={12} className="group-hover/btn:scale-110 transition-transform" /> 
+                        <span className="hidden sm:inline">Partager</span>
+                        {getShareCount(s.id) > 0 && (
+                          <span className="bg-emerald-500/10 text-emerald-400/60 text-[8px] px-1 py-0.5 rounded-full">
+                            {getShareCount(s.id)}
+                          </span>
+                        )}
                       </button>
                     </div>
-                    {showComments === s.id && <CommentsSection signalementId={s.id} />}
+                    
+                    {showComments === s.id && (
+                      <div className="mt-2 animate-slide-down">
+                        <CommentsSection signalementId={s.id} />
+                      </div>
+                    )}
                   </div>
                 </article>
               );
@@ -804,30 +793,164 @@ export default function Signalements() {
         </div>
       </main>
 
+      {/* Modal de partage */}
+      {showShareModal && selectedSignalementToShare && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl" onClick={() => setShowShareModal(false)}>
+          <div className="bg-[#1a1a2e] rounded-2xl max-w-md w-full max-h-[85vh] overflow-hidden border border-white/10 flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4 border-b border-white/10 flex justify-between items-center flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-blue-500/20 to-emerald-500/20 rounded-xl">
+                  <Share2 size={16} className="text-blue-400" />
+                </div>
+                <div>
+                  <h2 className="text-white font-bold text-sm">Partager</h2>
+                  <p className="text-white/30 text-[10px]">Envoyer à un utilisateur</p>
+                </div>
+              </div>
+              <button onClick={() => setShowShareModal(false)} className="text-white/30 hover:text-white/60 p-1.5 rounded-lg hover:bg-white/5 transition">
+                <X size={18} />
+              </button>
+            </div>
+            
+            <div className="p-3 border-b border-white/5">
+              <div className="flex items-center gap-3">
+                <div className="p-1.5 bg-blue-500/10 rounded-lg">
+                  <MapPin size={14} className="text-blue-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white/60 font-medium text-xs truncate">{selectedSignalementToShare.titre}</p>
+                  <p className="text-white/20 text-[10px] truncate">{selectedSignalementToShare.ville || selectedSignalementToShare.commune || "Localisation"}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-3 border-b border-white/5">
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20" />
+                <input
+                  type="text"
+                  placeholder="Rechercher un utilisateur..."
+                  value={searchUserTerm}
+                  onChange={(e) => setSearchUserTerm(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-white text-xs placeholder-white/20 focus:outline-none focus:border-blue-500/30"
+                />
+              </div>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto max-h-60 p-2">
+              {filteredUsers.length === 0 ? (
+                <div className="text-center py-6">
+                  <Users size={24} className="text-white/10 mx-auto mb-2" />
+                  <p className="text-white/20 text-xs">Aucun utilisateur trouvé</p>
+                </div>
+              ) : (
+                filteredUsers.map(user => {
+                  const isSelected = selectedUsers.some(u => u.id === user.id);
+                  return (
+                    <button
+                      key={user.id}
+                      onClick={() => toggleUserSelection(user)}
+                      className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all mb-0.5 ${
+                        isSelected 
+                          ? 'bg-blue-500/10 border border-blue-500/20' 
+                          : 'hover:bg-white/5'
+                      }`}
+                    >
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500/30 to-emerald-500/30 flex items-center justify-center text-blue-400 font-bold text-xs">
+                        {(user.prenom?.[0] || user.nom?.[0] || "U").toUpperCase()}
+                      </div>
+                      <div className="flex-1 text-left">
+                        <p className="text-white/60 text-xs font-medium">
+                          {user.prenom || ""} {user.nom || "Utilisateur"}
+                        </p>
+                        <p className="text-white/20 text-[9px]">{user.role === "ADMIN" ? "Admin" : user.role === "AGENT" ? "Agent" : "Citoyen"}</p>
+                      </div>
+                      {isSelected && (
+                        <div className="w-4 h-4 rounded-full bg-gradient-to-br from-blue-500 to-emerald-500 flex items-center justify-center">
+                          <Check size={8} className="text-white" />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+            
+            <div className="p-3 border-t border-white/10 flex-shrink-0">
+              <button
+                onClick={sendSharedMessage}
+                disabled={isSharing || selectedUsers.length === 0}
+                className={`w-full font-medium py-2.5 rounded-xl transition-all text-xs ${
+                  isSharing || selectedUsers.length === 0
+                    ? 'bg-white/5 cursor-not-allowed text-white/20'
+                    : 'bg-gradient-to-r from-blue-500/20 to-emerald-500/20 hover:from-blue-500/30 hover:to-emerald-500/30 text-blue-400 border border-blue-500/20'
+                }`}
+              >
+                {isSharing ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                    Envoi...
+                  </div>
+                ) : (
+                  `Envoyer à ${selectedUsers.length} utilisateur${selectedUsers.length > 1 ? 's' : ''}`
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Lightbox */}
       {selectedImages && (
         <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center" onClick={closeImageViewer}>
-          <button className="absolute top-4 right-4 text-white hover:text-gray-300 p-2 rounded-full bg-black/50 hover:bg-black/70" onClick={closeImageViewer}>
-            <X size={24} />
+          <button 
+            className="absolute top-4 right-4 text-white/40 hover:text-white p-2 rounded-full bg-white/5 hover:bg-white/10 transition-all" 
+            onClick={closeImageViewer}
+          >
+            <X size={20} />
           </button>
-          <div className="absolute top-4 left-4 text-white text-sm bg-black/50 px-3 py-1.5 rounded-full">
+          
+          <div className="absolute top-4 left-4 text-white/40 text-xs bg-black/50 px-3 py-1.5 rounded-full border border-white/10">
             {currentImageIndex + 1} / {selectedImages.length}
           </div>
+          
           {currentImageIndex > 0 && (
-            <button className="absolute left-4 text-white hover:text-gray-300 p-3 rounded-full bg-black/50 hover:bg-black/70" onClick={(e) => { e.stopPropagation(); prevImage(); }}>
-              <ChevronLeft size={32} />
+            <button 
+              className="absolute left-4 text-white/40 hover:text-white p-2 rounded-full bg-black/50 hover:bg-black/70 transition-all" 
+              onClick={(e) => { e.stopPropagation(); prevImage(); }}
+            >
+              <ChevronLeft size={24} />
             </button>
           )}
+          
           {currentImageIndex < selectedImages.length - 1 && (
-            <button className="absolute right-4 text-white hover:text-gray-300 p-3 rounded-full bg-black/50 hover:bg-black/70" onClick={(e) => { e.stopPropagation(); nextImage(); }}>
-              <ChevronRight size={32} />
+            <button 
+              className="absolute right-4 text-white/40 hover:text-white p-2 rounded-full bg-black/50 hover:bg-black/70 transition-all" 
+              onClick={(e) => { e.stopPropagation(); nextImage(); }}
+            >
+              <ChevronRight size={24} />
             </button>
           )}
-          <img src={selectedImages[currentImageIndex]?.url} className="max-w-[90vw] max-h-[90vh] object-contain" alt="Image" onClick={(e) => e.stopPropagation()} />
+          
+          <img 
+            src={selectedImages[currentImageIndex]?.url} 
+            className="max-w-[90vw] max-h-[85vh] object-contain" 
+            alt="Image" 
+            onClick={(e) => e.stopPropagation()} 
+          />
+          
           {selectedImages.length > 1 && (
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 bg-black/50 p-2 rounded-xl backdrop-blur-sm">
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-1.5 bg-black/60 backdrop-blur-sm p-1.5 rounded-xl border border-white/10">
               {selectedImages.map((img, index) => (
-                <button key={index} onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(index); }} className={`w-12 h-12 rounded-lg overflow-hidden border-2 transition-all ${index === currentImageIndex ? 'border-blue-500 scale-105' : 'border-transparent opacity-60 hover:opacity-100'}`}>
+                <button 
+                  key={index} 
+                  onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(index); }} 
+                  className={`w-10 h-10 rounded-lg overflow-hidden border-2 transition-all ${
+                    index === currentImageIndex 
+                      ? 'border-blue-500 scale-105' 
+                      : 'border-transparent opacity-50 hover:opacity-100'
+                  }`}
+                >
                   <img src={img.url} className="w-full h-full object-cover" alt={`Miniature ${index + 1}`} />
                 </button>
               ))}
@@ -837,9 +960,35 @@ export default function Signalements() {
       )}
 
       <style>{`
-        @keyframes fade-in {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
+        @keyframes slide-down {
+          from { opacity: 0; transform: translateY(-6px); max-height: 0; }
+          to { opacity: 1; transform: translateY(0); max-height: 300px; }
+        }
+        
+        .animate-slide-down {
+          animation: slide-down 0.25s ease-out forwards;
+          overflow: hidden;
+        }
+        
+        .line-clamp-2 {
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+        
+        ::-webkit-scrollbar {
+          width: 3px;
+          height: 3px;
+        }
+        
+        ::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.02);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+          background: rgba(59, 130, 246, 0.2);
+          border-radius: 10px;
         }
       `}</style>
     </div>

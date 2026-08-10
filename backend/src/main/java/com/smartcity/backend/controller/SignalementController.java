@@ -62,7 +62,7 @@ public class SignalementController {
             for (Utilisateur agent : agents) {
                 notificationService.createNotification(
                     agent.getEmail(),
-                    "📢 Nouveau signalement",
+                    "Nouveau signalement",
                     "Un nouveau signalement a été créé: " + signalement.getTitre(),
                     "NOUVEAU_SIGNALEMENT",
                     "/agent/signalements-assignes"
@@ -74,7 +74,7 @@ public class SignalementController {
             for (Utilisateur admin : admins) {
                 notificationService.createNotification(
                     admin.getEmail(),
-                    "📢 Nouveau signalement",
+                    "Nouveau signalement",
                     "Un nouveau signalement nécessite votre attention: " + signalement.getTitre(),
                     "NOUVEAU_SIGNALEMENT",
                     "/admin/signalements"
@@ -84,7 +84,7 @@ public class SignalementController {
             // Notifier le citoyen (confirmation)
             notificationService.createNotification(
                 user.getEmail(),
-                "✅ Signalement enregistré",
+                "Signalement enregistré",
                 "Votre signalement #" + saved.getId() + " a bien été enregistré et sera traité rapidement.",
                 "CONFIRMATION_SIGNALEMENT",
                 "/mes-signalements"
@@ -181,10 +181,10 @@ public class SignalementController {
                         signalement.setAgentEmail(agent.getEmail());
                         signalement.setAgentNom(agent.getNom());
                         
-                        // 🔔 NOTIFIER L'AGENT ASSIGNÉ (avec signalementId)
+                        // NOTIFIER L'AGENT ASSIGNÉ (avec signalementId)
                         notificationService.createNotification(
                             agent.getEmail(),
-                            "✅ Signalement assigné",
+                            "Signalement assigné",
                             "Le signalement #" + id + " vous a été assigné: " + signalement.getTitre(),
                             "ASSIGNATION",
                             "/agent/signalements-assignes",
@@ -198,10 +198,10 @@ public class SignalementController {
                     signalement.setAgentEmail(currentUser.getEmail());
                     signalement.setAgentNom(currentUser.getNom());
                     
-                    // 🔔 NOTIFIER L'AGENT (lui-même - avec signalementId)
+                    // NOTIFIER L'AGENT (lui-même - avec signalementId)
                     notificationService.createNotification(
                         currentUser.getEmail(),
-                        "✅ Signalement assigné",
+                        "Signalement assigné",
                         "Le signalement #" + id + " vous a été assigné automatiquement: " + signalement.getTitre(),
                         "ASSIGNATION",
                         "/agent/signalements-assignes",
@@ -213,7 +213,7 @@ public class SignalementController {
             signalement.setStatut(nouveauStatut);
             signalementRepository.save(signalement);
             
-            // 🔔 NOTIFIER LE CITOYEN DU CHANGEMENT DE STATUT
+            // NOTIFIER LE CITOYEN DU CHANGEMENT DE STATUT
             if (!ancienStatut.equals(nouveauStatut)) {
                 String messageStatut = "";
                 if ("EN_COURS".equals(nouveauStatut)) {
@@ -226,7 +226,7 @@ public class SignalementController {
                 
                 notificationService.createNotification(
                     signalement.getUtilisateur().getEmail(),
-                    "🔄 Mise à jour de votre signalement",
+                    "Mise à jour de votre signalement",
                     "Votre signalement #" + id + " " + messageStatut,
                     "CHANGEMENT_STATUS",
                     "/mes-signalements",
@@ -292,17 +292,17 @@ public class SignalementController {
             
             signalementRepository.save(signalement);
             
-            // 🔔 NOTIFIER LE NOUVEL AGENT (avec signalementId)
+            // NOTIFIER LE NOUVEL AGENT (avec signalementId)
             notificationService.createNotification(
                 agent.getEmail(),
-                "✅ Nouvelle assignation",
+                "Nouvelle assignation",
                 "Le signalement #" + id + " vous a été assigné: " + signalement.getTitre(),
                 "ASSIGNATION",
                 "/agent/signalements-assignes",
                 id.longValue()
             );
             
-            // 🔔 NOTIFIER LE CITOYEN (avec signalementId)
+            // NOTIFIER LE CITOYEN (avec signalementId)
             if (signalement.getUtilisateur() != null) {
                 notificationService.createNotification(
                     signalement.getUtilisateur().getEmail(),
