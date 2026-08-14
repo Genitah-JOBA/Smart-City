@@ -1,7 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { MessageCircle, Mail, Send, X, Bell, Check, Trash2, Eye, Move, Reply } from "lucide-react";
+import { useI18n } from "./context/AppContext";
+import MessageBox from "./components/MessageBox";
 
 export default function FloatingChat() {
+  const { t } = useI18n();
+  const [msg, setMsg] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("messages");
   const [messages, setMessages] = useState([]); // ← toujours initialisé à []
@@ -44,17 +48,13 @@ export default function FloatingChat() {
   }, [position]);
 
   useEffect(() => {
-    if (token && isOpen) {
-      fetchMessages();
-      fetchNonLuCount();
-      
-      const interval = setInterval(() => {
-        fetchMessages();
-        fetchNonLuCount();
-      }, 30000);
-      
-      return () => clearInterval(interval);
-    }
+    if (!token) return;
+    // fetchMessages met à jour la liste ET le compteur "non lu(s)" de façon cohérente.
+    // On rafraîchit même quand le chat est fermé pour garder le badge exact.
+    fetchMessages();
+
+    const interval = setInterval(fetchMessages, 30000);
+    return () => clearInterval(interval);
   }, [token, isOpen]);
 
   useEffect(() => {
@@ -143,12 +143,17 @@ export default function FloatingChat() {
         
         console.log(`📬 ${messagesInternes.length} messages internes affichés (${allMessages.length - messagesInternes.length} emails masqués)`);
         setMessages(messagesInternes);
+        // 🔢 Le compteur "non lu(s)" doit refléter UNIQUEMENT les messages internes visibles,
+        // pas les emails masqués (sinon le badge affiche un total sans message à voir).
+        setNonLuCount(messagesInternes.filter(msg => !msg.lu).length);
       } else {
         setMessages([]);
+        setNonLuCount(0);
       }
     } catch (error) {
       console.error("Erreur chargement messages:", error);
       setMessages([]);
+      setNonLuCount(0);
     }
   };
 
@@ -259,7 +264,7 @@ export default function FloatingChat() {
     };
 
     if (!peutRepondre()) {
-      alert("❌ Vous ne pouvez répondre qu'aux messages des administrateurs.");
+      setMsg({ type: "error", text: t("chat.replyAdminOnly") });
       return;
     }
 
@@ -290,15 +295,15 @@ export default function FloatingChat() {
 
   const envoyerMessage = async () => {
     if (!messageForm.destinataireEmail || !messageForm.sujet || !messageForm.contenu) {
-      alert("Veuillez remplir tous les champs");
+      setMsg({ type: "error", text: t("admin.fillAllFields") });
       return;
     }
 
     if (!peutEnvoyerA(messageForm.destinataireEmail)) {
       if (isAdmin) {
-        alert("❌ Destinataire invalide.");
+        setMsg({ type: "error", text: t("chat.invalidRecipient") });
       } else {
-        alert("❌ Vous ne pouvez envoyer des messages qu'aux administrateurs uniquement.");
+        setMsg({ type: "error", text: t("chat.sendAdminOnly") });
       }
       return;
     }
@@ -321,11 +326,11 @@ export default function FloatingChat() {
       
       if (response.ok) {
         const result = await response.json();
-        const notification = messageForm.type === "EMAIL" 
-          ? "✅ Email envoyé avec succès ! Le destinataire recevra une notification ET un email réel." 
-          : "✅ Message envoyé avec succès !";
-        alert(notification);
-        
+        setMsg({
+          type: "success",
+          text: messageForm.type === "EMAIL" ? t("chat.emailSent") : t("chat.messageSent")
+        });
+
         setMessageForm({ 
           destinataireEmail: "", 
           sujet: "", 
@@ -338,11 +343,11 @@ export default function FloatingChat() {
         fetchNonLuCount();
       } else {
         const error = await response.json();
-        alert(error.error || "Erreur lors de l'envoi");
+        setMsg({ type: "error", text: error.error || t("chat.sendError") });
       }
     } catch (error) {
       console.error("Erreur envoi message:", error);
-      alert("Erreur réseau");
+      setMsg({ type: "error", text: t("common.networkError") });
     } finally {
       setIsLoading(false);
     }
@@ -368,13 +373,13 @@ export default function FloatingChat() {
 
   const getInfoMessage = () => {
     if (isCitizen) {
-      return "💬 En tant que citoyen, vous pouvez uniquement envoyer des messages aux administrateurs.";
+      return t("chat.infoCitizen");
     }
     if (isAgent) {
-      return "💬 En tant qu'agent, vous pouvez uniquement envoyer des messages aux administrateurs.";
+      return t("chat.infoAgent");
     }
     if (isAdmin) {
-      return "💬 En tant qu'administrateur, vous pouvez envoyer des messages à tous les utilisateurs (citoyens, agents, admins).";
+      return t("chat.infoAdmin");
     }
     return "";
   };
@@ -385,6 +390,7 @@ export default function FloatingChat() {
       style={chatStyle}
       className="z-50"
     >
+      <MessageBox message={msg} onClose={() => setMsg(null)} />
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
@@ -411,7 +417,7 @@ export default function FloatingChat() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <MessageCircle className="w-5 h-5 text-indigo-400" />
-                <h3 className="text-white font-semibold">Messages</h3>
+                <h3 className="text-white font-semibold">{t("chat.title")}</h3>
                 {nonLuCount > 0 && (
                   <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
                     {nonLuCount} non lu(s)
@@ -458,7 +464,7 @@ export default function FloatingChat() {
                 >
                   <div className="flex items-center justify-center gap-2">
                     <Bell className="w-4 h-4" />
-                    Messages reçus
+                    {t("chat.received")}
                   </div>
                 </button>
                 <button
@@ -473,7 +479,7 @@ export default function FloatingChat() {
                 >
                   <div className="flex items-center justify-center gap-2">
                     <Send className="w-4 h-4" />
-                    Nouveau message
+                    {t("chat.newMessage")}
                   </div>
                 </button>
               </div>
@@ -484,7 +490,7 @@ export default function FloatingChat() {
                     {!messages || messages.length === 0 ? (
                       <div className="text-center text-white/50 py-8">
                         <Mail className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                        <p>Aucun message</p>
+                        <p>{t("chat.noMessage")}</p>
                       </div>
                     ) : (
                       messages.map((message) => (
@@ -570,23 +576,23 @@ export default function FloatingChat() {
                     </div>
 
                     <div>
-                      <label className="text-white/70 text-sm mb-1 block">Destinataire</label>
+                      <label className="text-white/70 text-sm mb-1 block">{t("chat.recipient")}</label>
                       <select
                         value={messageForm.destinataireEmail}
                         onChange={(e) => setMessageForm({ ...messageForm, destinataireEmail: e.target.value })}
-                        className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500"
+                        className="w-full bg-white dark:bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-indigo-500"
                         disabled={!!replyTo}
                       >
-                        <option value="">Sélectionner un destinataire</option>
+                        <option value="" className="bg-white text-slate-900 dark:bg-gray-800 dark:text-white">{t("chat.selectRecipient")}</option>
                         {utilisateurs.map((user) => (
-                          <option key={user.email} value={user.email} className="bg-gray-800">
+                          <option key={user.email} value={user.email} className="bg-white text-slate-900 dark:bg-gray-800 dark:text-white">
                             {user.nom} ({user.role === "ADMIN" ? "Admin" : user.role === "AGENT" ? "Agent" : "Citoyen"}) - {user.email}
                           </option>
                         ))}
                       </select>
                       {replyTo && (
                         <p className="text-indigo-400 text-xs mt-1">
-                          Destinataire verrouillé (réponse en cours)
+                          {t("chat.recipientLocked")}
                         </p>
                       )}
                       {utilisateurs.length === 0 && !replyTo && (
@@ -599,7 +605,7 @@ export default function FloatingChat() {
                     </div>
 
                     <div>
-                      <label className="text-white/70 text-sm mb-1 block">Type d'envoi</label>
+                      <label className="text-white/70 text-sm mb-1 block">{t("chat.sendType")}</label>
                       <div className="flex gap-4">
                         <label className="flex items-center gap-2 cursor-pointer">
                           <input
@@ -610,7 +616,7 @@ export default function FloatingChat() {
                             className="text-indigo-500"
                           />
                           <MessageCircle className="w-4 h-4 text-indigo-400" />
-                          <span className="text-white text-sm">Message</span>
+                          <span className="text-white text-sm">{t("chat.message")}</span>
                         </label>
                         <label className="flex items-center gap-2 cursor-pointer">
                           <input
@@ -621,30 +627,30 @@ export default function FloatingChat() {
                             className="text-indigo-500"
                           />
                           <Mail className="w-4 h-4 text-sky-400" />
-                          <span className="text-white text-sm">Email</span>
+                          <span className="text-white text-sm">{t("chat.email")}</span>
                         </label>
                       </div>
                     </div>
 
                     <div>
-                      <label className="text-white/70 text-sm mb-1 block">Sujet</label>
+                      <label className="text-white/70 text-sm mb-1 block">{t("chat.subject")}</label>
                       <input
                         type="text"
                         value={messageForm.sujet}
                         onChange={(e) => setMessageForm({ ...messageForm, sujet: e.target.value })}
                         className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500"
-                        placeholder="Sujet du message"
+                        placeholder={t("chat.subjectPlaceholder")}
                       />
                     </div>
 
                     <div>
-                      <label className="text-white/70 text-sm mb-1 block">Message</label>
+                      <label className="text-white/70 text-sm mb-1 block">{t("chat.message")}</label>
                       <textarea
                         value={messageForm.contenu}
                         onChange={(e) => setMessageForm({ ...messageForm, contenu: e.target.value })}
                         rows={4}
                         className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500 resize-none"
-                        placeholder="Votre message..."
+                        placeholder={t("chat.yourMessage")}
                         autoFocus={!!replyTo}
                       />
                     </div>
@@ -655,7 +661,7 @@ export default function FloatingChat() {
                           onClick={annulerReponse}
                           className="flex-1 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-semibold py-2 rounded-lg transition-all duration-300"
                         >
-                          Annuler
+                          {t("common.cancel")}
                         </button>
                       )}
                       <button
@@ -668,7 +674,7 @@ export default function FloatingChat() {
                         ) : (
                           <>
                             <Send size={16} />
-                            {replyTo ? "Envoyer la réponse" : (messageForm.type === "MESSAGE" ? "Envoyer le message" : "Envoyer l'email")}
+                            {replyTo ? t("chat.sendReply") : (messageForm.type === "MESSAGE" ? t("chat.sendMessage") : t("chat.sendEmail"))}
                           </>
                         )}
                       </button>

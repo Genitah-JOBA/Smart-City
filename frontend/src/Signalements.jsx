@@ -4,15 +4,19 @@ import {
   Construction, Lightbulb, Trash2, Droplets, TreePine, 
   Shield, HelpCircle, X, ChevronLeft, ChevronRight,
   BarChart3, TrendingUp, CheckCircle2, Activity,
-  AlertTriangle, PlayCircle, Send, Users, Search, Check,
+  AlertTriangle, XCircle, PlayCircle, Send, Users, Search, Check,
   Sparkles, Eye, Layers, Award, Zap, Camera, 
   LayoutGrid, List, Grid3x3, Grid
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useI18n } from "./context/AppContext";
+import MessageBox from "./components/MessageBox";
 
 export default function Signalements() {
+  const { t } = useI18n();
   const [signalements, setSignalements] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [msg, setMsg] = useState(null);
   const [selectedImages, setSelectedImages] = useState(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showStats, setShowStats] = useState(true);
@@ -100,6 +104,7 @@ export default function Signalements() {
       }
     } catch (error) {
       console.error("Erreur de chargement:", error);
+      setMsg({ type: "error", text: t("agent.cantReachServer") });
     } finally {
       setIsLoading(false);
     }
@@ -211,7 +216,7 @@ export default function Signalements() {
 
   const sendSharedMessage = async () => {
     if (selectedUsers.length === 0) {
-      alert("Veuillez sélectionner au moins un destinataire");
+      alert(t("feed.selectRecipient"));
       return;
     }
 
@@ -347,14 +352,14 @@ export default function Signalements() {
   }, [selectedImages, currentImageIndex]);
 
   const getRelativeTime = (dateString) => {
-    if (!dateString) return "Récemment";
+    if (!dateString) return t("feed.recently");
     const date = new Date(dateString);
     const now = new Date();
     const diffInSeconds = Math.floor((now - date) / 1000);
-    if (diffInSeconds < 60) return "À l'instant";
-    if (diffInSeconds < 3600) return `Il y a ${Math.floor(diffInSeconds / 60)} min`;
-    if (diffInSeconds < 86400) return `Il y a ${Math.floor(diffInSeconds / 3600)} h`;
-    if (diffInSeconds < 604800) return `Il y a ${Math.floor(diffInSeconds / 86400)} j`;
+    if (diffInSeconds < 60) return t("time.now");
+    if (diffInSeconds < 3600) return t("time.minutes").replace("{n}", Math.floor(diffInSeconds / 60));
+    if (diffInSeconds < 86400) return t("time.hours").replace("{n}", Math.floor(diffInSeconds / 3600));
+    if (diffInSeconds < 604800) return t("time.days").replace("{n}", Math.floor(diffInSeconds / 86400));
     return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
   };
 
@@ -385,16 +390,8 @@ export default function Signalements() {
   };
 
   const getTypeLabel = (type) => {
-    const labels = {
-      'VOIRIE': 'Voirie',
-      'ECLAIRAGE': 'Éclairage',
-      'DECHETS': 'Déchets',
-      'EAU': 'Eau',
-      'ESPACES_VERTS': 'Espaces verts',
-      'SECURITE': 'Sécurité',
-      'AUTRE': 'Autre'
-    };
-    return labels[type] || type;
+    const label = t(`type.${type}`);
+    return label === `type.${type}` ? type : label;
   };
 
   const getStatusColor = (statut) => {
@@ -402,7 +399,8 @@ export default function Signalements() {
       'EN_ATTENTE': 'text-amber-400 bg-amber-500/20 border-amber-500/30',
       'EN_COURS': 'text-blue-400 bg-blue-500/20 border-blue-500/30',
       'RESOLU': 'text-emerald-400 bg-emerald-500/20 border-emerald-500/30',
-      'TRAITE': 'text-emerald-400 bg-emerald-500/20 border-emerald-500/30'
+      'TRAITE': 'text-emerald-400 bg-emerald-500/20 border-emerald-500/30',
+      'REJETE': 'text-red-400 bg-red-500/20 border-red-500/30'
     };
     return colors[statut] || 'text-gray-400 bg-gray-500/20 border-gray-500/30';
   };
@@ -412,19 +410,15 @@ export default function Signalements() {
       'EN_ATTENTE': AlertTriangle,
       'EN_COURS': PlayCircle,
       'RESOLU': CheckCircle2,
-      'TRAITE': CheckCircle2
+      'TRAITE': CheckCircle2,
+      'REJETE': XCircle
     };
     return icons[statut] || AlertTriangle;
   };
 
   const getStatusText = (statut) => {
-    const texts = {
-      'EN_ATTENTE': 'En attente',
-      'EN_COURS': 'En cours',
-      'RESOLU': 'Résolu',
-      'TRAITE': 'Traité'
-    };
-    return texts[statut] || statut;
+    const label = t(`status.${statut}`);
+    return label === `status.${statut}` ? statut : label;
   };
 
   const CommentsSection = ({ signalementId }) => {
@@ -462,7 +456,7 @@ export default function Signalements() {
             );
           })}
           {signalComments.length === 0 && (
-            <p className="text-white/20 text-[10px] text-center py-2">Aucun commentaire</p>
+            <p className="text-white/20 text-[10px] text-center py-2">{t("feed.noComment")}</p>
           )}
         </div>
         
@@ -473,7 +467,7 @@ export default function Signalements() {
           <div className="flex-1 flex gap-2">
             <input
               type="text"
-              placeholder="Écrire un commentaire..."
+              placeholder={t("feed.writeComment")}
               value={currentComment}
               onChange={(e) => updateCommentText(signalementId, e.target.value)}
               onKeyPress={(e) => { if (e.key === 'Enter') addComment(signalementId); }}
@@ -506,6 +500,7 @@ export default function Signalements() {
 
   return (
     <div className="min-h-screen bg-[#0f0f1a]">
+      <MessageBox message={msg} onClose={() => setMsg(null)} />
       {/* En-tête */}
       <header className="sticky top-0 z-40 bg-[#1a1a2e]/90 backdrop-blur-xl border-b border-white/5">
         <div className="container mx-auto max-w-6xl px-4 py-4">
@@ -516,10 +511,10 @@ export default function Signalements() {
               </div>
               <div>
                 <h1 className="text-base font-bold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
-                  Signalements
+                  {t("nav.signalements")}
                 </h1>
                 <p className="text-white/20 text-[10px] tracking-wider">
-                  {signalements.length} signalement{signalements.length > 1 ? 's' : ''}
+                  {signalements.length} {t("feed.reportsWord")}
                 </p>
               </div>
             </div>
@@ -565,9 +560,9 @@ export default function Signalements() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               {[
                 { label: 'Total', value: stats.total, icon: BarChart3, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
-                { label: 'En attente', value: stats.enAttente, icon: AlertTriangle, color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20' },
-                { label: 'En cours', value: stats.enCours, icon: PlayCircle, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
-                { label: 'Résolus', value: stats.resolus, icon: CheckCircle2, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' }
+                { label: t("status.EN_ATTENTE"), value: stats.enAttente, icon: AlertTriangle, color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20' },
+                { label: t("status.EN_COURS"), value: stats.enCours, icon: PlayCircle, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
+                { label: t("feed.resolved"), value: stats.resolus, icon: CheckCircle2, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' }
               ].map((stat, idx) => {
                 const Icon = stat.icon;
                 return (
@@ -587,7 +582,7 @@ export default function Signalements() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
               <div className="bg-white/3 rounded-xl p-3 border border-white/5">
                 <div className="flex items-center justify-between">
-                  <span className="text-white/20 text-[9px] font-medium tracking-wider uppercase">Prise en charge</span>
+                  <span className="text-white/20 text-[9px] font-medium tracking-wider uppercase">{t("feed.handling")}</span>
                   <span className="text-blue-400 font-bold text-xs">{tauxPriseEnCharge}%</span>
                 </div>
                 <div className="mt-1.5 h-1.5 bg-white/5 rounded-full overflow-hidden">
@@ -597,7 +592,7 @@ export default function Signalements() {
               </div>
               <div className="bg-white/3 rounded-xl p-3 border border-white/5">
                 <div className="flex items-center justify-between">
-                  <span className="text-white/20 text-[9px] font-medium tracking-wider uppercase">Résolution</span>
+                  <span className="text-white/20 text-[9px] font-medium tracking-wider uppercase">{t("feed.resolution")}</span>
                   <span className="text-emerald-400 font-bold text-xs">{tauxResolution}%</span>
                 </div>
                 <div className="mt-1.5 h-1.5 bg-white/5 rounded-full overflow-hidden">
@@ -623,8 +618,8 @@ export default function Signalements() {
                   <MapPin className="w-8 h-8 text-white/20" />
                 </div>
               </div>
-              <p className="text-white/30 text-sm font-medium mb-1">Aucun signalement</p>
-              <p className="text-white/20 text-xs">Soyez le premier à signaler un problème</p>
+              <p className="text-white/30 text-sm font-medium mb-1">{t("feed.empty")}</p>
+              <p className="text-white/20 text-xs">{t("feed.beFirst")}</p>
             </div>
           ) : (
             signalements.map((s, index) => {
@@ -759,7 +754,7 @@ export default function Signalements() {
                         className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-white/20 hover:text-blue-400 hover:bg-blue-500/5 rounded-lg transition-all group/btn text-[10px] font-medium"
                       >
                         <MessageCircle size={12} className="group-hover/btn:scale-110 transition-transform" /> 
-                        <span className="hidden sm:inline">Commenter</span>
+                        <span className="hidden sm:inline">{t("feed.comment")}</span>
                         {getCommentCount(s.id) > 0 && (
                           <span className="bg-blue-500/10 text-blue-400/60 text-[8px] px-1 py-0.5 rounded-full">
                             {getCommentCount(s.id)}
@@ -771,7 +766,7 @@ export default function Signalements() {
                         className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-white/20 hover:text-emerald-400 hover:bg-emerald-500/5 rounded-lg transition-all group/btn text-[10px] font-medium"
                       >
                         <Share2 size={12} className="group-hover/btn:scale-110 transition-transform" /> 
-                        <span className="hidden sm:inline">Partager</span>
+                        <span className="hidden sm:inline">{t("feed.share")}</span>
                         {getShareCount(s.id) > 0 && (
                           <span className="bg-emerald-500/10 text-emerald-400/60 text-[8px] px-1 py-0.5 rounded-full">
                             {getShareCount(s.id)}
@@ -803,8 +798,8 @@ export default function Signalements() {
                   <Share2 size={16} className="text-blue-400" />
                 </div>
                 <div>
-                  <h2 className="text-white font-bold text-sm">Partager</h2>
-                  <p className="text-white/30 text-[10px]">Envoyer à un utilisateur</p>
+                  <h2 className="text-white font-bold text-sm">{t("feed.share")}</h2>
+                  <p className="text-white/30 text-[10px]">{t("feed.shareTo")}</p>
                 </div>
               </div>
               <button onClick={() => setShowShareModal(false)} className="text-white/30 hover:text-white/60 p-1.5 rounded-lg hover:bg-white/5 transition">
@@ -819,7 +814,7 @@ export default function Signalements() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-white/60 font-medium text-xs truncate">{selectedSignalementToShare.titre}</p>
-                  <p className="text-white/20 text-[10px] truncate">{selectedSignalementToShare.ville || selectedSignalementToShare.commune || "Localisation"}</p>
+                  <p className="text-white/20 text-[10px] truncate">{selectedSignalementToShare.ville || selectedSignalementToShare.commune || t("feed.location")}</p>
                 </div>
               </div>
             </div>
@@ -829,7 +824,7 @@ export default function Signalements() {
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20" />
                 <input
                   type="text"
-                  placeholder="Rechercher un utilisateur..."
+                  placeholder={t("feed.searchUser")}
                   value={searchUserTerm}
                   onChange={(e) => setSearchUserTerm(e.target.value)}
                   className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-white text-xs placeholder-white/20 focus:outline-none focus:border-blue-500/30"
@@ -841,7 +836,7 @@ export default function Signalements() {
               {filteredUsers.length === 0 ? (
                 <div className="text-center py-6">
                   <Users size={24} className="text-white/10 mx-auto mb-2" />
-                  <p className="text-white/20 text-xs">Aucun utilisateur trouvé</p>
+                  <p className="text-white/20 text-xs">{t("feed.noUser")}</p>
                 </div>
               ) : (
                 filteredUsers.map(user => {
@@ -889,10 +884,10 @@ export default function Signalements() {
                 {isSharing ? (
                   <div className="flex items-center justify-center gap-2">
                     <div className="w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
-                    Envoi...
+                    {t("feed.sending")}
                   </div>
                 ) : (
-                  `Envoyer à ${selectedUsers.length} utilisateur${selectedUsers.length > 1 ? 's' : ''}`
+                  `${t("feed.sendToPrefix")} ${selectedUsers.length} ${selectedUsers.length > 1 ? t("feed.users") : t("feed.user")}`
                 )}
               </button>
             </div>

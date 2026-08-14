@@ -1,8 +1,12 @@
 import { useEffect, useState } from "react";
 import { MapPin, CheckCircle, Clock } from "lucide-react";
+import { useI18n } from "./context/AppContext";
+import MessageBox from "./components/MessageBox";
 
 export default function SignalementsResolus() {
+  const { t } = useI18n();
   const [signalements, setSignalements] = useState([]);
+  const [msg, setMsg] = useState(null);
   const token = localStorage.getItem("token");
 
   useEffect(() => {
@@ -17,6 +21,7 @@ export default function SignalementsResolus() {
         }
       } catch (error) {
         console.error(error);
+        setMsg({ type: "error", text: t("agent.cantReachServer") });
       }
     };
     if (token) fetchSignalements();
@@ -33,17 +38,22 @@ export default function SignalementsResolus() {
         body: JSON.stringify({ statut: "RESOLU" })
       });
       if (res.ok) {
-        setSignalements(prev => prev.map(s => 
+        setSignalements(prev => prev.map(s =>
           s.id === id ? { ...s, statut: "RESOLU" } : s
         ));
+        setMsg({ type: "success", text: t("agent.reportResolved") });
+      } else {
+        setMsg({ type: "error", text: t("common.genericError") });
       }
     } catch (error) {
       console.error(error);
+      setMsg({ type: "error", text: t("agent.cantReachServer") });
     }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
+      <MessageBox message={msg} onClose={() => setMsg(null)} />
       <div className="container mx-auto max-w-6xl pt-8">
         <h1 className="text-3xl font-bold text-white mb-6">📋 Gestion des signalements</h1>
         

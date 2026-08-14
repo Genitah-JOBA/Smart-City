@@ -31,7 +31,16 @@ public class Signalement {
     
     private String ville;
     private String commune;
-    
+
+    // Détails de localisation
+    private String quartier;
+    private String fokontany;
+
+    @Column(name = "lieu_dit")
+    private String lieuDit;
+
+    private String rue;
+
     // Champs pour l'assignation des agents
     @Column(name = "agent_id")
     private Long agentId;
@@ -58,5 +67,11 @@ public class Signalement {
     @PrePersist
     protected void onCreate() {
         dateCreation = LocalDateTime.now();
+        dateModification = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        dateModification = LocalDateTime.now();
     }
 }

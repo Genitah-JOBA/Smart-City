@@ -38,7 +38,7 @@ public class PreuveController {
             
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.status(500).body("Erreur: " + e.getMessage());
+            return ResponseEntity.status(500).body("Impossible d'enregistrer la preuve pour le moment. Veuillez réessayer.");
         }
     }
 
@@ -48,7 +48,8 @@ public class PreuveController {
             List<Preuve> preuves = preuveRepository.findBySignalementId(signalementId);
             return ResponseEntity.ok(preuves);
         } catch (Exception e) {
-            return ResponseEntity.status(500).body("Erreur: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("Impossible de charger les preuves pour le moment. Veuillez réessayer.");
         }
     }
 }

@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { 
-  Camera, MapPin, Trash2, X, Shield, Road, 
+  Camera, MapPin, Trash2, X, Shield, Road,
   Lightbulb, Trash, Droplets, Search, Filter, Calendar, User,
   Clock, CheckCircle, RefreshCw, ChevronLeft, ChevronRight,
-  AlertTriangle, PlayCircle
+  AlertTriangle, PlayCircle, XCircle, TreePine, Bus, Building2
 } from "lucide-react";
+import { useI18n } from "./context/AppContext";
 
 export default function Signaler() {
+  const { t } = useI18n();
   const [signalements, setSignalements] = useState([]);
   const [filteredSignalements, setFilteredSignalements] = useState([]);
   
@@ -32,10 +34,14 @@ export default function Signaler() {
   const [currentUserRole, setCurrentUserRole] = useState(null);
 
   const categories = [
-    { id: "VOIRIE", name: "Voirie / Routes", icon: Road, color: "from-green-800 to-green-700", iconColor: "text-green-400" },
-    { id: "ECLAIRAGE", name: "Éclairage Public", icon: Lightbulb, color: "from-green-600 to-green-500", iconColor: "text-green-400" },
-    { id: "DECHETS", name: "Déchets / Propreté", icon: Trash, color: "from-teal-600 to-teal-500", iconColor: "text-teal-400" },
-    { id: "EAU", name: "Eau / Assainissement", icon: Droplets, color: "from-green-400 to-green-300", iconColor: "text-green-400" }
+    { id: "VOIRIE", name: t("cat.VOIRIE"), icon: Road, color: "from-green-800 to-green-700", iconColor: "text-green-400" },
+    { id: "ECLAIRAGE", name: t("cat.ECLAIRAGE"), icon: Lightbulb, color: "from-green-600 to-green-500", iconColor: "text-green-400" },
+    { id: "DECHETS", name: t("cat.PROPRETE"), icon: Trash, color: "from-teal-600 to-teal-500", iconColor: "text-teal-400" },
+    { id: "EAU", name: t("cat.EAU"), icon: Droplets, color: "from-green-400 to-green-300", iconColor: "text-green-400" },
+    { id: "ESPACES_VERTS", name: t("cat.ESPACES_VERTS"), icon: TreePine, color: "from-emerald-600 to-emerald-500", iconColor: "text-emerald-400" },
+    { id: "TRANSPORTS", name: t("cat.TRANSPORTS"), icon: Bus, color: "from-purple-600 to-purple-500", iconColor: "text-purple-400" },
+    { id: "SECURITE", name: t("cat.SECURITE"), icon: Shield, color: "from-slate-600 to-slate-500", iconColor: "text-slate-400" },
+    { id: "URBANISME", name: t("cat.URBANISME"), icon: Building2, color: "from-cyan-600 to-cyan-500", iconColor: "text-cyan-400" }
   ];
 
   // Obtenir la couleur du statut
@@ -44,7 +50,8 @@ export default function Signaler() {
       'EN_ATTENTE': 'bg-amber-500/20 text-amber-300 border-amber-500/30',
       'EN_COURS': 'bg-blue-500/20 text-blue-300 border-blue-500/30',
       'RESOLU': 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-      'TRAITE': 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+      'TRAITE': 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+      'REJETE': 'bg-red-500/20 text-red-300 border-red-500/30'
     };
     return colors[statut] || 'bg-gray-500/20 text-gray-300 border-gray-500/30';
   };
@@ -55,7 +62,8 @@ export default function Signaler() {
       'EN_ATTENTE': AlertTriangle,
       'EN_COURS': PlayCircle,
       'RESOLU': CheckCircle,
-      'TRAITE': CheckCircle
+      'TRAITE': CheckCircle,
+      'REJETE': XCircle
     };
     return icons[statut] || AlertTriangle;
   };
@@ -66,9 +74,11 @@ export default function Signaler() {
       'EN_ATTENTE': 'En attente',
       'EN_COURS': 'En cours',
       'RESOLU': 'Résolu',
-      'TRAITE': 'Traité'
+      'TRAITE': 'Traité',
+      'REJETE': 'Rejeté'
     };
-    return texts[statut] || statut;
+    const tr = t(`status.${statut}`);
+    return tr !== `status.${statut}` ? tr : (texts[statut] || statut);
   };
 
   // Obtenir le style du badge de statut pour le filtre
@@ -76,7 +86,8 @@ export default function Signaler() {
     const styles = {
       'EN_ATTENTE': 'bg-amber-500/20 text-amber-300',
       'EN_COURS': 'bg-blue-500/20 text-blue-300',
-      'RESOLU': 'bg-green-500/20 text-green-300'
+      'RESOLU': 'bg-green-500/20 text-green-300',
+      'REJETE': 'bg-red-500/20 text-red-300'
     };
     return styles[statut] || 'bg-gray-500/20 text-gray-300';
   };
@@ -231,11 +242,11 @@ export default function Signaler() {
               <p className="text-slate-600 text-sm mb-6">{message}</p>
               {deleteConfirmId ? (
                 <div className="flex gap-3">
-                  <button onClick={() => { setDeleteConfirmId(null); setShowModal(false); }} className="flex-1 py-2 rounded-xl font-semibold bg-slate-100">Annuler</button>
-                  <button onClick={handleDelete} className="flex-1 py-2 rounded-xl font-semibold text-white bg-red-500">Supprimer</button>
+                  <button onClick={() => { setDeleteConfirmId(null); setShowModal(false); }} className="flex-1 py-2 rounded-xl font-semibold bg-slate-100">{t("common.cancel")}</button>
+                  <button onClick={handleDelete} className="flex-1 py-2 rounded-xl font-semibold text-white bg-red-500">{t("sig.delete")}</button>
                 </div>
               ) : (
-                <button onClick={() => setShowModal(false)} className={`w-full py-2 rounded-xl font-semibold text-white ${isSuccess ? 'bg-emerald-500' : 'bg-slate-800'}`}>Fermer</button>
+                <button onClick={() => setShowModal(false)} className={`w-full py-2 rounded-xl font-semibold text-white ${isSuccess ? 'bg-emerald-500' : 'bg-slate-800'}`}>{t("sig.close")}</button>
               )}
             </div>
           </div>
@@ -325,13 +336,13 @@ export default function Signaler() {
               
               {/* Description complète */}
               <div>
-                <h3 className="text-white/70 text-sm font-medium mb-2">Description</h3>
+                <h3 className="text-white/70 text-sm font-medium mb-2">{t("sig.descrTitle")}</h3>
                 <p className="text-white/80 text-sm leading-relaxed">{selectedSignalement.description}</p>
               </div>
               
               {/* Localisation */}
               <div>
-                <h3 className="text-white/70 text-sm font-medium mb-2">📍 Localisation</h3>
+                <h3 className="text-white/70 text-sm font-medium mb-2">📍 {t("feed.location")}</h3>
                 <div className="bg-white/5 rounded-lg p-3">
                   <p className="text-white text-sm">{selectedSignalement.address || selectedSignalement.ville || "Position non définie"}</p>
                   {selectedSignalement.latitude && selectedSignalement.longitude && (
@@ -347,14 +358,14 @@ export default function Signaler() {
                 <div className="bg-white/5 rounded-lg p-3">
                   <div className="flex items-center gap-2 text-white/50 text-xs mb-1">
                     <Calendar size={12} />
-                    <span>Date de publication</span>
+                    <span>{t("admin.publishDate")}</span>
                   </div>
                   <p className="text-white text-sm">{formatDate(selectedSignalement.dateCreation)}</p>
                 </div>
                 <div className="bg-white/5 rounded-lg p-3">
                   <div className="flex items-center gap-2 text-white/50 text-xs mb-1">
                     <User size={12} />
-                    <span>Publié par</span>
+                    <span>{t("admin.publishedBy")}</span>
                   </div>
                   <p className="text-white text-sm">{selectedSignalement.utilisateur?.nom || "Anonyme"}</p>
                 </div>
@@ -377,7 +388,7 @@ export default function Signaler() {
                     }} 
                     className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/40 hover:bg-red-500 text-white transition"
                   >
-                    <Trash2 size={16} /> Supprimer
+                    <Trash2 size={16} /> {t("sig.delete")}
                   </button>
                 </div>
               )}
@@ -398,8 +409,8 @@ export default function Signaler() {
         
         {/* En-tête avec titre seulement */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Signalements citoyens</h1>
-          <p className="text-white/60">Consultez tous les problèmes signalés par la communauté</p>
+          <h1 className="text-3xl font-bold text-white mb-2">{t("admin.citizenReports")}</h1>
+          <p className="text-white/60">{t("admin.citizenReportsSub")}</p>
         </div>
 
         {/* Barre de recherche et filtres */}
@@ -409,7 +420,7 @@ export default function Signaler() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/40 w-4 h-4" />
               <input
                 type="text"
-                placeholder="Rechercher par titre, description ou localisation..."
+                placeholder={t("admin.searchByTitle")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full bg-white/10 border border-white/20 rounded-xl pl-10 pr-4 py-3 text-white placeholder-white/50 focus:outline-none focus:border-emerald-500"
@@ -420,7 +431,7 @@ export default function Signaler() {
               className="bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white hover:bg-white/20 transition flex items-center gap-2"
             >
               <Filter size={18} />
-              <span className="hidden sm:inline">Filtres</span>
+              <span className="hidden sm:inline">{t("admin.filters")}</span>
             </button>
           </div>
           
@@ -471,9 +482,9 @@ export default function Signaler() {
                   <div className="w-1 h-4 bg-emerald-500 rounded-full"></div>
                   Statut
                 </label>
-                <div className="grid grid-cols-4 gap-3">
-                  <button 
-                    onClick={() => setFilterStatus("TOUS")} 
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+                  <button
+                    onClick={() => setFilterStatus("TOUS")}
                     className={`flex items-center justify-center gap-2 py-3 px-4 transition-all duration-300 rounded-xl ${
                       filterStatus === "TOUS" 
                         ? 'bg-gradient-to-r from-gray-600 to-gray-500 text-white shadow-lg scale-[1.02]' 
@@ -493,7 +504,7 @@ export default function Signaler() {
                     }`}
                   >
                     <AlertTriangle size={14} />
-                    <span className="text-sm font-medium">En attente</span>
+                    <span className="text-sm font-medium">{t("status.EN_ATTENTE")}</span>
                   </button>
                   
                   <button 
@@ -505,7 +516,7 @@ export default function Signaler() {
                     }`}
                   >
                     <PlayCircle size={14} />
-                    <span className="text-sm font-medium">En cours</span>
+                    <span className="text-sm font-medium">{t("status.EN_COURS")}</span>
                   </button>
                   
                   <button 
@@ -517,7 +528,19 @@ export default function Signaler() {
                     }`}
                   >
                     <CheckCircle size={14} />
-                    <span className="text-sm font-medium">Résolu</span>
+                    <span className="text-sm font-medium">{t("status.RESOLU")}</span>
+                  </button>
+
+                  <button
+                    onClick={() => setFilterStatus("REJETE")}
+                    className={`flex items-center justify-center gap-2 py-3 px-4 transition-all duration-300 rounded-xl ${
+                      filterStatus === "REJETE"
+                        ? 'bg-gradient-to-r from-red-600 to-red-500 text-white shadow-lg scale-[1.02]'
+                        : 'bg-white/5 border border-white/20 text-white/70 hover:bg-white/15'
+                    }`}
+                  >
+                    <XCircle size={14} />
+                    <span className="text-sm font-medium">{t("status.REJETE")}</span>
                   </button>
                 </div>
               </div>
@@ -541,7 +564,7 @@ export default function Signaler() {
         {/* Liste des signalements */}
         <div className="space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="text-xl font-bold text-white">Tous les signalements</h3>
+            <h3 className="text-xl font-bold text-white">{t("sig.listTitle")}</h3>
             <span className="bg-emerald-600/30 text-emerald-300 px-3 py-1 rounded-full text-sm">
               {filteredSignalements.length} signalement(s)
             </span>
@@ -549,7 +572,7 @@ export default function Signaler() {
           
           {filteredSignalements.length === 0 ? (
             <div className="bg-white/10 rounded-2xl p-12 text-center">
-              <p className="text-white/70">Aucun signalement trouvé</p>
+              <p className="text-white/70">{t("sig.empty")}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -567,7 +590,7 @@ export default function Signaler() {
                         {/* Overlay et bouton Voir plus au survol */}
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-center gap-2">
                           <span className="text-white bg-white/20 backdrop-blur-sm rounded-xl px-4 py-2 text-sm font-medium opacity-0 group-hover:opacity-100 transition-all duration-300 delay-100">
-                            Voir plus
+                            {t("sig.seeMore")}
                           </span>
                         </div>
                         {/* Badge multi-images */}
@@ -587,7 +610,7 @@ export default function Signaler() {
                           <div className={`p-1.5 rounded-lg bg-gradient-to-r ${category?.color || 'from-emerald-500 to-green-600'}`}>
                             <Icon size={14} className="text-white" />
                           </div>
-                          <span className="text-xs text-emerald-300">{category?.name.split(' ')[0] || s.type}</span>
+                          <span className="text-xs text-emerald-300">{t(`type.${s.type}`)}</span>
                         </div>
                         {/* Statut avec icône */}
                         <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${getStatusBadgeStyle(s.statut)}`}>

@@ -35,9 +35,10 @@ public class NotificationController {
             response.put("unreadCount", unreadCount);
             
             return ResponseEntity.ok(response);
-            
+
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", "Impossible de charger vos notifications pour le moment. Veuillez réessayer."));
         }
     }
 
@@ -55,9 +56,10 @@ public class NotificationController {
             notificationRepository.save(notification);
             
             return ResponseEntity.ok(Map.of("message", "Notification marquée comme lue"));
-            
+
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", "Cette action n'a pas pu être effectuée. Veuillez réessayer."));
         }
     }
     
@@ -72,7 +74,8 @@ public class NotificationController {
             }
             return ResponseEntity.ok(Map.of("message", "Toutes les notifications ont été marquées comme lues"));
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", "Cette action n'a pas pu être effectuée. Veuillez réessayer."));
         }
     }
     
@@ -124,7 +127,7 @@ public class NotificationController {
             
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.status(500).body(Map.of("error", "Erreur lors du partage: " + e.getMessage()));
+            return ResponseEntity.status(500).body(Map.of("error", "Le partage n'a pas pu aboutir. Veuillez réessayer."));
         }
     }
     
@@ -151,9 +154,10 @@ public class NotificationController {
                     "message", notif.getMessage()
                 )
             ));
-            
+
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", "Cette action n'a pas pu être effectuée. Veuillez réessayer."));
         }
     }
 }

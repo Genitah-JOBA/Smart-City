@@ -5,8 +5,10 @@ import {
   Loader2, X, Eye, ChevronLeft, AlertCircle, Info,
   FolderOpen, Briefcase, Award, FileCheck
 } from "lucide-react";
+import { useI18n } from "./context/AppContext";
 
 export default function AgentIntervention() {
+  const { t } = useI18n();
   const [signalements, setSignalements] = useState([]);
   const [filteredSignalements, setFilteredSignalements] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -105,18 +107,18 @@ export default function AgentIntervention() {
         }
       } else {
         console.error("Erreur API:", res.status);
-        showMessage("error", "Erreur", "Impossible de charger les signalements");
+        showMessage("error", t("common.error"), t("agent.cantLoadReports"));
       }
     } catch (error) {
       console.error("Erreur fetch:", error);
-      showMessage("error", "Erreur", "Impossible de charger les signalements");
+      showMessage("error", t("common.error"), t("agent.cantLoadReports"));
     } finally {
       setIsLoading(false);
     }
   };
 
   const fetchAgentName = async (email) => {
-    if (!email) return "Inconnu";
+    if (!email) return t("agent.unknown");
     if (agentNames[email]) return agentNames[email];
     
     try {
@@ -220,7 +222,7 @@ export default function AgentIntervention() {
   }, [selectedImages, currentImageIndex]);
 
   const formatDate = (dateString) => {
-    if (!dateString) return "Date inconnue";
+    if (!dateString) return t("agent.unknownDate");
     try {
       const date = new Date(dateString);
       return date.toLocaleDateString('fr-FR', {
@@ -290,9 +292,9 @@ export default function AgentIntervention() {
         <div className="mb-8 text-center">
           <div className="flex items-center justify-center gap-2 mb-1">
             <FileCheck className="w-8 h-8 text-emerald-400" />
-            <h1 className="text-3xl font-bold text-white">Signalements Résolus</h1>
+            <h1 className="text-3xl font-bold text-white">{t("agent.resolvedReports")}</h1>
           </div>
-          <p className="text-white/50 text-sm mt-1">Consultez les preuves de résolution des signalements</p>
+          <p className="text-white/50 text-sm mt-1">{t("agent.resolvedSubtitle")}</p>
         </div>
 
         <div className="grid grid-cols-2 gap-4 mb-8">
@@ -300,14 +302,14 @@ export default function AgentIntervention() {
             <div className="text-3xl font-bold text-white mt-1">{stats.total}</div>
             <div className="flex items-center justify-center gap-2 mb-1">
               <CheckCircle className="w-4 h-4 text-emerald-400" />
-              <span className="text-white/50 text-xs">Total résolus</span>
+              <span className="text-white/50 text-xs">{t("agent.totalResolved")}</span>
             </div>
           </div>
           <div className="bg-purple-500/20 rounded-xl p-4 text-center">
             <div className="text-3xl font-bold text-purple-300 mt-1">{stats.mesResolus}</div>
             <div className="flex items-center justify-center gap-2 mb-1">
               <Award className="w-4 h-4 text-purple-300" />
-              <span className="text-purple-300/70 text-xs">Ma résolution</span>
+              <span className="text-purple-300/70 text-xs">{t("agent.myResolution")}</span>
             </div>
           </div>
         </div>
@@ -344,7 +346,7 @@ export default function AgentIntervention() {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/40 w-4 h-4" />
           <input
             type="text"
-            placeholder="Rechercher par titre, description ou adresse..."
+            placeholder={t("agent.searchResolvedPlaceholder")}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full bg-white/10 border border-white/20 rounded-xl py-3 pl-10 pr-4 text-white placeholder-white/40 focus:outline-none focus:border-emerald-500 transition"
@@ -357,8 +359,8 @@ export default function AgentIntervention() {
               <Briefcase className="w-16 h-16 text-white/30 mx-auto mb-4" />
               <p className="text-white/60 text-lg">
                 {filterType === "MES_RESOLUS" 
-                  ? "Vous n'avez pas encore résolu de signalement" 
-                  : "Aucun signalement résolu trouvé"}
+                  ? t("agent.noneResolvedYet")
+                  : t("agent.noResolvedFound")}
               </p>
             </div>
           ) : (
@@ -421,18 +423,18 @@ export default function AgentIntervention() {
                         </div>
                       </div>
 
-                      <h3 className="text-white font-bold text-xl mb-2">{signalement.titre || "Sans titre"}</h3>
-                      <p className="text-white/60 text-sm mb-3 line-clamp-2">{signalement.description || "Aucune description"}</p>
+                      <h3 className="text-white font-bold text-xl mb-2">{signalement.titre || t("agent.noTitle")}</h3>
+                      <p className="text-white/60 text-sm mb-3 line-clamp-2">{signalement.description || t("agent.noDescription")}</p>
                       
                       <div className="flex flex-wrap items-center gap-4 text-xs mb-4">
                         <div className="flex items-center gap-1 text-white/40">
                           <MapPin size={14} />
-                          <span>{signalement.address || signalement.ville || "Localisation non spécifiée"}</span>
+                          <span>{signalement.address || signalement.ville || t("agent.locationUnspecified")}</span>
                         </div>
                         {resolvedBy && (
                           <div className="flex items-center gap-1 text-emerald-400">
                             <User size={14} />
-                            <span>Résolu par : <span className="font-medium">{resolvedBy.name}</span></span>
+                            <span>{t("agent.resolvedBy")} <span className="font-medium">{resolvedBy.name}</span></span>
                           </div>
                         )}
                       </div>
@@ -441,7 +443,7 @@ export default function AgentIntervention() {
                         onClick={() => toggleExpandCard(signalement.id)}
                         className="text-emerald-400 hover:text-emerald-300 text-sm font-medium flex items-center gap-1 transition"
                       >
-                        {isExpanded ? "Voir moins" : "Voir les preuves de résolution"}
+                        {isExpanded ? t("agent.seeLess") : t("agent.seeProofs")}
                         <ChevronRight size={16} className={`transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
                       </button>
                     </div>
@@ -461,7 +463,7 @@ export default function AgentIntervention() {
                           </div>
                         ) : preuves.length > 0 ? (
                           preuves.map((preuve, idx) => {
-                            const agentName = agentNames[preuve.agentEmail] || preuve.agentEmail?.split('@')[0] || "Inconnu";
+                            const agentName = agentNames[preuve.agentEmail] || preuve.agentEmail?.split('@')[0] || t("agent.unknown");
                             return (
                               <div key={preuve.id || idx} className="bg-black/30 rounded-xl p-4 border border-white/10">
                                 <div className="flex justify-between items-start mb-3 flex-wrap gap-2">
@@ -525,7 +527,7 @@ export default function AgentIntervention() {
                                   </div>
                                 ) : (
                                   <div className="text-center py-4 bg-white/5 rounded-lg">
-                                    <p className="text-white/40 text-sm">Aucune image pour cette preuve</p>
+                                    <p className="text-white/40 text-sm">{t("agent.noImageForProof")}</p>
                                   </div>
                                 )}
                               </div>
@@ -534,7 +536,7 @@ export default function AgentIntervention() {
                         ) : (
                           <div className="text-center py-8 bg-black/30 rounded-xl">
                             <ImageIcon size={48} className="text-white/20 mx-auto mb-2" />
-                            <p className="text-white/40 text-sm">Aucune preuve d'intervention enregistrée</p>
+                            <p className="text-white/40 text-sm">{t("agent.noProofRecorded")}</p>
                           </div>
                         )}
 

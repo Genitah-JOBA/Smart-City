@@ -1,12 +1,70 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { 
   Camera, MapPin, Send, Trash2, Edit2, X, Shield, Road, 
   Lightbulb, Trash, Droplets, Search, Filter, Calendar, User,
   Clock, CheckCircle, RefreshCw, Maximize2, ChevronLeft, ChevronRight,
   TreePine, Bus, Shield as ShieldIcon, Building2 as BuildingIcon,
-  AlertTriangle, PlayCircle, Loader, Navigation2, Building2, Home, Target, LocateFixed, CheckCircle as CheckCircleIcon,
+  AlertTriangle, XCircle, PlayCircle, Loader, Navigation2, Building2, Home, Target, LocateFixed, CheckCircle as CheckCircleIcon,
   Grid, List, Plus, Image as ImageIcon, FolderOpen
 } from "lucide-react";
+import { useI18n } from "./context/AppContext";
+
+// 📍 Quartiers/fokontany connus d'Antananarivo.
+// ⚠️ Coordonnées APPROXIMATIVES (centre du quartier) — à ajuster librement.
+// Le point GPS est "aimanté" vers le quartier connu le plus proche : c'est
+// gratuit, hors-ligne, et robuste à l'imprécision Wi-Fi (~500 m) des ordinateurs.
+// 👉 Pour ajouter/corriger : mettez-vous dans le quartier, lisez les coordonnées
+//    affichées par l'app en mode GPS, puis copiez-les ici (une ligne par quartier).
+const QUARTIERS_CONNUS = [
+  { nom: "67ha", lat: -18.9130, lng: 47.5150 },
+  { nom: "67ha Sud", lat: -18.9165, lng: 47.5140 },
+  { nom: "Analakely", lat: -18.9096, lng: 47.5237 },
+  { nom: "Antaninarenina", lat: -18.9086, lng: 47.5262 },
+  { nom: "Isotry", lat: -18.9086, lng: 47.5175 },
+  { nom: "Tsaralalàna", lat: -18.9066, lng: 47.5223 },
+  { nom: "Behoririka", lat: -18.9038, lng: 47.5288 },
+  { nom: "Andravoahangy", lat: -18.9018, lng: 47.5345 },
+  { nom: "Ampefiloha", lat: -18.9122, lng: 47.5182 },
+  { nom: "Anosy", lat: -18.9190, lng: 47.5238 },
+  { nom: "Mahamasina", lat: -18.9205, lng: 47.5268 },
+  { nom: "Ambohijatovo", lat: -18.9150, lng: 47.5288 },
+  { nom: "Faravohitra", lat: -18.9075, lng: 47.5300 },
+  { nom: "Andohalo", lat: -18.9128, lng: 47.5300 },
+  { nom: "Antanimena", lat: -18.9020, lng: 47.5232 },
+  { nom: "Ankorondrano", lat: -18.8790, lng: 47.5250 },
+  { nom: "Andraharo", lat: -18.8730, lng: 47.5170 },
+  { nom: "Ivandry", lat: -18.8640, lng: 47.5290 },
+  { nom: "Ambodivona", lat: -18.8930, lng: 47.5290 },
+  { nom: "Ankadifotsy", lat: -18.9000, lng: 47.5290 },
+  { nom: "Soanierana", lat: -18.9240, lng: 47.5170 },
+  { nom: "Anosibe", lat: -18.9280, lng: 47.5190 },
+  { nom: "Ambohipo", lat: -18.9160, lng: 47.5470 },
+  { nom: "Ankatso", lat: -18.9180, lng: 47.5440 },
+  { nom: "Ampandrana", lat: -18.9020, lng: 47.5330 },
+];
+
+// Distance en mètres entre deux points GPS (formule de haversine).
+const distanceMetres = (lat1, lng1, lat2, lng2) => {
+  const R = 6371000;
+  const toRad = (d) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+};
+
+// Renvoie le quartier connu le plus proche s'il est dans le rayon (en mètres), sinon null.
+const trouverQuartierProche = (lat, lng, seuilMetres = 1500) => {
+  let best = null;
+  for (const q of QUARTIERS_CONNUS) {
+    const d = distanceMetres(lat, lng, q.lat, q.lng);
+    if (d <= seuilMetres && (!best || d < best.distance)) {
+      best = { nom: q.nom, distance: d };
+    }
+  }
+  return best;
+};
 
 export default function Signaler() {
   const [signalements, setSignalements] = useState([]);
@@ -59,23 +117,46 @@ export default function Signaler() {
   const [originalFormData, setOriginalFormData] = useState(null);
   const [originalImages, setOriginalImages] = useState([]);
 
+  const fileInputRef = useRef(null);
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+  const [showCamera, setShowCamera] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  const { t } = useI18n();
+
+  // Anciennes valeurs de type (données historiques) -> catégorie actuelle
+  const LEGACY_TYPE_ALIAS = {
+    DECHETS: "PROPRETE", DECHET: "PROPRETE", ORDURES: "PROPRETE",
+    ROUTE: "VOIRIE", ROUTES: "VOIRIE",
+    ECLAIRAGE_PUBLIC: "ECLAIRAGE", LAMPADAIRE: "ECLAIRAGE",
+    TRANSPORT: "TRANSPORTS", EAUX: "EAU",
+    ESPACE_VERT: "ESPACES_VERTS", ESPACES_VERT: "ESPACES_VERTS",
+  };
+
   const categories = [
-    { id: "VOIRIE", name: "Voirie / Routes", icon: Road, color: "from-orange-500 to-orange-400", iconColor: "text-orange-400" },
-    { id: "ECLAIRAGE", name: "Éclairage Public", icon: Lightbulb, color: "from-yellow-500 to-yellow-400", iconColor: "text-yellow-400" },
-    { id: "PROPRETE", name: "Propreté / Déchets", icon: Trash, color: "from-red-500 to-red-400", iconColor: "text-red-400" },
-    { id: "EAU", name: "Eau / Assainissement", icon: Droplets, color: "from-blue-500 to-blue-400", iconColor: "text-blue-400" },
-    { id: "ESPACES_VERTS", name: "Espaces verts", icon: TreePine, color: "from-emerald-500 to-emerald-400", iconColor: "text-emerald-400" },
-    { id: "TRANSPORTS", name: "Transports / Mobilité", icon: Bus, color: "from-purple-500 to-purple-400", iconColor: "text-purple-400" },
-    { id: "SECURITE", name: "Sécurité / Prévention", icon: Shield, color: "from-slate-500 to-slate-400", iconColor: "text-slate-400" },
-    { id: "URBANISME", name: "Urbanisme", icon: Building2, color: "from-cyan-500 to-cyan-400", iconColor: "text-cyan-400" }
+    { id: "VOIRIE", name: t("cat.VOIRIE"), icon: Road, color: "from-orange-500 to-orange-400", iconColor: "text-orange-400" },
+    { id: "ECLAIRAGE", name: t("cat.ECLAIRAGE"), icon: Lightbulb, color: "from-yellow-500 to-yellow-400", iconColor: "text-yellow-400" },
+    { id: "PROPRETE", name: t("cat.PROPRETE"), icon: Trash, color: "from-red-500 to-red-400", iconColor: "text-red-400" },
+    { id: "EAU", name: t("cat.EAU"), icon: Droplets, color: "from-blue-500 to-blue-400", iconColor: "text-blue-400" },
+    { id: "ESPACES_VERTS", name: t("cat.ESPACES_VERTS"), icon: TreePine, color: "from-emerald-500 to-emerald-400", iconColor: "text-emerald-400" },
+    { id: "TRANSPORTS", name: t("cat.TRANSPORTS"), icon: Bus, color: "from-purple-500 to-purple-400", iconColor: "text-purple-400" },
+    { id: "SECURITE", name: t("cat.SECURITE"), icon: Shield, color: "from-slate-500 to-slate-400", iconColor: "text-slate-400" },
+    { id: "URBANISME", name: t("cat.URBANISME"), icon: Building2, color: "from-cyan-500 to-cyan-400", iconColor: "text-cyan-400" }
   ];
+
+  // Retrouve la catégorie d'un type, en tenant compte des anciennes valeurs.
+  const resolveCat = (type) =>
+    categories.find(c => c.id === type) ||
+    categories.find(c => c.id === LEGACY_TYPE_ALIAS[type]);
 
   const getStatusColor = (statut) => {
     const colors = {
       'EN_ATTENTE': 'text-amber-400 bg-amber-500/10 border-amber-500/20',
       'EN_COURS': 'text-blue-400 bg-blue-500/10 border-blue-500/20',
       'RESOLU': 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
-      'TRAITE': 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+      'TRAITE': 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
+      'REJETE': 'text-red-400 bg-red-500/10 border-red-500/20'
     };
     return colors[statut] || 'text-gray-400 bg-gray-500/10 border-gray-500/20';
   };
@@ -85,26 +166,23 @@ export default function Signaler() {
       'EN_ATTENTE': AlertTriangle,
       'EN_COURS': PlayCircle,
       'RESOLU': CheckCircle,
-      'TRAITE': CheckCircle
+      'TRAITE': CheckCircle,
+      'REJETE': XCircle
     };
     return icons[statut] || AlertTriangle;
   };
 
   const getStatusText = (statut) => {
-    const texts = {
-      'EN_ATTENTE': 'En attente',
-      'EN_COURS': 'En cours',
-      'RESOLU': 'Résolu',
-      'TRAITE': 'Traité'
-    };
-    return texts[statut] || statut;
+    const label = t(`status.${statut}`);
+    return label === `status.${statut}` ? statut : label;
   };
 
   const getStatusBadgeStyle = (statut) => {
     const styles = {
       'EN_ATTENTE': 'bg-amber-500/10 text-amber-400',
       'EN_COURS': 'bg-blue-500/10 text-blue-400',
-      'RESOLU': 'bg-emerald-500/10 text-emerald-400'
+      'RESOLU': 'bg-emerald-500/10 text-emerald-400',
+      'REJETE': 'bg-red-500/10 text-red-400'
     };
     return styles[statut] || 'bg-gray-500/10 text-gray-400';
   };
@@ -147,6 +225,55 @@ export default function Signaler() {
     }
     
     return { quartier, fokontany, lieuDit };
+  };
+
+  // Résout une adresse à partir de coordonnées :
+  // 1) essaie le backend (Google, clé côté serveur) ;
+  // 2) si indisponible (204) ou erreur, retombe sur OpenStreetMap.
+  const resolveAddressFromCoordinates = async (lat, lng) => {
+    let base = null;
+
+    // 1) Google via le backend (actif uniquement si une clé est configurée côté serveur)
+    const token = localStorage.getItem("token");
+    try {
+      const res = await fetch(
+        `http://localhost:8081/api/geocode/reverse?lat=${lat}&lng=${lng}`,
+        { headers: token ? { "Authorization": `Bearer ${token}` } : {} }
+      );
+      // 200 => Google a répondu ; 204 => pas de clé/échec => fallback OSM
+      if (res.ok && res.status !== 204) {
+        const g = await res.json();
+        if (g && g.source === "google") {
+          base = {
+            fullAddress: g.fullAddress || `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+            ville: g.ville || "Fianarantsoa",
+            commune: g.commune || "",
+            quartier: g.quartier || "",
+            fokontany: g.fokontany || "",
+            lieuDit: g.lieuDit || "",
+            rue: g.rue || "",
+            latitude: lat,
+            longitude: lng
+          };
+        }
+      }
+    } catch (e) {
+      console.warn("Géocodage Google indisponible, bascule sur OpenStreetMap:", e);
+    }
+
+    // 2) Repli OpenStreetMap (gratuit) si Google n'a rien donné
+    if (!base) {
+      base = await getDetailedAddressFromCoordinates(lat, lng);
+    }
+
+    // 3) "Aimantage" vers le quartier connu le plus proche (gratuit, hors-ligne,
+    //    robuste à l'imprécision Wi-Fi). Il prime sur le quartier renvoyé par la carte.
+    const local = trouverQuartierProche(lat, lng);
+    if (local) {
+      base.quartier = local.nom;
+    }
+
+    return base;
   };
 
   const getDetailedAddressFromCoordinates = async (lat, lng) => {
@@ -235,7 +362,7 @@ export default function Signaler() {
         const accuracy = pos.coords.accuracy;
         setLocationAccuracy(accuracy);
         
-        const addressData = await getDetailedAddressFromCoordinates(
+        const addressData = await resolveAddressFromCoordinates(
           pos.coords.latitude,
           pos.coords.longitude
         );
@@ -253,14 +380,20 @@ export default function Signaler() {
           rue: addressData.rue
         }));
         
-        let successMessage = `✓ Position détectée avec précision ${Math.round(accuracy)}m`;
-        if (addressData.quartier) successMessage += `\n📍 Quartier: ${addressData.quartier}`;
+        const isPrecise = accuracy <= 100;
+        let successMessage = isPrecise
+          ? `✓ Position détectée (précision ±${Math.round(accuracy)}m)`
+          : `⚠️ Position approximative (précision ±${Math.round(accuracy)}m)`;
+        if (addressData.quartier) successMessage += `\n📍 Quartier détecté: ${addressData.quartier}`;
         if (addressData.rue) successMessage += `\n🏠 Rue: ${addressData.rue}`;
-        
+        if (!isPrecise) {
+          successMessage += `\n\n${t("sig.lowPrecisionMsg")}`;
+        }
+
         setMessage(successMessage);
         setIsSuccess(true);
         setShowModal(true);
-        setTimeout(() => setShowModal(false), 3000);
+        setTimeout(() => setShowModal(false), isPrecise ? 3000 : 7000);
         
         if (errors.position) setErrors({ ...errors, position: null });
         setIsGettingLocation(false);
@@ -344,18 +477,18 @@ export default function Signaler() {
   const validateField = (name, value) => {
     switch (name) {
       case 'titre':
-        if (!value.trim()) return "Le titre est requis";
-        if (value.length < 3) return "Le titre doit contenir au moins 3 caractères";
-        if (value.length > 100) return "Le titre ne doit pas dépasser 100 caractères";
+        if (!value.trim()) return t("val.titleRequired");
+        if (value.length < 3) return t("val.titleMin3");
+        if (value.length > 100) return t("val.titleMax100");
         return null;
       case 'description':
-        if (!value.trim()) return "La description est requise";
-        if (value.length < 10) return "La description doit contenir au moins 10 caractères";
-        if (value.length > 500) return "La description ne doit pas dépasser 500 caractères";
+        if (!value.trim()) return t("val.descRequired");
+        if (value.length < 10) return t("val.descMin10");
+        if (value.length > 500) return t("val.descMax500");
         return null;
       case 'imageUrl':
         if (value && !value.match(/^https?:\/\/.+\..+/)) {
-          return "L'URL de l'image n'est pas valide";
+          return t("val.imageUrlInvalid");
         }
         return null;
       default:
@@ -363,7 +496,7 @@ export default function Signaler() {
     }
   };
 
-  const validateImages = () => images.length === 0 ? "Au moins une image est obligatoire" : null;
+  const validateImages = () => images.length === 0 ? t("val.imageRequired") : null;
 
   const handleFieldChange = (name, value) => {
     setFormData({ ...formData, [name]: value });
@@ -415,9 +548,30 @@ export default function Signaler() {
     }
   };
 
-  useEffect(() => { 
+  useEffect(() => {
     fetchSignalements();
     fetchCurrentUser();
+  }, []);
+
+  // Couper la caméra si le composant est démonté pendant qu'elle est active
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+      }
+    };
+  }, []);
+
+  // Détecter les appareils mobiles (pour n'afficher "Prendre une photo" que sur mobile)
+  useEffect(() => {
+    const check = () => {
+      const coarse = window.matchMedia?.("(pointer: coarse)")?.matches;
+      const ua = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+      setIsMobile(Boolean(coarse || ua));
+    };
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
   }, []);
 
   useEffect(() => {
@@ -460,9 +614,128 @@ export default function Signaler() {
     if (newImages.length === 0) setErrors({ ...errors, images: "Au moins une image est obligatoire" });
   };
 
+  // Compresse/redimensionne une image (max 1280px, JPEG) pour éviter des fichiers trop lourds
+  const compressImage = (file, maxSize = 1280, quality = 0.7) =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new window.Image();
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > height && width > maxSize) {
+            height = Math.round((height * maxSize) / width);
+            width = maxSize;
+          } else if (height >= width && height > maxSize) {
+            width = Math.round((width * maxSize) / height);
+            height = maxSize;
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL("image/jpeg", quality));
+        };
+        img.onerror = reject;
+        img.src = e.target.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  // Appelé par les inputs "appareil photo" et "galerie / fichiers"
+  const handleFileSelected = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    try {
+      const newOnes = [];
+      for (const file of files) {
+        if (!file.type.startsWith("image/")) continue;
+        const dataUrl = await compressImage(file);
+        newOnes.push({ url: dataUrl });
+      }
+      if (newOnes.length > 0) {
+        setImages((prev) => [...prev, ...newOnes]);
+        if (errors.images) setErrors({ ...errors, images: null });
+      }
+    } catch (err) {
+      console.error(err);
+      setMessage("Impossible de charger cette image. Veuillez réessayer avec une autre.");
+      setIsSuccess(false);
+      setShowModal(true);
+    } finally {
+      e.target.value = ""; // permet de re-sélectionner le même fichier
+    }
+  };
+
+  // Ouvre la caméra (webcam sur ordinateur, caméra arrière sur mobile).
+  // Si indisponible (pas de webcam / accès refusé), bascule sur l'explorateur.
+  const openCamera = async () => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      fileInputRef.current?.click();
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" } },
+        audio: false
+      });
+      streamRef.current = stream;
+      setShowCamera(true);
+      // Attacher le flux après le rendu du <video>
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play().catch(() => {});
+        }
+      }, 0);
+    } catch (err) {
+      console.error("Accès caméra impossible:", err);
+      setMessage("Impossible d'accéder à la caméra (absente ou accès refusé). Ouverture de l'explorateur de fichiers…");
+      setIsSuccess(false);
+      setShowModal(true);
+      setTimeout(() => setShowModal(false), 2500);
+      fileInputRef.current?.click();
+    }
+  };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+  };
+
+  const closeCamera = () => {
+    stopCamera();
+    setShowCamera(false);
+  };
+
+  const capturePhoto = () => {
+    const video = videoRef.current;
+    if (!video || !video.videoWidth) return;
+    const maxSize = 1280;
+    let w = video.videoWidth;
+    let h = video.videoHeight;
+    if (w > h && w > maxSize) {
+      h = Math.round((h * maxSize) / w);
+      w = maxSize;
+    } else if (h >= w && h > maxSize) {
+      w = Math.round((w * maxSize) / h);
+      h = maxSize;
+    }
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    canvas.getContext("2d").drawImage(video, 0, 0, w, h);
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+    setImages((prev) => [...prev, { url: dataUrl }]);
+    if (errors.images) setErrors({ ...errors, images: null });
+    closeCamera();
+  };
+
   const confirmDelete = (id) => {
     setDeleteConfirmId(id);
-    setMessage("Êtes-vous sûr de vouloir supprimer ce signalement ?");
+    setMessage(t("sig.deleteConfirm"));
     setIsSuccess(false);
     setShowModal(true);
   };
@@ -479,12 +752,23 @@ export default function Signaler() {
         if (editingId === deleteConfirmId) {
           handleCancelEdit();
         }
-        setMessage("✓ Signalement supprimé avec succès !");
+        setMessage(t("sig.deletedOk"));
         setIsSuccess(true);
         setShowModal(true);
         setTimeout(() => setShowModal(false), 2000);
+      } else {
+        setMessage(res.status === 401 || res.status === 403
+          ? "Vous n'êtes pas autorisé à supprimer ce signalement."
+          : "Impossible de supprimer le signalement pour le moment. Veuillez réessayer.");
+        setIsSuccess(false);
+        setShowModal(true);
       }
-    } catch (error) { console.error(error); }
+    } catch (error) {
+      console.error(error);
+      setMessage("Connexion au serveur impossible. Vérifiez votre connexion Internet et réessayez.");
+      setIsSuccess(false);
+      setShowModal(true);
+    }
     finally { setDeleteConfirmId(null); }
   };
 
@@ -493,7 +777,7 @@ export default function Signaler() {
     const token = localStorage.getItem("token");
     
     if (!validateForm()) {
-      setMessage("Veuillez corriger les erreurs");
+      setMessage(t("sig.fixErrors"));
       setIsSuccess(false);
       setShowModal(true);
       setTimeout(() => setShowModal(false), 3000);
@@ -544,19 +828,24 @@ export default function Signaler() {
       if (res.ok) {
         handleCancelEdit();
         fetchSignalements();
-        setMessage(editingId ? "✓ Signalement modifié avec succès !" : "✓ Signalement créé avec succès !");
+        setMessage(editingId ? t("sig.updatedOk") : t("sig.createdOk"));
         setIsSuccess(true);
         setShowModal(true);
         setTimeout(() => setShowModal(false), 2000);
       } else {
-        const errorData = await res.json();
-        setMessage(`Erreur: ${errorData.message || "Une erreur est survenue"}`);
+        if (res.status === 401 || res.status === 403) {
+          setMessage("Vous n'avez pas les droits nécessaires pour effectuer cette action.");
+        } else {
+          setMessage(editingId
+            ? "Impossible de modifier le signalement pour le moment. Veuillez réessayer."
+            : "Impossible d'enregistrer votre signalement pour le moment. Veuillez réessayer.");
+        }
         setIsSuccess(false);
         setShowModal(true);
       }
-    } catch (error) { 
+    } catch (error) {
       console.error(error);
-      setMessage("Erreur de connexion au serveur");
+      setMessage("Connexion au serveur impossible. Vérifiez votre connexion Internet et réessayez.");
       setIsSuccess(false);
       setShowModal(true);
     }
@@ -682,6 +971,46 @@ export default function Signaler() {
 
   return (
     <div className="min-h-screen bg-[#0f0f1a]">
+      {/* Module Caméra */}
+      {showCamera && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl">
+          <div className="bg-[#1a1a2e] rounded-2xl w-full max-w-lg border border-white/10 overflow-hidden">
+            <div className="relative bg-black">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full max-h-[70vh] object-contain"
+              />
+              <button
+                type="button"
+                onClick={closeCamera}
+                className="absolute top-3 right-3 p-2 bg-black/50 rounded-full hover:bg-black/70 text-white/80 transition"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-4 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={closeCamera}
+                className="flex-1 py-3 rounded-xl bg-white/5 text-white/60 hover:bg-white/10 transition font-medium"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={capturePhoto}
+                className="flex-1 py-3 rounded-xl bg-blue-500/80 hover:bg-blue-500 text-white font-medium flex items-center justify-center gap-2 transition"
+              >
+                <Camera size={18} /> {t("sig.capture")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal de confirmation */}
       {showModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl">
@@ -693,16 +1022,16 @@ export default function Signaler() {
                 {isSuccess ? <Shield className="w-7 h-7" /> : deleteConfirmId ? <div className="text-2xl font-bold">?</div> : <div className="text-2xl font-bold">!</div>}
               </div>
               <h3 className={`text-lg font-bold mb-2 ${isSuccess ? 'text-emerald-400' : deleteConfirmId ? 'text-amber-400' : 'text-red-400'}`}>
-                {isSuccess ? "Succès" : deleteConfirmId ? "Confirmation" : "Information"}
+                {isSuccess ? t("sig.success") : deleteConfirmId ? t("sig.confirmation") : t("sig.info")}
               </h3>
               <p className="text-white/60 text-sm mb-6 whitespace-pre-line">{message}</p>
               {deleteConfirmId ? (
                 <div className="flex gap-3">
-                  <button onClick={() => { setDeleteConfirmId(null); setShowModal(false); }} className="flex-1 py-2 rounded-xl font-semibold bg-white/5 text-white/60 hover:bg-white/10 transition">Annuler</button>
-                  <button onClick={handleDelete} className="flex-1 py-2 rounded-xl font-semibold text-white bg-red-500/80 hover:bg-red-500 transition">Supprimer</button>
+                  <button onClick={() => { setDeleteConfirmId(null); setShowModal(false); }} className="flex-1 py-2 rounded-xl font-semibold bg-white/5 text-white/60 hover:bg-white/10 transition">{t("common.cancel")}</button>
+                  <button onClick={handleDelete} className="flex-1 py-2 rounded-xl font-semibold text-white bg-red-500/80 hover:bg-red-500 transition">{t("sig.delete")}</button>
                 </div>
               ) : (
-                <button onClick={() => setShowModal(false)} className={`w-full py-2 rounded-xl font-semibold text-white ${isSuccess ? 'bg-emerald-500/80 hover:bg-emerald-500' : 'bg-white/10 hover:bg-white/20'} transition`}>Fermer</button>
+                <button onClick={() => setShowModal(false)} className={`w-full py-2 rounded-xl font-semibold text-white ${isSuccess ? 'bg-emerald-500/80 hover:bg-emerald-500' : 'bg-white/10 hover:bg-white/20'} transition`}>{t("sig.close")}</button>
               )}
             </div>
           </div>
@@ -756,13 +1085,13 @@ export default function Signaler() {
             <div className="p-6 space-y-4">
               <div className="flex justify-between items-start">
                 <div className="flex items-center gap-2">
-                  <div className={`p-2 rounded-xl bg-gradient-to-r ${categories.find(c => c.id === selectedSignalement.type)?.color || 'from-emerald-500 to-green-600'}`}>
+                  <div className={`p-2 rounded-xl bg-gradient-to-r ${resolveCat(selectedSignalement.type)?.color || 'from-emerald-500 to-green-600'}`}>
                     {(() => {
-                      const Icon = categories.find(c => c.id === selectedSignalement.type)?.icon || Road;
+                      const Icon = resolveCat(selectedSignalement.type)?.icon || Road;
                       return <Icon size={20} className="text-white" />;
                     })()}
                   </div>
-                  <span className="text-white/60 text-sm font-medium">{selectedSignalement.type}</span>
+                  <span className="text-white/60 text-sm font-medium">{resolveCat(selectedSignalement.type)?.name || selectedSignalement.type}</span>
                 </div>
                 <span className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border ${getStatusColor(selectedSignalement.statut)}`}>
                   {(() => {
@@ -776,21 +1105,21 @@ export default function Signaler() {
               <h2 className="text-2xl font-bold text-white">{selectedSignalement.titre}</h2>
               
               <div>
-                <h3 className="text-white/40 text-xs font-medium mb-2 uppercase tracking-wider">Description</h3>
+                <h3 className="text-white/40 text-xs font-medium mb-2 uppercase tracking-wider">{t("sig.descrTitle")}</h3>
                 <p className="text-white/60 text-sm leading-relaxed">{selectedSignalement.description}</p>
               </div>
               
               <div>
                 <h3 className="text-white/40 text-xs font-medium mb-2 uppercase tracking-wider flex items-center gap-2">
                   <MapPin size={14} />
-                  Localisation
+                  {t("sig.locationTitle")}
                 </h3>
                 <div className="bg-white/5 rounded-lg p-3 space-y-2 border border-white/5">
                   {selectedSignalement.quartier && (
                     <div className="flex items-start gap-2">
                       <Building2 size={14} className="text-blue-400 mt-0.5" />
                       <div>
-                        <span className="text-white/30 text-[10px]">Quartier</span>
+                        <span className="text-white/30 text-[10px]">{t("sig.quartier")}</span>
                         <p className="text-white text-sm">{selectedSignalement.quartier}</p>
                       </div>
                     </div>
@@ -799,7 +1128,7 @@ export default function Signaler() {
                     <div className="flex items-start gap-2">
                       <MapPin size={14} className="text-blue-400 mt-0.5" />
                       <div>
-                        <span className="text-white/30 text-[10px]">Rue/Route</span>
+                        <span className="text-white/30 text-[10px]">{t("sig.street")}</span>
                         <p className="text-white text-sm">{selectedSignalement.rue}</p>
                       </div>
                     </div>
@@ -807,7 +1136,7 @@ export default function Signaler() {
                   <div className="flex items-start gap-2">
                     <MapPin size={14} className="text-blue-400 mt-0.5" />
                     <div>
-                      <span className="text-white/30 text-[10px]">Ville</span>
+                      <span className="text-white/30 text-[10px]">{t("sig.city")}</span>
                       <p className="text-white text-sm">{selectedSignalement.ville || selectedSignalement.commune || "Fianarantsoa"}</p>
                     </div>
                   </div>
@@ -815,7 +1144,7 @@ export default function Signaler() {
                     <div className="flex items-start gap-2 pt-2 border-t border-white/5">
                       <Target size={14} className="text-blue-400 mt-0.5" />
                       <div>
-                        <span className="text-white/30 text-[10px]">Coordonnées GPS</span>
+                        <span className="text-white/30 text-[10px]">{t("sig.gps")}</span>
                         <p className="text-white/40 text-xs font-mono">
                           {parseFloat(selectedSignalement.latitude).toFixed(6)}, {parseFloat(selectedSignalement.longitude).toFixed(6)}
                         </p>
@@ -829,16 +1158,16 @@ export default function Signaler() {
                 <div className="bg-white/5 rounded-lg p-3 border border-white/5">
                   <div className="flex items-center gap-2 text-white/30 text-[10px] uppercase tracking-wider mb-1">
                     <Calendar size={12} />
-                    <span>Date</span>
+                    <span>{t("sig.date")}</span>
                   </div>
                   <p className="text-white text-sm">{formatDate(selectedSignalement.dateCreation)}</p>
                 </div>
                 <div className="bg-white/5 rounded-lg p-3 border border-white/5">
                   <div className="flex items-center gap-2 text-white/30 text-[10px] uppercase tracking-wider mb-1">
                     <User size={12} />
-                    <span>Auteur</span>
+                    <span>{t("sig.author")}</span>
                   </div>
-                  <p className="text-white text-sm">{selectedSignalement.utilisateur?.nom || "Anonyme"}</p>
+                  <p className="text-white text-sm">{selectedSignalement.utilisateur?.nom || t("sig.anonymous")}</p>
                 </div>
               </div>
               
@@ -846,12 +1175,12 @@ export default function Signaler() {
                 <div className="flex justify-end gap-3 pt-4 border-t border-white/5">
                   {canEdit(selectedSignalement) && (
                     <button onClick={() => { closeDetailModal(); handleEdit(selectedSignalement); }} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 transition text-sm font-medium">
-                      <Edit2 size={16} /> Modifier
+                      <Edit2 size={16} /> {t("sig.edit")}
                     </button>
                   )}
                   {canDelete(selectedSignalement) && (
                     <button onClick={() => { closeDetailModal(); confirmDelete(selectedSignalement.id); }} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 transition text-sm font-medium">
-                      <Trash2 size={16} /> Supprimer
+                      <Trash2 size={16} /> {t("sig.delete")}
                     </button>
                   )}
                 </div>
@@ -872,15 +1201,15 @@ export default function Signaler() {
               <div className="text-center">
                 <h2 className="text-xl font-bold text-white flex items-center justify-center gap-2">
                   {editingId ? <Edit2 size={22} className="text-blue-400" /> : <Camera size={22} className="text-blue-400" />}
-                  {editingId ? "Modifier le signalement" : "Nouveau signalement"}
+                  {editingId ? t("sig.editTitle") : t("sig.newTitle")}
                 </h2>
-                <p className="text-white/30 text-sm">Signalez un problème à Madagascar</p>
+                <p className="text-white/30 text-sm">{t("sig.subtitle")}</p>
               </div>
 
               <div>
                 <input 
                   type="text" 
-                  placeholder="Titre du signalement *" 
+                  placeholder={t("sig.titlePlaceholder")}
                   value={formData.titre || ""} 
                   onChange={(e) => handleFieldChange('titre', e.target.value)} 
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50 transition" 
@@ -888,7 +1217,7 @@ export default function Signaler() {
                 {errors.titre && <p className="text-red-400 text-xs mt-1">{errors.titre}</p>}
               </div>
 
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {categories.map((category) => {
                   const Icon = category.icon;
                   const isSelected = formData.type === category.id;
@@ -914,7 +1243,7 @@ export default function Signaler() {
 
               <div>
                 <textarea 
-                  placeholder="Description détaillée *" 
+                  placeholder={t("sig.descPlaceholder")}
                   value={formData.description || ""} 
                   onChange={(e) => handleFieldChange('description', e.target.value)} 
                   rows="3" 
@@ -927,7 +1256,7 @@ export default function Signaler() {
               <div className="space-y-3">
                 <label className="text-white/40 text-xs uppercase tracking-wider flex items-center gap-2">
                   <LocateFixed size={14} className="text-blue-400" />
-                  Localisation précise *
+                  {t("sig.locLabel")}
                 </label>
                 
                 {!isManualLocation ? (
@@ -941,12 +1270,12 @@ export default function Signaler() {
                       {isGettingLocation ? (
                         <>
                           <Loader size={18} className="animate-spin" />
-                          Détection en cours...
+                          {t("sig.detecting")}
                         </>
                       ) : (
                         <>
                           <LocateFixed size={18} />
-                          Détecter ma position GPS
+                          {t("sig.detectGps")}
                         </>
                       )}
                     </button>
@@ -957,7 +1286,7 @@ export default function Signaler() {
                       className="w-full flex items-center justify-center gap-2 bg-white/5 border border-white/10 hover:bg-white/10 text-white/60 font-medium py-2.5 rounded-xl transition"
                     >
                       <MapPin size={16} />
-                      Saisir manuellement l'adresse
+                      {t("sig.manualEntry")}
                     </button>
                   </div>
                 ) : (
@@ -965,7 +1294,7 @@ export default function Signaler() {
                     <div className="flex justify-between items-center mb-3">
                       <p className="text-amber-400 text-sm flex items-center gap-2 font-medium">
                         <MapPin size={16} />
-                        Saisie manuelle
+                        {t("sig.manualTitle")}
                       </p>
                       <button
                         type="button"
@@ -979,7 +1308,7 @@ export default function Signaler() {
                     
                     <div className="space-y-3">
                       <div>
-                        <label className="text-white/40 text-[10px] uppercase tracking-wider mb-1 block">Quartier *</label>
+                        <label className="text-white/40 text-[10px] uppercase tracking-wider mb-1 block">{t("sig.quartier")} *</label>
                         <input
                           type="text"
                           placeholder="Ex: Soanierana, 67ha..."
@@ -990,7 +1319,7 @@ export default function Signaler() {
                       </div>
                       
                       <div>
-                        <label className="text-white/40 text-[10px] uppercase tracking-wider mb-1 block">Rue / Route</label>
+                        <label className="text-white/40 text-[10px] uppercase tracking-wider mb-1 block">{t("sig.street")}</label>
                         <input
                           type="text"
                           placeholder="Nom de la rue"
@@ -1001,7 +1330,7 @@ export default function Signaler() {
                       </div>
                       
                       <div>
-                        <label className="text-white/40 text-[10px] uppercase tracking-wider mb-1 block">Ville *</label>
+                        <label className="text-white/40 text-[10px] uppercase tracking-wider mb-1 block">{t("sig.city")} *</label>
                         <input
                           type="text"
                           placeholder="Ex: Fianarantsoa"
@@ -1017,7 +1346,7 @@ export default function Signaler() {
                         className="w-full bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 font-medium py-2 rounded-xl transition"
                       >
                         <CheckCircleIcon size={16} className="inline mr-2" />
-                        Valider l'adresse
+                        {t("sig.validateAddress")}
                       </button>
                     </div>
                   </div>
@@ -1035,7 +1364,7 @@ export default function Signaler() {
                         isManualLocation ? 'text-amber-400' : 'text-blue-400'
                       }`}>
                         <MapPin size={14} />
-                        {isManualLocation ? 'Adresse saisie' : 'Localisation détectée'}
+                        {isManualLocation ? t("sig.entered") : t("sig.detected")}
                       </p>
                       <button
                         type="button"
@@ -1060,23 +1389,35 @@ export default function Signaler() {
                         }}
                         className="text-red-400/60 hover:text-red-400 text-[10px]"
                       >
-                        Effacer
+                        {t("sig.clear")}
                       </button>
                     </div>
                     
                     <div className="space-y-1 text-sm">
                       {formData.quartier && (
-                        <p className="text-white"><span className="text-white/30">Quartier:</span> {formData.quartier}</p>
+                        <p className="text-white"><span className="text-white/30">{t("sig.quartier")}:</span> {formData.quartier}</p>
                       )}
                       {formData.rue && (
-                        <p className="text-white"><span className="text-white/30">Rue:</span> {formData.rue}</p>
+                        <p className="text-white"><span className="text-white/30">{t("sig.street")}:</span> {formData.rue}</p>
                       )}
-                      <p className="text-white"><span className="text-white/30">Ville:</span> {formData.ville}</p>
+                      <p className="text-white"><span className="text-white/30">{t("sig.city")}:</span> {formData.ville}</p>
                       {formData.latitude && formData.longitude && (
                         <p className="text-white/40 text-xs font-mono">
                           {parseFloat(formData.latitude).toFixed(6)}°, {parseFloat(formData.longitude).toFixed(6)}°
-                          {locationAccuracy && <span className="ml-2 text-emerald-400">(±{Math.round(locationAccuracy)}m)</span>}
+                          {locationAccuracy && (
+                            <span className={`ml-2 ${locationAccuracy <= 100 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                              (±{Math.round(locationAccuracy)}m)
+                            </span>
+                          )}
                         </p>
+                      )}
+                      {!isManualLocation && locationAccuracy && locationAccuracy > 100 && (
+                        <div className="flex items-start gap-2 mt-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                          <AlertTriangle size={14} className="text-amber-400 mt-0.5 flex-shrink-0" />
+                          <p className="text-amber-300/90 text-[11px] leading-snug">
+                            {t("sig.lowPrecisionWarn")}
+                          </p>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -1087,21 +1428,60 @@ export default function Signaler() {
               <div className="space-y-3">
                 <label className="text-white/40 text-xs uppercase tracking-wider flex items-center gap-2">
                   <Camera size={14} className="text-blue-400" />
-                  Images *
-                  <span className="text-white/20 text-[10px]">(au moins 1)</span>
+                  {t("sig.imagesLabel")} *
+                  <span className="text-white/20 text-[10px]">{t("sig.atLeastOne")}</span>
                 </label>
                 
+                {/* Champ caché : galerie / explorateur (et repli si pas de caméra) */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleFileSelected}
+                  className="hidden"
+                />
+
+                {/* Appareil photo (mobile uniquement) + Galerie / Explorateur */}
+                <div className={`grid ${isMobile ? "grid-cols-2" : "grid-cols-1"} gap-2`}>
+                  {isMobile && (
+                    <button
+                      type="button"
+                      onClick={openCamera}
+                      className="flex items-center justify-center gap-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 font-medium py-3 rounded-xl transition border border-blue-500/20"
+                    >
+                      <Camera size={18} />
+                      {t("sig.takePhoto")}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white/70 font-medium py-3 rounded-xl transition border border-white/10"
+                  >
+                    <FolderOpen size={18} />
+                    {t("sig.gallery")}
+                  </button>
+                </div>
+
+                {/* Séparateur "ou via une URL" */}
+                <div className="flex items-center gap-2">
+                  <div className="h-px flex-1 bg-white/10" />
+                  <span className="text-white/30 text-[10px] uppercase tracking-wider">{t("sig.orUrl")}</span>
+                  <div className="h-px flex-1 bg-white/10" />
+                </div>
+
                 <div className="flex gap-2">
-                  <input 
-                    type="text" 
-                    placeholder="URL de l'image" 
-                    value={formData.imageUrl || ""} 
-                    onChange={(e) => setFormData({...formData, imageUrl: e.target.value})} 
+                  <input
+                    type="text"
+                    placeholder={t("sig.urlPlaceholder")}
+                    value={formData.imageUrl || ""}
+                    onChange={(e) => setFormData({...formData, imageUrl: e.target.value})}
                     className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50 transition"
                   />
-                  <button 
-                    type="button" 
-                    onClick={addImage} 
+                  <button
+                    type="button"
+                    onClick={addImage}
                     className="bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 px-5 rounded-xl transition font-medium"
                   >
                     <Plus size={18} />
@@ -1135,7 +1515,7 @@ export default function Signaler() {
                   type="submit" 
                   className="flex-1 bg-gradient-to-r from-blue-500/20 to-emerald-500/20 hover:from-blue-500/30 hover:to-emerald-500/30 text-white font-medium py-3 rounded-xl transition flex items-center justify-center gap-2 border border-white/10"
                 >
-                  <Send size={18}/> {editingId ? "Mettre à jour" : "Envoyer"}
+                  <Send size={18}/> {editingId ? t("sig.update") : t("sig.send")}
                 </button>
                 
                 {editingId && (
@@ -1144,7 +1524,7 @@ export default function Signaler() {
                     onClick={handleCancelEdit}
                     className="flex-1 bg-white/5 hover:bg-white/10 text-white/60 font-medium py-3 rounded-xl transition flex items-center justify-center gap-2"
                   >
-                    <X size={18} /> Annuler
+                    <X size={18} /> {t("common.cancel")}
                   </button>
                 )}
               </div>
@@ -1159,7 +1539,7 @@ export default function Signaler() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/20 w-4 h-4" />
               <input
                 type="text"
-                placeholder="Rechercher un signalement..."
+                placeholder={t("sig.searchPlaceholder")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50 transition"
@@ -1202,7 +1582,7 @@ export default function Signaler() {
           {showFilters && (
             <div className="bg-white/5 rounded-xl p-5 border border-white/10">
               <div className="mb-5">
-                <label className="text-white/30 text-[10px] uppercase tracking-wider block mb-3">Type de problème</label>
+                <label className="text-white/30 text-[10px] uppercase tracking-wider block mb-3">{t("sig.filterType")}</label>
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                   <button
                     onClick={() => setFilterType("TOUS")}
@@ -1214,7 +1594,7 @@ export default function Signaler() {
                   >
                     <div className="flex flex-col items-center gap-1">
                       <Filter size={16} />
-                      <span className="text-[10px]">Tous</span>
+                      <span className="text-[10px]">{t("sig.all")}</span>
                     </div>
                   </button>
                   {categories.map((cat) => {
@@ -1241,28 +1621,31 @@ export default function Signaler() {
               </div>
 
               <div className="mb-4">
-                <label className="text-white/30 text-[10px] uppercase tracking-wider block mb-3">Statut</label>
-                <div className="grid grid-cols-4 gap-2">
-                  {['TOUS', 'EN_ATTENTE', 'EN_COURS', 'RESOLU'].map((status) => {
+                <label className="text-white/30 text-[10px] uppercase tracking-wider block mb-3">{t("sig.filterStatus")}</label>
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                  {['TOUS', 'EN_ATTENTE', 'EN_COURS', 'RESOLU', 'REJETE'].map((status) => {
                     const isSelected = filterStatus === status;
                     const labels = {
-                      'TOUS': 'Tous',
-                      'EN_ATTENTE': 'En attente',
-                      'EN_COURS': 'En cours',
-                      'RESOLU': 'Résolu'
+                      'TOUS': t("sig.all"),
+                      'EN_ATTENTE': t("status.EN_ATTENTE"),
+                      'EN_COURS': t("status.EN_COURS"),
+                      'RESOLU': t("status.RESOLU"),
+                      'REJETE': t("status.REJETE")
                     };
                     const icons = {
                       'TOUS': Filter,
                       'EN_ATTENTE': AlertTriangle,
                       'EN_COURS': PlayCircle,
-                      'RESOLU': CheckCircle
+                      'RESOLU': CheckCircle,
+                      'REJETE': XCircle
                     };
                     const Icon = icons[status];
                     const colors = {
                       'TOUS': 'text-blue-400 border-blue-500/20',
                       'EN_ATTENTE': 'text-amber-400 border-amber-500/20',
                       'EN_COURS': 'text-blue-400 border-blue-500/20',
-                      'RESOLU': 'text-emerald-400 border-emerald-500/20'
+                      'RESOLU': 'text-emerald-400 border-emerald-500/20',
+                      'REJETE': 'text-red-400 border-red-500/20'
                     };
                     return (
                       <button
@@ -1284,10 +1667,10 @@ export default function Signaler() {
 
               {(filterType !== "TOUS" || filterStatus !== "TOUS" || searchTerm) && (
                 <div className="mt-4 pt-3 border-t border-white/5 flex justify-between items-center">
-                  <span className="text-white/30 text-xs">{filteredSignalements.length} résultat(s)</span>
+                  <span className="text-white/30 text-xs">{filteredSignalements.length} {t("sig.results")}</span>
                   <button onClick={() => { setSearchTerm(""); setFilterType("TOUS"); setFilterStatus("TOUS"); }} className="text-blue-400/60 hover:text-blue-400 text-xs flex items-center gap-1">
                     <RefreshCw size={12} />
-                    Réinitialiser
+                    {t("sig.reset")}
                   </button>
                 </div>
               )}
@@ -1300,7 +1683,7 @@ export default function Signaler() {
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-bold text-white flex items-center gap-2">
               <FolderOpen size={18} className="text-blue-400" />
-              Tous les signalements
+              {t("sig.listTitle")}
             </h3>
             <span className="bg-white/5 text-white/40 px-3 py-1 rounded-full text-xs border border-white/5">
               {filteredSignalements.length}
@@ -1312,14 +1695,14 @@ export default function Signaler() {
               <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Search className="w-8 h-8 text-white/20" />
               </div>
-              <p className="text-white/30 text-sm">Aucun signalement trouvé</p>
+              <p className="text-white/30 text-sm">{t("sig.empty")}</p>
             </div>
           ) : (
             <div className={`grid gap-4 ${
               viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"
             }`}>
               {filteredSignalements.map((s) => {
-                const category = categories.find(c => c.id === s.type);
+                const category = resolveCat(s.type);
                 const Icon = category?.icon || Road;
                 const StatusIcon = getStatusIcon(s.statut);
                 
@@ -1330,7 +1713,7 @@ export default function Signaler() {
                         <img src={s.images[0].url} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" alt={s.titre} />
                         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center">
                           <span className="text-white bg-blue-500/30 backdrop-blur-sm rounded-xl px-4 py-2 text-sm font-medium opacity-0 group-hover:opacity-100 transition-all duration-300 border border-white/10">
-                            Voir plus
+                            {t("sig.seeMore")}
                           </span>
                         </div>
                         {s.images.length > 1 && (

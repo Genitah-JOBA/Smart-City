@@ -90,7 +90,7 @@ public class AuthController {
             
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Erreur: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("La création du compte a échoué. Vérifiez vos informations et réessayez.");
         }
     }
 
@@ -157,7 +157,7 @@ public class AuthController {
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", e.getMessage()));
+                .body(Map.of("error", "Impossible de charger votre profil pour le moment. Veuillez réessayer."));
         }
     }
 
@@ -210,8 +210,9 @@ public class AuthController {
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", e.getMessage()));
+                .body(Map.of("error", "Impossible de mettre à jour votre profil pour le moment. Veuillez réessayer."));
         }
     }
 
@@ -260,7 +261,7 @@ public class AuthController {
             System.err.println("❌ Erreur dans change-password: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", e.getMessage()));
+                .body(Map.of("error", "Impossible de modifier votre mot de passe pour le moment. Veuillez réessayer."));
         }
     }
 }

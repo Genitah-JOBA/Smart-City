@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { User, Mail, Shield, Save, Lock, Eye, EyeOff, Edit2, X, Check, AlertCircle, CheckCircle, Info, Briefcase, MapPin, Wrench, Building2, Lightbulb, Trash2, TreePine, Bus, ShieldCheck, Palette, Home, Phone } from "lucide-react";
+import { useI18n } from "./context/AppContext";
 
 // ✅ COMPOSANT MESSAGEBOX MODERNE
 const MessageBox = ({ type, message, onClose, autoClose = 5000 }) => {
@@ -91,6 +92,7 @@ const ValidatedInput = ({
   showPasswordToggle = false,
   onTogglePassword
 }) => {
+  const { t } = useI18n();
   const [error, setError] = useState("");
   const [touched, setTouched] = useState(false);
   const inputRef = useRef(null);
@@ -98,13 +100,13 @@ const ValidatedInput = ({
 
   const validate = (val) => {
     if (required && !val.trim()) {
-      return "Ce champ est requis";
+      return t("val.required");
     }
     if (minLength && val.length < minLength) {
-      return `Minimum ${minLength} caractères`;
+      return `Minimum ${minLength}`;
     }
     if (pattern && !pattern.test(val)) {
-      return errorMessage || "Format invalide";
+      return errorMessage || t("val.invalidFormat");
     }
     return "";
   };
@@ -191,14 +193,15 @@ const ValidatedInput = ({
 
 // ✅ SÉLECTEUR DE DOMAINE
 const DomaineSelector = ({ value, onChange, label, onValidChange }) => {
+  const { t } = useI18n();
   const domaines = [
-    { id: "VOIRIE", label: "Voirie", icon: MapPin, description: "Routes, trottoirs, nids-de-poule" },
-    { id: "ECLAIRAGE", label: "Éclairage", icon: Lightbulb, description: "Lampadaires, éclairage public" },
-    { id: "PROPRETE", label: "Propreté", icon: Trash2, description: "Collecte des déchets, nettoyage" },
-    { id: "ESPACES_VERTS", label: "Espaces verts", icon: TreePine, description: "Parcs, jardins, arbres" },
-    { id: "TRANSPORTS", label: "Transports", icon: Bus, description: "Transport en commun, stationnement" },
-    { id: "SECURITE", label: "Sécurité", icon: ShieldCheck, description: "Sécurité publique, prévention" },
-    { id: "URBANISME", label: "Urbanisme", icon: Building2, description: "Aménagement urbain" },
+    { id: "VOIRIE", label: t("type.VOIRIE"), icon: MapPin, description: t("dom.VOIRIE.desc") },
+    { id: "ECLAIRAGE", label: t("type.ECLAIRAGE"), icon: Lightbulb, description: t("dom.ECLAIRAGE.desc") },
+    { id: "PROPRETE", label: t("type.PROPRETE"), icon: Trash2, description: t("dom.DECHETS.desc") },
+    { id: "ESPACES_VERTS", label: t("type.ESPACES_VERTS"), icon: TreePine, description: t("dom.ESPACES_VERTS.desc") },
+    { id: "TRANSPORTS", label: t("type.TRANSPORTS"), icon: Bus, description: t("dom.TRANSPORTS.desc") },
+    { id: "SECURITE", label: t("type.SECURITE"), icon: ShieldCheck, description: t("dom.SECURITE.desc") },
+    { id: "URBANISME", label: t("type.URBANISME"), icon: Building2, description: t("dom.URBANISME.desc") },
   ];
 
   const selectedDomaine = domaines.find(d => d.id === value);
@@ -243,42 +246,43 @@ const DomaineSelector = ({ value, onChange, label, onValidChange }) => {
 
 // ✅ SÉLECTEUR DE MÉTIER
 const MetierSelector = ({ domaine, value, onChange, label, onValidChange }) => {
+  const { t } = useI18n();
   const metiersParDomaine = {
     VOIRIE: [
-      { id: "AGENT_VOIRIE", label: "Agent de voirie", icon: Wrench },
-      { id: "TECHNICIEN_GENIE_CIVIL", label: "Technicien génie civil", icon: Building2 },
-      { id: "CHEF_CHANTIER_VOIRIE", label: "Chef de chantier", icon: Briefcase },
-      { id: "AGENT_SIGNALISATION", label: "Agent signalisation", icon: MapPin },
+      { id: "AGENT_VOIRIE", label: t("met.AGENT_VOIRIE.label"), icon: Wrench },
+      { id: "TECHNICIEN_GENIE_CIVIL", label: t("met.TECHNICIEN_GENIE_CIVIL.label"), icon: Building2 },
+      { id: "CHEF_CHANTIER_VOIRIE", label: t("met.CHEF_CHANTIER_VOIRIE.label"), icon: Briefcase },
+      { id: "AGENT_SIGNALISATION", label: t("met.AGENT_SIGNALISATION.label"), icon: MapPin },
     ],
     ECLAIRAGE: [
-      { id: "TECHNICIEN_ECLAIRAGE", label: "Technicien éclairage", icon: Lightbulb },
-      { id: "INGENIEUR_ECLAIRAGE", label: "Ingénieur éclairage", icon: Wrench },
-      { id: "AGENT_MAINTENANCE_ELEC", label: "Agent maintenance", icon: Shield },
+      { id: "TECHNICIEN_ECLAIRAGE", label: t("met.TECHNICIEN_ECLAIRAGE.label"), icon: Lightbulb },
+      { id: "INGENIEUR_ECLAIRAGE", label: t("met.INGENIEUR_ECLAIRAGE.label"), icon: Wrench },
+      { id: "AGENT_MAINTENANCE_ELEC", label: t("met.AGENT_MAINTENANCE_ELEC.label"), icon: Shield },
     ],
     PROPRETE: [
-      { id: "AGENT_COLLECTE", label: "Agent de collecte", icon: Trash2 },
-      { id: "TECHNICIEN_NETTOIEMENT", label: "Technicien nettoiement", icon: Wrench },
-      { id: "RESPONSABLE_DECHETTERIE", label: "Responsable déchetterie", icon: Briefcase },
+      { id: "AGENT_COLLECTE", label: t("met.AGENT_COLLECTE.label"), icon: Trash2 },
+      { id: "TECHNICIEN_NETTOIEMENT", label: t("met.TECHNICIEN_NETTOIEMENT.label"), icon: Wrench },
+      { id: "RESPONSABLE_DECHETTERIE", label: t("met.RESPONSABLE_DECHETTERIE.label"), icon: Briefcase },
     ],
     ESPACES_VERTS: [
-      { id: "JARDINIER_MUNICIPAL", label: "Jardinier municipal", icon: TreePine },
-      { id: "ELAGUEUR", label: "Élagueur", icon: Wrench },
-      { id: "PAYSAGISTE_URBAIN", label: "Paysagiste urbain", icon: Palette },
+      { id: "JARDINIER_MUNICIPAL", label: t("met.JARDINIER_MUNICIPAL.label"), icon: TreePine },
+      { id: "ELAGUEUR", label: t("met.ELAGUEUR.label"), icon: Wrench },
+      { id: "PAYSAGISTE_URBAIN", label: t("met.PAYSAGISTE_URBAIN.label"), icon: Palette },
     ],
     TRANSPORTS: [
-      { id: "AGENT_REGULATION", label: "Agent régulation", icon: Bus },
-      { id: "CONTROLEUR_TRANSPORT", label: "Contrôleur transport", icon: Shield },
-      { id: "TECHNICIEN_STATIONNEMENT", label: "Technicien stationnement", icon: MapPin },
+      { id: "AGENT_REGULATION", label: t("met.AGENT_REGULATION.label"), icon: Bus },
+      { id: "CONTROLEUR_TRANSPORT", label: t("met.CONTROLEUR_TRANSPORT.label"), icon: Shield },
+      { id: "TECHNICIEN_STATIONNEMENT", label: t("met.TECHNICIEN_STATIONNEMENT.label"), icon: MapPin },
     ],
     SECURITE: [
-      { id: "AGENT_SECURITE_URBAINE", label: "Agent sécurité", icon: ShieldCheck },
-      { id: "POLICE_MUNICIPALE", label: "Police municipale", icon: Shield },
-      { id: "AGENT_MEDIATEUR", label: "Agent médiateur", icon: Wrench },
+      { id: "AGENT_SECURITE_URBAINE", label: t("met.AGENT_SECURITE_URBAINE.label"), icon: ShieldCheck },
+      { id: "POLICE_MUNICIPALE", label: t("met.POLICE_MUNICIPALE.label"), icon: Shield },
+      { id: "AGENT_MEDIATEUR", label: t("met.AGENT_MEDIATEUR.label"), icon: Wrench },
     ],
     URBANISME: [
-      { id: "URBANISTE", label: "Urbaniste", icon: Building2 },
-      { id: "ARCHITECTE_CONSEIL", label: "Architecte conseil", icon: Palette },
-      { id: "TECHNICIEN_URBANISME", label: "Technicien urbanisme", icon: Wrench },
+      { id: "URBANISTE", label: t("met.URBANISTE.label"), icon: Building2 },
+      { id: "ARCHITECTE_CONSEIL", label: t("met.ARCHITECTE_CONSEIL.label"), icon: Palette },
+      { id: "TECHNICIEN_URBANISME", label: t("met.TECHNICIEN_URBANISME.label"), icon: Wrench },
     ],
   };
 
@@ -324,6 +328,7 @@ const MetierSelector = ({ domaine, value, onChange, label, onValidChange }) => {
 };
 
 export default function Profil() {
+  const { t } = useI18n();
   const [userInfo, setUserInfo] = useState({ 
     nom: "", 
     email: "", 
@@ -494,24 +499,24 @@ export default function Profil() {
 
   // Validation adresse
   const validateAdresse = (adresse) => {
-    if (!adresse.trim()) return "L'adresse est obligatoire";
-    if (adresse.length < 4) return "L'adresse doit contenir au moins 4 caractères";
+    if (!adresse.trim()) return t("val.addressRequired");
+    if (adresse.length < 4) return t("val.addressMin4");
     return null;
   };
 
   // ⭐ Validation téléphone
   const validateTelephone = (telephone) => {
-    if (!telephone.trim()) return "Le numéro de téléphone est obligatoire";
+    if (!telephone.trim()) return t("val.phoneRequired");
     const phoneRegex = /^(032|033|034|037|038)\d{7}$/;
     if (!phoneRegex.test(telephone)) {
-      return "Le téléphone doit commencer par 032, 033, 034, 037 ou 038 et contenir exactement 10 chiffres";
+      return t("val.phoneFormat");
     }
     return null;
   };
 
   const handleUpdateProfile = async () => {
     if (!isFormValid) {
-      showMessage("error", "Veuillez corriger les erreurs avant de valider");
+      showMessage("error", t("prof.fixErrors"));
       return;
     }
 
@@ -566,7 +571,7 @@ export default function Profil() {
             telephone: formData.telephone  // ⭐ AJOUTÉ
           });
           
-          showMessage("success", "✅ Profil mis à jour avec succès ! Votre session a été actualisée.");
+          showMessage("success", "Profil mis à jour avec succès ! Votre session a été actualisée.");
           setIsEditing(false);
           
           setTimeout(() => {
@@ -587,7 +592,7 @@ export default function Profil() {
           if (formData.metier) localStorage.setItem("userMetier", formData.metier);
           if (formData.adresse) localStorage.setItem("userAdresse", formData.adresse);
           if (formData.telephone) localStorage.setItem("userTelephone", formData.telephone);  // ⭐ AJOUTÉ
-          showMessage("success", "✅ Profil mis à jour avec succès !");
+          showMessage("success", "Profil mis à jour avec succès !");
           setIsEditing(false);
         }
       } else if (response.status === 403) {
@@ -595,7 +600,7 @@ export default function Profil() {
         setTimeout(() => handleLogout(), 2000);
       } else {
         const error = await response.text();
-        showMessage("error", error || "Erreur lors de la mise à jour");
+        showMessage("error", error || t("prof.updateError"));
       }
     } catch (error) {
       showMessage("error", "Erreur réseau, veuillez réessayer");
@@ -606,7 +611,7 @@ export default function Profil() {
 
   const handleChangePassword = async () => {
     if (!isPasswordFormValid) {
-      showMessage("error", "Veuillez corriger les erreurs avant de valider");
+      showMessage("error", t("prof.fixErrors"));
       return;
     }
 
@@ -638,7 +643,7 @@ export default function Profil() {
         setTimeout(() => handleLogout(), 2000);
       } else {
         const error = await response.text();
-        showMessage("error", error || "Erreur lors du changement de mot de passe");
+        showMessage("error", error || t("prof.passwordChangeError"));
       }
     } catch (error) {
       showMessage("error", "Erreur réseau, veuillez réessayer");
@@ -654,10 +659,10 @@ export default function Profil() {
 
   const getRoleLabel = (role) => {
     const roles = {
-      'ADMIN': 'Administrateur',
-      'AGENT': 'Agent Municipal',
-      'CITOYEN': 'Citoyen',
-      'CITIZEN': 'Citoyen'
+      'ADMIN': t("roleFull.admin"),
+      'AGENT': t("auth.agent"),
+      'CITOYEN': t("role.citizen"),
+      'CITIZEN': t("role.citizen")
     };
     return roles[role] || role;
   };
@@ -704,14 +709,14 @@ export default function Profil() {
       <div className="container mx-auto max-w-3xl pt-8">
         <h1 className="text-3xl font-bold text-white mb-6 flex items-center gap-2">
           <User className="w-8 h-8 text-emerald-400" />
-          Mon profil
+          {t("prof.title")}
         </h1>
 
         <div className="space-y-6">
           {/* Informations du profil */}
           <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-white">Informations personnelles</h2>
+              <h2 className="text-xl font-semibold text-white">{t("prof.personalInfo")}</h2>
               {!isEditing && (
                 <button
                   onClick={() => setIsEditing(true)}
@@ -742,7 +747,7 @@ export default function Profil() {
 
             <div className="space-y-4">
               <div className="p-4 bg-white/5 rounded-xl">
-                <p className="text-white/50 text-xs mb-1">Nom complet</p>
+                <p className="text-white/50 text-xs mb-1">{t("prof.fullName")}</p>
                 {isEditing ? (
                   <ValidatedInput
                     label=""
@@ -751,10 +756,10 @@ export default function Profil() {
                       setFormData({ ...formData, nom: val });
                       setIsNomValid(validateNom(val));
                     }}
-                    placeholder="Votre nom"
+                    placeholder={t("prof.yourName")}
                     required={true}
                     minLength={2}
-                    errorMessage="Le nom doit contenir au moins 2 caractères"
+                    errorMessage={t("val.nameMin2")}
                     onValidChange={(valid) => setIsNomValid(valid)}
                     className="mt-0"
                   />
@@ -764,7 +769,7 @@ export default function Profil() {
               </div>
 
               <div className="p-4 bg-white/5 rounded-xl">
-                <p className="text-white/50 text-xs mb-1">Adresse email</p>
+                <p className="text-white/50 text-xs mb-1">{t("auth.email")}</p>
                 {isEditing ? (
                   <ValidatedInput
                     label=""
@@ -777,7 +782,7 @@ export default function Profil() {
                     placeholder="votre@email.com"
                     required={true}
                     pattern={/^[^\s@]+@[^\s@]+\.[^\s@]+$/}
-                    errorMessage="Email invalide (exemple: nom@domaine.com)"
+                    errorMessage={t("val.emailInvalid")}
                     onValidChange={(valid) => setIsEmailValid(valid)}
                     className="mt-0"
                   />
@@ -790,7 +795,7 @@ export default function Profil() {
               <div className="p-4 bg-white/5 rounded-xl">
                 <p className="text-white/50 text-xs mb-1 flex items-center gap-2">
                   <Home size={14} />
-                  Adresse *
+                  {t("auth.address")} *
                 </p>
                 {isEditing ? (
                   <ValidatedInput
@@ -801,15 +806,15 @@ export default function Profil() {
                       const error = validateAdresse(val);
                       setIsAdresseValid(!error);
                     }}
-                    placeholder="Votre adresse complète"
+                    placeholder={t("prof.yourAddress")}
                     required={true}
                     minLength={4}
-                    errorMessage="L'adresse doit contenir au moins 4 caractères"
+                    errorMessage={t("val.addressMin4")}
                     onValidChange={(valid) => setIsAdresseValid(valid)}
                     className="mt-0"
                   />
                 ) : (
-                  <p className="text-white text-lg">{userInfo.adresse || "Non renseignée"}</p>
+                  <p className="text-white text-lg">{userInfo.adresse || t("prof.notProvided")}</p>
                 )}
               </div>
 
@@ -817,7 +822,7 @@ export default function Profil() {
               <div className="p-4 bg-white/5 rounded-xl">
                 <p className="text-white/50 text-xs mb-1 flex items-center gap-2">
                   <Phone size={14} />
-                  Téléphone *
+                  {t("prof.phone")} *
                 </p>
                 {isEditing ? (
                   <ValidatedInput
@@ -833,12 +838,12 @@ export default function Profil() {
                     required={true}
                     minLength={10}
                     pattern={/^(032|033|034|037|038)\d{7}$/}
-                    errorMessage="Le téléphone doit commencer par 032, 033, 034, 037 ou 038 et contenir exactement 10 chiffres"
+                    errorMessage={t("val.phoneFormat")}
                     onValidChange={(valid) => setIsTelephoneValid(valid)}
                     className="mt-0"
                   />
                 ) : (
-                  <p className="text-white text-lg">{userInfo.telephone || "Non renseigné"}</p>
+                  <p className="text-white text-lg">{userInfo.telephone || t("prof.notProvided")}</p>
                 )}
               </div>
 
@@ -848,7 +853,7 @@ export default function Profil() {
                   <div className="p-4 bg-white/5 rounded-xl">
                     <p className="text-white/50 text-xs mb-3 flex items-center gap-2">
                       <Building2 size={14} />
-                      Domaine d'intervention
+                      {t("auth.interventionDomain")}
                     </p>
                     {isEditing ? (
                       <DomaineSelector
@@ -875,7 +880,7 @@ export default function Profil() {
                             {userInfo.domaine}
                           </>
                         ) : (
-                          <span className="text-white/40">Non défini</span>
+                          <span className="text-white/40">{t("agent.notDefined")}</span>
                         )}
                       </p>
                     )}
@@ -915,7 +920,7 @@ export default function Profil() {
               )}
 
               <div className="p-4 bg-white/5 rounded-xl">
-                <p className="text-white/50 text-xs mb-1">Rôle non modifiable</p>
+                <p className="text-white/50 text-xs mb-1">{t("prof.roleNotEditable")}</p>
                 <p className="text-white text-lg">{getRoleLabel(userInfo.role)}</p>
               </div>
             </div>
@@ -932,7 +937,7 @@ export default function Profil() {
                   ) : (
                     <>
                       <Save size={18} />
-                      Enregistrer
+                      {t("prof.save")}
                     </>
                   )}
                 </button>
@@ -957,7 +962,7 @@ export default function Profil() {
                   className="px-6 bg-gray-600 hover:bg-gray-500 text-white font-semibold py-3 rounded-xl transition flex items-center justify-center gap-2"
                 >
                   <X size={18} />
-                  Annuler
+                  {t("common.cancel")}
                 </button>
               </div>
             )}
@@ -968,14 +973,14 @@ export default function Profil() {
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold text-white flex items-center gap-2">
                 <Lock className="w-5 h-5 text-emerald-400" />
-                Sécurité
+                {t("prof.security")}
               </h2>
               {!showPasswordForm && (
                 <button
                   onClick={() => setShowPasswordForm(true)}
                   className="text-emerald-400 hover:text-emerald-300 text-sm font-medium"
                 >
-                  Changer le mot de passe
+                  {t("admin.changePassword")}
                 </button>
               )}
             </div>
@@ -983,7 +988,7 @@ export default function Profil() {
             {showPasswordForm ? (
               <div className="space-y-4">
                 <ValidatedInput
-                  label="Mot de passe actuel"
+                  label={t("prof.currentPassword")}
                   value={passwordData.currentPassword}
                   onChange={(val) => {
                     setPasswordData({ ...passwordData, currentPassword: val });
@@ -993,29 +998,29 @@ export default function Profil() {
                   placeholder="••••••••"
                   required={true}
                   minLength={6}
-                  errorMessage="Le mot de passe doit contenir au moins 6 caractères"
+                  errorMessage={t("val.passwordMin6")}
                   onValidChange={(valid) => setIsCurrentPasswordValid(valid)}
                   showPasswordToggle={true}
                 />
 
                 <ValidatedInput
-                  label="Nouveau mot de passe"
+                  label={t("prof.newPassword")}
                   value={passwordData.newPassword}
                   onChange={(val) => {
                     setPasswordData({ ...passwordData, newPassword: val });
                     setIsNewPasswordValid(validateNewPassword(val));
                   }}
                   type="password"
-                  placeholder="•••••••• (minimum 6 caractères)"
+                  placeholder={`•••••••• (${t("prof.min6")})`}
                   required={true}
                   minLength={6}
-                  errorMessage="Le mot de passe doit contenir au moins 6 caractères"
+                  errorMessage={t("val.passwordMin6")}
                   onValidChange={(valid) => setIsNewPasswordValid(valid)}
                   showPasswordToggle={true}
                 />
 
                 <ValidatedInput
-                  label="Confirmer le mot de passe"
+                  label={t("prof.confirmPassword")}
                   value={passwordData.confirmPassword}
                   onChange={(val) => {
                     setPasswordData({ ...passwordData, confirmPassword: val });
@@ -1044,7 +1049,7 @@ export default function Profil() {
                     ) : (
                       <>
                         <Save size={18} />
-                        Changer le mot de passe
+                        {t("admin.changePassword")}
                       </>
                     )}
                   </button>
@@ -1059,15 +1064,15 @@ export default function Profil() {
                     className="px-6 bg-gray-600 hover:bg-gray-500 text-white font-semibold py-3 rounded-xl transition flex items-center justify-center gap-2"
                   >
                     <X size={18} />
-                    Annuler
+                    {t("common.cancel")}
                   </button>
                 </div>
               </div>
             ) : (
               <div className="p-4 bg-white/5 rounded-xl">
-                <p className="text-white/50 text-sm">Mot de passe</p>
+                <p className="text-white/50 text-sm">{t("auth.password")}</p>
                 <p className="text-white text-lg">••••••••</p>
-                <p className="text-white/40 text-xs mt-1">Dernière modification : Jamais</p>
+                <p className="text-white/40 text-xs mt-1">{t("prof.lastModified")} {t("prof.never")}</p>
               </div>
             )}
           </div>

@@ -66,12 +66,14 @@ public class EmailService {
                 System.out.println("✅ Email envoyé avec Resend à " + destinataire);
             } else {
                 System.err.println("⚠️ Erreur Resend (" + response.statusCode() + "): " + response.body());
-                throw new RuntimeException("Erreur Resend: " + response.body());
+                throw new RuntimeException("L'email n'a pas pu être envoyé. Veuillez réessayer plus tard.");
             }
-            
+
+        } catch (RuntimeException e) {
+            throw e;
         } catch (Exception e) {
             System.err.println("❌ Erreur envoi email: " + e.getMessage());
-            throw new RuntimeException("Erreur lors de l'envoi de l'email: " + e.getMessage());
+            throw new RuntimeException("L'email n'a pas pu être envoyé. Veuillez réessayer plus tard.");
         }
     }
 }

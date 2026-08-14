@@ -6,8 +6,10 @@ import {
   User, Briefcase, Wrench, Loader2, Building2, PlayCircle, Send, FileText, Camera, Info
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useI18n } from "./context/AppContext";
 
 export default function AgentDashboard() {
+  const { t } = useI18n();
   const [stats, setStats] = useState({ 
     total: 0, 
     enAttente: 0, 
@@ -244,7 +246,7 @@ export default function AgentDashboard() {
       console.log("✅ Signalements chargés:", tries.length);
     } catch (error) {
       console.error("Erreur chargement signalements:", error);
-      showMessage("error", "Erreur", "Impossible de charger les signalements");
+      showMessage("error", t("common.error"), t("agent.cantLoadReports"));
     } finally {
       setIsLoading(false);
     }
@@ -265,16 +267,16 @@ export default function AgentDashboard() {
         setSignalementsAssignes(prev => prev.map(s => 
           s.id === id ? { ...s, statut: "EN_COURS" } : s
         ));
-        showMessage("success", "Succès", "Signalement pris en charge !");
+        showMessage("success", t("common.success"), t("agent.takenCharge"));
         fetchAssignedSignalements();
       } else {
         const error = await res.text();
         console.error("Erreur mise à jour:", error);
-        showMessage("error", "Erreur", "Impossible de prendre en charge");
+        showMessage("error", t("common.error"), t("agent.cantTakeCharge"));
       }
     } catch (error) {
       console.error("Erreur:", error);
-      showMessage("error", "Erreur", "Une erreur est survenue");
+      showMessage("error", t("common.error"), t("common.genericError"));
     } finally {
       setActionLoading(null);
     }
@@ -299,14 +301,14 @@ export default function AgentDashboard() {
   const handleProofImagesUpload = async (e) => {
     const files = Array.from(e.target.files);
     if (proofImages.length + files.length > 5) {
-      showMessage("error", "Limite", "5 photos maximum");
+      showMessage("error", t("common.limit"), t("agent.max5photos"));
       return;
     }
     try {
       const base64Images = await Promise.all(files.map(convertToBase64));
       setProofImages(prev => [...prev, ...base64Images]);
     } catch (error) {
-      showMessage("error", "Erreur", "Impossible de charger les images");
+      showMessage("error", t("common.error"), t("agent.cantLoadImages"));
     }
   };
 
@@ -316,7 +318,7 @@ export default function AgentDashboard() {
 
   const handleSubmitProof = async () => {
     if (!proofDescription.trim()) {
-      showMessage("error", "Champ requis", "Ajoutez une description");
+      showMessage("error", t("common.requiredField"), t("agent.addDescription"));
       return;
     }
 
@@ -340,7 +342,7 @@ export default function AgentDashboard() {
       });
 
       if (!proofResponse.ok) {
-        throw new Error("Erreur lors de l'envoi de la preuve");
+        throw new Error(t("agent.proofSendError"));
       }
 
       const res = await fetch(`http://localhost:8081/api/signalements/${currentSignalementId}/statut`, {
@@ -356,14 +358,16 @@ export default function AgentDashboard() {
         setShowProofModal(false);
         setProofDescription("");
         setProofImages([]);
-        showMessage("success", "Félicitations !", "Signalement résolu !");
+        showMessage("success", t("common.congrats"), t("agent.reportResolved"));
         fetchAssignedSignalements();
       } else {
-        throw new Error("Erreur lors de la mise à jour du statut");
+        throw new Error(t("agent.statusUpdateError"));
       }
     } catch (error) {
       console.error("Erreur:", error);
-      showMessage("error", "Erreur", error.message || "Une erreur est survenue");
+      showMessage("error", t("common.error"), error instanceof TypeError
+        ? t("agent.cantReachServer")
+        : (error.message || t("common.genericError")));
     } finally {
       setActionLoading(null);
       setCurrentSignalementId(null);
@@ -394,19 +398,8 @@ export default function AgentDashboard() {
 
   const getTypeLabel = (type) => {
     const typeUpper = type?.toUpperCase() || "AUTRE";
-    const labels = {
-      'VOIRIE': 'Voirie', 
-      'ECLAIRAGE': 'Éclairage', 
-      'PROPRETE': 'Propreté',
-      'DECHETS': 'Déchets', 
-      'EAU': 'Eau', 
-      'ESPACES_VERTS': 'Espaces verts',
-      'TRANSPORTS': 'Transports', 
-      'SECURITE': 'Sécurité', 
-      'URBANISME': 'Urbanisme',
-      'AUTRE': 'Autre'
-    };
-    return labels[typeUpper] || type || "Autre";
+    const label = t(`type.${typeUpper}`);
+    return label === `type.${typeUpper}` ? (type || t("type.AUTRE")) : label;
   };
 
   const getStatusColor = (statut) => {
@@ -415,27 +408,33 @@ export default function AgentDashboard() {
       'EN_ATTENTE': 'bg-amber-500/20 text-amber-300 border-amber-500/30',
       'PENDING': 'bg-amber-500/20 text-amber-300 border-amber-500/30',
       'EN_COURS': 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-      'IN_PROGRESS': 'bg-blue-500/20 text-blue-300 border-blue-500/30'
+      'IN_PROGRESS': 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+      'REJETE': 'bg-red-500/20 text-red-300 border-red-500/30'
     };
     return colors[statusUpper] || 'bg-gray-500/20 text-gray-300 border-gray-500/30';
   };
 
   const getStatusLabel = (statut) => {
-    const statusUpper = statut?.toUpperCase() || "";
-    const labels = { 
-      'EN_ATTENTE': 'En attente', 
+    let statusUpper = statut?.toUpperCase() || "";
+    if (statusUpper === "PENDING") statusUpper = "EN_ATTENTE";
+    if (statusUpper === "IN_PROGRESS") statusUpper = "EN_COURS";
+    const tr = t(`status.${statusUpper}`);
+    if (tr !== `status.${statusUpper}`) return tr;
+    const labels = {
+      'EN_ATTENTE': 'En attente',
       'PENDING': 'En attente',
       'EN_COURS': 'En cours',
-      'IN_PROGRESS': 'En cours'
+      'IN_PROGRESS': 'En cours',
+      'REJETE': 'Rejeté'
     };
     return labels[statusUpper] || statut || "En attente";
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return "Date inconnue";
+    if (!dateString) return t("agent.unknownDate");
     try {
       const date = new Date(dateString);
-      if (isNaN(date.getTime())) return "Date inconnue";
+      if (isNaN(date.getTime())) return t("agent.unknownDate");
       return date.toLocaleDateString('fr-FR', { 
         day: 'numeric', 
         month: 'short', 
@@ -444,12 +443,12 @@ export default function AgentDashboard() {
         minute: '2-digit' 
       });
     } catch (e) {
-      return "Date inconnue";
+      return t("agent.unknownDate");
     }
   };
 
   const getMetierLabel = (metierId) => {
-    if (!metierId || metierId === "Non défini") return "Agent terrain";
+    if (!metierId || metierId === "Non défini") return t("roleFull.agent");
     
     const metiers = {
       'AGENT_VOIRIE': 'Agent de voirie', 
@@ -487,7 +486,7 @@ export default function AgentDashboard() {
   };
 
   const getDomaineLabel = (domaine) => {
-    if (!domaine || domaine === "Non défini") return "Service municipal";
+    if (!domaine || domaine === "Non défini") return t("agent.municipalService");
     
     const domaines = {
       'VOIRIE': 'Voirie',
@@ -511,7 +510,7 @@ export default function AgentDashboard() {
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-10 h-10 text-blue-500 animate-spin mx-auto mb-4" />
-          <p className="text-gray-400">Chargement du tableau de bord...</p>
+          <p className="text-gray-400">{t("agent.loadingDashboard")}</p>
         </div>
       </div>
     );
@@ -528,28 +527,28 @@ export default function AgentDashboard() {
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center gap-2">
                 <FileText className="w-6 h-6 text-emerald-600" />
-                <h2 className="text-xl font-bold text-slate-900">Preuve de résolution</h2>
+                <h2 className="text-xl font-bold text-slate-900">{t("agent.proofTitle")}</h2>
               </div>
               <button onClick={() => setShowProofModal(false)} className="text-slate-400 hover:text-slate-600">
                 <X size={24} />
               </button>
             </div>
-            <p className="text-slate-600 text-sm mb-4">Veuillez fournir une preuve que le problème a été résolu.</p>
+            <p className="text-slate-600 text-sm mb-4">{t("agent.proofIntro")}</p>
             
             <div className="mb-4">
-              <label className="block text-slate-700 font-medium mb-2">Description de la résolution *</label>
+              <label className="block text-slate-700 font-medium mb-2">{t("agent.proofDescLabel")} *</label>
               <textarea value={proofDescription} onChange={(e) => setProofDescription(e.target.value)} rows={4}
                 className="w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                placeholder="Décrivez comment le problème a été résolu..." />
+                placeholder={t("agent.proofDescPlaceholder")} />
             </div>
 
             <div className="mb-4">
-              <label className="block text-slate-700 font-medium mb-2">Photos avant/après</label>
+              <label className="block text-slate-700 font-medium mb-2">{t("agent.beforeAfter")}</label>
               <div className="border-2 border-dashed border-slate-300 rounded-lg p-4 text-center">
                 <input type="file" accept="image/*" multiple onChange={handleProofImagesUpload} className="hidden" id="proofImages" />
                 <label htmlFor="proofImages" className="cursor-pointer flex flex-col items-center gap-2">
                   <Camera className="w-8 h-8 text-slate-400" />
-                  <span className="text-slate-500 text-sm">Cliquez pour ajouter des photos</span>
+                  <span className="text-slate-500 text-sm">{t("agent.clickAddPhotos")}</span>
                 </label>
               </div>
             </div>
@@ -631,8 +630,8 @@ export default function AgentDashboard() {
             {signalementsAssignes.length === 0 ? (
               <div className="text-center py-12">
                 <CheckCircle className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
-                <p className="text-white/60 text-lg">Aucun signalement assigné</p>
-                <p className="text-white/40 text-sm mt-2">Tous vos signalements ont été traités !</p>
+                <p className="text-white/60 text-lg">{t("agent.noAssigned")}</p>
+                <p className="text-white/40 text-sm mt-2">{t("agent.allTreated")}</p>
               </div>
             ) : (
               signalementsAssignes.map((s) => {
@@ -648,7 +647,7 @@ export default function AgentDashboard() {
                           <div className="w-8 h-8 bg-amber-500/20 rounded-lg flex items-center justify-center">
                             <TypeIcon className="w-4 h-4 text-amber-400" />
                           </div>
-                          <h4 className="text-white font-semibold">{s.titre || "Sans titre"}</h4>
+                          <h4 className="text-white font-semibold">{s.titre || t("agent.noTitle")}</h4>
                           <span className={`text-xs px-2 py-0.5 rounded-full border ${statusColor}`}>
                             {getStatusLabel(s.statut)}
                           </span>
@@ -665,7 +664,7 @@ export default function AgentDashboard() {
                               className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg transition flex items-center gap-1 text-sm disabled:opacity-50"
                             >
                               {isLoadingAction && actionLoading === s.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <PlayCircle size={14} />}
-                              Prendre en charge
+                              {t("agent.takeCharge")}
                             </button>
                           )}
                           <button 
@@ -674,17 +673,17 @@ export default function AgentDashboard() {
                             className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg transition flex items-center gap-1 text-sm disabled:opacity-50"
                           >
                             <CheckCircle size={14} />
-                            Marquer résolu
+                            {t("agent.markResolved")}
                           </button>
                         </div>
                       </div>
                       
-                      <p className="text-white/60 text-sm">{s.description || "Aucune description"}</p>
+                      <p className="text-white/60 text-sm">{s.description || t("agent.noDescription")}</p>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-white/40">
                         <div className="flex items-center gap-1">
                           <MapPin size={12} />
-                          <span>{s.address || s.ville || s.commune || "Localisation non spécifiée"}</span>
+                          <span>{s.address || s.ville || s.commune || t("agent.locationUnspecified")}</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <Calendar size={12} />
@@ -738,9 +737,9 @@ export default function AgentDashboard() {
           <div>
             <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-2">
               <Activity className="w-8 h-8 text-blue-400" />
-              Dashboard Agent
+              {t("agent.dashboardTitle")}
             </h1>
-            <p className="text-white/60">Bienvenue dans votre espace de travail</p>
+            <p className="text-white/60">{t("agent.welcome")}</p>
           </div>
           
           <div className="mt-4 md:mt-0 bg-gradient-to-r from-blue-600/20 to-emerald-600/20 rounded-xl p-4 border border-white/20">
@@ -779,15 +778,15 @@ export default function AgentDashboard() {
                 <AlertTriangle className="w-8 h-8 text-amber-400" />
               </div>
               <div>
-                <p className="text-amber-300 text-sm font-medium mb-1">SIGNALEMENTS ASSIGNÉS</p>
+                <p className="text-amber-300 text-sm font-medium mb-1">{t("agent.assignedCaps")}</p>
                 <p className="text-5xl font-bold text-white">{stats.total}</p>
-                <p className="text-white/60 text-sm mt-1">Signalements à traiter</p>
+                <p className="text-white/60 text-sm mt-1">{t("agent.toTreat")}</p>
               </div>
             </div>
             {signalementsAssignes.length > 0 && (
               <button onClick={() => setShowAllModal(true)} className="bg-white/10 hover:bg-white/20 text-white font-semibold px-6 py-3 rounded-xl transition flex items-center gap-2">
                 <ArrowRight size={18} />
-                Voir tous ({signalementsAssignes.length})
+                {t("agent.seeAll")} ({signalementsAssignes.length})
               </button>
             )}
           </div>
@@ -797,28 +796,28 @@ export default function AgentDashboard() {
           <div className="bg-[#242526] backdrop-blur-xl rounded-xl p-6 border border-white/20 hover:scale-[1.02] transition-transform">
             <div className="flex items-center justify-between mb-4">
               <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center"><Activity className="w-6 h-6 text-blue-400" /></div>
-              <span className="text-white/40 text-sm">Assignés</span>
+              <span className="text-white/40 text-sm">{t("agent.assigned")}</span>
             </div>
             <div className="text-4xl font-bold text-white mb-1">{stats.total}</div>
-            <div className="text-white/60 text-sm">Signalements assignés</div>
+            <div className="text-white/60 text-sm">{t("agent.assignedReports")}</div>
           </div>
 
           <div className="bg-[#242526] backdrop-blur-xl rounded-xl p-6 border border-white/20 hover:scale-[1.02] transition-transform">
             <div className="flex items-center justify-between mb-4">
               <div className="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center"><Clock className="w-6 h-6 text-amber-400" /></div>
-              <span className="text-white/40 text-sm">En attente</span>
+              <span className="text-white/40 text-sm">{t("status.EN_ATTENTE")}</span>
             </div>
             <div className="text-4xl font-bold text-amber-400 mb-1">{stats.enAttente}</div>
-            <div className="text-white/60 text-sm">À prendre en charge</div>
+            <div className="text-white/60 text-sm">{t("agent.toTakeCharge")}</div>
           </div>
 
           <div className="bg-[#242526] backdrop-blur-xl rounded-xl p-6 border border-white/20 hover:scale-[1.02] transition-transform">
             <div className="flex items-center justify-between mb-4">
               <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center"><CheckCircle className="w-6 h-6 text-blue-400" /></div>
-              <span className="text-white/40 text-sm">En cours</span>
+              <span className="text-white/40 text-sm">{t("status.EN_COURS")}</span>
             </div>
             <div className="text-4xl font-bold text-blue-400 mb-1">{stats.enCours}</div>
-            <div className="text-white/60 text-sm">Signalements en traitement</div>
+            <div className="text-white/60 text-sm">{t("agent.processingReports")}</div>
           </div>
         </div>
 
@@ -827,10 +826,10 @@ export default function AgentDashboard() {
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-white font-semibold flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5 text-amber-400" />
-                Derniers signalements assignés
+                {t("agent.latestAssigned")}
               </h3>
               <button onClick={() => setShowAllModal(true)} className="text-blue-400 hover:text-blue-300 text-sm font-medium flex items-center gap-1">
-                Voir tout <ArrowRight size={14} />
+                {t("agent.seeAllShort")} <ArrowRight size={14} />
               </button>
             </div>
             <div className="space-y-3">
@@ -845,13 +844,13 @@ export default function AgentDashboard() {
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <h4 className="text-white font-medium">{s.titre || "Sans titre"}</h4>
+                          <h4 className="text-white font-medium">{s.titre || t("agent.noTitle")}</h4>
                           <span className={`text-xs px-2 py-0.5 rounded-full border ${statusColor}`}>{getStatusLabel(s.statut)}</span>
                           <span className="text-xs bg-white/10 text-white/50 px-2 py-0.5 rounded-full">{getTypeLabel(s.type)}</span>
                         </div>
-                        <p className="text-white/60 text-sm line-clamp-1 mb-2">{s.description || "Aucune description"}</p>
+                        <p className="text-white/60 text-sm line-clamp-1 mb-2">{s.description || t("agent.noDescription")}</p>
                         <div className="flex items-center gap-4 text-xs text-white/40">
-                          <span className="flex items-center gap-1"><MapPin size={12} /> {s.ville || s.commune || "Localisation"}</span>
+                          <span className="flex items-center gap-1"><MapPin size={12} /> {s.ville || s.commune || t("feed.location")}</span>
                           <span className="flex items-center gap-1"><Calendar size={12} /> {formatDate(s.dateCreation)}</span>
                         </div>
                       </div>
@@ -866,8 +865,8 @@ export default function AgentDashboard() {
         {signalementsAssignes.length === 0 && (
           <div className="bg-[#242526] backdrop-blur-xl rounded-xl p-12 text-center border border-white/20">
             <CheckCircle className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
-            <p className="text-white/60 text-lg">Aucun signalement assigné</p>
-            <p className="text-white/40 text-sm mt-2">Vous n'avez pas encore de signalements à traiter.</p>
+            <p className="text-white/60 text-lg">{t("agent.noAssigned")}</p>
+            <p className="text-white/40 text-sm mt-2">{t("agent.noAssignedYet")}</p>
           </div>
         )}
       </div>

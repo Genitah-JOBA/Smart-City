@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useTheme, useI18n } from "./context/AppContext";
 import { 
   MapPin, Home, AlertTriangle, User, LogOut, Menu, X, 
   Shield, Bell, Settings, PlusCircle, LayoutDashboard, 
@@ -27,6 +28,9 @@ export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const token = localStorage.getItem("token");
+
+  const { theme, toggleTheme } = useTheme();
+  const { t, lang, setLang, languages } = useI18n();
 
   // Fermer le menu mobile lors du redimensionnement
   useEffect(() => {
@@ -205,6 +209,65 @@ export default function Navbar() {
     return notif.message;
   };
 
+  // Extrait le titre du signalement depuis le message (« … », "…", ou après ": ")
+  const extractTitreFromMessage = (msg) => {
+    if (!msg) return null;
+    let m = msg.match(/«\s*(.+?)\s*»/);
+    if (m) return m[1].trim();
+    m = msg.match(/"([^"]+)"/);
+    if (m) return m[1].trim();
+    const idx = msg.lastIndexOf(": ");
+    if (idx !== -1) return msg.slice(idx + 2).trim();
+    return null;
+  };
+
+  // Traduit une notification à l'affichage à partir de son type + parties dynamiques
+  const translateNotification = (notif) => {
+    const type = notif.type;
+    const msg = notif.message || "";
+
+    const isEmail = type === "EMAIL" || type === "EMAIL_RECU" || notif.title === "📧 Nouvel email reçu";
+    if (isEmail) {
+      return { title: notif.title, message: formatNotificationMessage(notif) };
+    }
+
+    const titleKey = {
+      NOUVEAU_SIGNALEMENT: "notifT.NOUVEAU_SIGNALEMENT",
+      CONFIRMATION_SIGNALEMENT: "notifT.CONFIRMATION_SIGNALEMENT",
+      ASSIGNATION: "notifT.ASSIGNATION",
+      CHANGEMENT_STATUS: "notifT.CHANGEMENT_STATUS",
+      AGENT_ASSIGNE: "notifT.AGENT_ASSIGNE",
+      PARTAGE_SIGNALEMENT: "notifT.PARTAGE_SIGNALEMENT",
+    }[type];
+    const title = titleKey ? t(titleKey) : notif.title;
+
+    const titre = extractTitreFromMessage(msg);
+    let message = notif.message;
+
+    if (titre) {
+      if (type === "CONFIRMATION_SIGNALEMENT") {
+        message = t("notifM.CONFIRMATION_SIGNALEMENT").replace("{title}", titre);
+      } else if (type === "ASSIGNATION") {
+        message = t("notifM.ASSIGNATION").replace("{title}", titre);
+      } else if (type === "NOUVEAU_SIGNALEMENT") {
+        message = t("notifM.NOUVEAU_SIGNALEMENT").replace("{title}", titre);
+      } else if (type === "AGENT_ASSIGNE") {
+        const agent = (msg.split(/»\s*:\s*/)[1] || "").trim();
+        message = t("notifM.AGENT_ASSIGNE").replace("{title}", titre).replace("{agent}", agent);
+      } else if (type === "CHANGEMENT_STATUS") {
+        let sk = "statusPhrase.EN_COURS";
+        if (/résolu|resolu/i.test(msg)) sk = "statusPhrase.RESOLU";
+        else if (/rejet/i.test(msg)) sk = "statusPhrase.REJETE";
+        message = t("notifM.CHANGEMENT_STATUS").replace("{title}", titre).replace("{status}", t(sk));
+      } else if (type === "PARTAGE_SIGNALEMENT") {
+        const sender = (msg.split(/\s+a partagé/)[0] || "").trim();
+        message = t("notifM.PARTAGE_SIGNALEMENT").replace("{sender}", sender).replace("{title}", titre);
+      }
+    }
+
+    return { title, message };
+  };
+
   useEffect(() => {
     if (token) {
       fetchNotifications();
@@ -241,23 +304,23 @@ export default function Navbar() {
     const role = userRole;
     if (role === "ADMIN") {
       return [
-        { path: "/admin/dashboard", name: "Dashboard", icon: LayoutDashboard, description: "Vue d'ensemble" },
-        { path: "/admin/assignation-ia", name: "Assignation IA", icon: Brain, description: "Intelligence artificielle" },
-        { path: "/admin/signalement", name: "Signalements", icon: ClipboardList, description: "Gestion" },
-        { path: "/admin/users", name: "Utilisateurs", icon: Users, description: "Gestion" },
-        { path: "/admin/profil", name: "Profil", icon: User, description: "Paramètres" },
+        { path: "/admin/dashboard", name: t("nav.dashboard"), icon: LayoutDashboard, description: t("desc.overview") },
+        { path: "/admin/assignation-ia", name: t("nav.assignmentIA"), icon: Brain, description: t("desc.ai") },
+        { path: "/admin/signalement", name: t("nav.signalements"), icon: ClipboardList, description: t("desc.management") },
+        { path: "/admin/users", name: t("nav.users"), icon: Users, description: t("desc.management") },
+        { path: "/admin/profil", name: t("nav.profile"), icon: User, description: t("desc.settings") },
       ];
     } else if (role === "AGENT") {
       return [
-        { path: "/agent/dashboard", name: "Dashboard", icon: LayoutDashboard, description: "Vue d'ensemble" },
-        { path: "/agent/signalements-assignes", name: "Signalements", icon: AlertTriangle, description: "Mes missions" },
-        { path: "/agent/profil", name: "Profil", icon: User, description: "Paramètres" },
+        { path: "/agent/dashboard", name: t("nav.dashboard"), icon: LayoutDashboard, description: t("desc.overview") },
+        { path: "/agent/signalements-assignes", name: t("nav.signalements"), icon: AlertTriangle, description: t("desc.missions") },
+        { path: "/agent/profil", name: t("nav.profile"), icon: User, description: t("desc.settings") },
       ];
     } else {
       return [
-        { path: "/signalements", name: "Accueil", icon: Home, description: "Explorer" },
-        { path: "/signaler", name: "Signaler", icon: PlusCircle, description: "Nouveau" },
-        { path: "/profil", name: "Profil", icon: User, description: "Mon compte" },
+        { path: "/signalements", name: t("nav.home"), icon: Home, description: t("desc.explore") },
+        { path: "/signaler", name: t("nav.report"), icon: PlusCircle, description: t("desc.new") },
+        { path: "/profil", name: t("nav.profile"), icon: User, description: t("desc.myAccount") },
       ];
     }
   };
@@ -266,9 +329,9 @@ export default function Navbar() {
   const isActive = (path) => location.pathname === path;
 
   const getRoleBadge = () => {
-    if (userRole === "ADMIN") return { label: "Admin", icon: Crown, color: "text-amber-400" };
-    if (userRole === "AGENT") return { label: "Agent", icon: Shield, color: "text-blue-400" };
-    return { label: "Citoyen", icon: Star, color: "text-emerald-400" };
+    if (userRole === "ADMIN") return { label: t("role.admin"), icon: Crown, color: "text-amber-400" };
+    if (userRole === "AGENT") return { label: t("role.agent"), icon: Shield, color: "text-blue-400" };
+    return { label: t("role.citizen"), icon: Star, color: "text-emerald-400" };
   };
 
   const roleBadge = getRoleBadge();
@@ -293,20 +356,20 @@ export default function Navbar() {
               <div className="mx-auto w-16 h-16 rounded-2xl flex items-center justify-center mb-4 bg-gradient-to-br from-red-500/20 to-red-600/10 border-2 border-red-500/30">
                 <LogOut className="w-8 h-8 text-red-500" />
               </div>
-              <h3 className="text-xl font-bold mb-2 text-slate-800 dark:text-white">Déconnexion</h3>
-              <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">Êtes-vous sûr de vouloir vous déconnecter ?</p>
+              <h3 className="text-xl font-bold mb-2 text-slate-800 dark:text-white">{t("logout.title")}</h3>
+              <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">{t("logout.question")}</p>
               <div className="flex gap-3">
-                <button 
-                  onClick={() => setShowLogoutModal(false)} 
+                <button
+                  onClick={() => setShowLogoutModal(false)}
                   className="flex-1 py-2.5 rounded-xl font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition"
                 >
-                  Annuler
+                  {t("common.cancel")}
                 </button>
-                <button 
-                  onClick={handleLogout} 
+                <button
+                  onClick={handleLogout}
                   className="flex-1 py-2.5 rounded-xl font-medium text-white bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 transition shadow-lg shadow-red-500/30"
                 >
-                  Déconnexion
+                  {t("menu.logout")}
                 </button>
               </div>
             </div>
@@ -336,11 +399,11 @@ export default function Navbar() {
               </div>
               <div className="hidden sm:block">
                 <h1 className="text-lg font-bold tracking-tight">
-                  <span className="bg-gradient-to-r from-white to-emerald-400 bg-clip-text text-transparent">SmartCity</span>
+                  <span className={`bg-gradient-to-r bg-clip-text text-transparent ${theme === "light" ? "from-[#0f172a] to-emerald-600" : "from-white to-emerald-400"}`}>SmartCity</span>
                 </h1>
                 <p className="text-[10px] text-emerald-400/60 font-medium -mt-0.5 tracking-wider flex items-center gap-1.5">
                   <span className="w-1 h-1 bg-emerald-400 rounded-full animate-pulse"></span>
-                  Plateforme citoyenne
+                  {t("app.tagline")}
                 </p>
               </div>
             </Link>
@@ -397,15 +460,15 @@ export default function Navbar() {
                     <div className="p-4 border-b border-white/10 flex justify-between items-center bg-white/5">
                       <h3 className="text-white font-semibold text-sm flex items-center gap-2">
                         <Bell size={16} className="text-emerald-400" />
-                        Notifications
+                        {t("notif.title")}
                       </h3>
                       <div className="flex gap-3">
                         <button onClick={fetchNotifications} className="text-xs text-emerald-400 hover:text-emerald-300 transition">
-                          Rafraîchir
+                          {t("notif.refresh")}
                         </button>
                         {notifications.length > 0 && (
                           <button onClick={markAllAsRead} className="text-xs text-emerald-400 hover:text-emerald-300 transition">
-                            Tout lire
+                            {t("notif.readAll")}
                           </button>
                         )}
                       </div>
@@ -420,7 +483,7 @@ export default function Navbar() {
                           <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-3">
                             <Bell size={24} className="text-white/20" />
                           </div>
-                          <p className="text-white/40 text-sm">Aucune notification</p>
+                          <p className="text-white/40 text-sm">{t("notif.empty")}</p>
                         </div>
                       ) : (
                         notifications.map(notif => (
@@ -436,8 +499,8 @@ export default function Navbar() {
                                 {getNotificationIcon(notif.type)}
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="text-white/90 text-sm font-medium">{notif.title}</p>
-                                <p className="text-white/50 text-xs mt-0.5 line-clamp-2">{formatNotificationMessage(notif)}</p>
+                                <p className="text-white/90 text-sm font-medium">{translateNotification(notif).title}</p>
+                                <p className="text-white/50 text-xs mt-0.5 line-clamp-2">{translateNotification(notif).message}</p>
                                 <div className="flex items-center gap-2 mt-1.5">
                                   <Clock size={10} className="text-white/30" />
                                   <p className="text-white/20 text-[10px]">{new Date(notif.dateCreation).toLocaleString()}</p>
@@ -469,7 +532,7 @@ export default function Navbar() {
                       </div>
                     </div>
                     <div className="hidden lg:block text-left">
-                      <p className="text-white/90 text-sm font-medium capitalize leading-tight">{userName || "Utilisateur"}</p>
+                      <p className="text-white/90 text-sm font-medium capitalize leading-tight">{userName || t("user.default")}</p>
                       <div className="flex items-center gap-1">
                         <RoleIcon size={10} className={roleBadge.color} />
                         <span className={`text-[10px] font-medium ${roleBadge.color}`}>{roleBadge.label}</span>
@@ -490,25 +553,66 @@ export default function Navbar() {
                           </div>
                         </div>
                         <div>
-                          <p className="text-white text-sm font-medium capitalize">{userName || "Utilisateur"}</p>
+                          <p className="text-white text-sm font-medium capitalize">{userName || t("user.default")}</p>
                           <div className="flex items-center gap-1.5">
                             <RoleIcon size={12} className={roleBadge.color} />
                             <p className={`text-xs font-medium ${roleBadge.color}`}>
-                              {userRole === "ADMIN" ? "Administrateur" : userRole === "AGENT" ? "Agent terrain" : "Citoyen"}
+                              {userRole === "ADMIN" ? t("roleFull.admin") : userRole === "AGENT" ? t("roleFull.agent") : t("roleFull.citizen")}
                             </p>
                           </div>
                         </div>
                       </div>
                     </div>
-                    <div className="p-1">
-                      <button 
-                        onClick={openLogoutModal} 
+                    <div className="p-2 space-y-1">
+                      {/* Apparence : clair / sombre */}
+                      <div className="px-2 pt-1">
+                        <p className="text-white/40 text-[10px] uppercase tracking-wider mb-1.5">{t("menu.appearance")}</p>
+                        <button
+                          onClick={toggleTheme}
+                          className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 transition"
+                        >
+                          <span className="flex items-center gap-2 text-sm text-white/80">
+                            {theme === "dark"
+                              ? <Moon size={16} className="text-emerald-400" />
+                              : <Sun size={16} className="text-amber-400" />}
+                            {theme === "dark" ? t("menu.dark") : t("menu.light")}
+                          </span>
+                          <span className={`relative w-9 h-5 rounded-full transition-colors ${theme === "dark" ? "bg-emerald-500/40" : "bg-amber-400/40"}`}>
+                            <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${theme === "dark" ? "left-0.5" : "left-4"}`} />
+                          </span>
+                        </button>
+                      </div>
+
+                      {/* Langue : MG / FR / ANG */}
+                      <div className="px-2 pt-1">
+                        <p className="text-white/40 text-[10px] uppercase tracking-wider mb-1.5">{t("menu.language")}</p>
+                        <div className="grid grid-cols-3 gap-1">
+                          {languages.map((l) => (
+                            <button
+                              key={l.code}
+                              onClick={() => setLang(l.code)}
+                              className={`py-1.5 rounded-lg text-xs font-semibold transition border ${
+                                lang === l.code
+                                  ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+                                  : "bg-white/5 text-white/60 hover:bg-white/10 border-transparent"
+                              }`}
+                            >
+                              {l.short}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="h-px bg-white/10 my-1" />
+
+                      <button
+                        onClick={openLogoutModal}
                         className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-red-400 hover:bg-red-500/10 transition text-sm group"
                       >
                         <div className="p-1 rounded-lg bg-red-500/10 group-hover:bg-red-500/20 transition">
                           <LogOut size={16} />
                         </div>
-                        Déconnexion
+                        {t("menu.logout")}
                       </button>
                     </div>
                   </div>
@@ -553,7 +657,7 @@ export default function Navbar() {
               </div>
             </div>
             <div className="flex-1">
-              <p className="text-white font-medium capitalize">{userName || "Citoyen"}</p>
+              <p className="text-white font-medium capitalize">{userName || t("user.default")}</p>
               <div className="flex items-center gap-1.5">
                 <RoleIcon size={12} className={roleBadge.color} />
                 <p className={`text-xs font-medium ${roleBadge.color}`}>
@@ -592,13 +696,49 @@ export default function Navbar() {
             })}
           </div>
 
+          {/* Apparence + Langue (mobile) */}
+          <div className="pt-4 mt-4 border-t border-white/10 space-y-3">
+            <button
+              onClick={toggleTheme}
+              className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 transition"
+            >
+              <span className="flex items-center gap-2 text-sm text-white/80">
+                {theme === "dark"
+                  ? <Moon size={18} className="text-emerald-400" />
+                  : <Sun size={18} className="text-amber-400" />}
+                {theme === "dark" ? t("menu.dark") : t("menu.light")}
+              </span>
+              <span className={`relative w-10 h-5 rounded-full transition-colors ${theme === "dark" ? "bg-emerald-500/40" : "bg-amber-400/40"}`}>
+                <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${theme === "dark" ? "left-0.5" : "left-5"}`} />
+              </span>
+            </button>
+            <div>
+              <p className="text-white/40 text-[10px] uppercase tracking-wider mb-1.5 px-1">{t("menu.language")}</p>
+              <div className="grid grid-cols-3 gap-2">
+                {languages.map((l) => (
+                  <button
+                    key={l.code}
+                    onClick={() => setLang(l.code)}
+                    className={`py-2 rounded-lg text-sm font-semibold transition border ${
+                      lang === l.code
+                        ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+                        : "bg-white/5 text-white/60 hover:bg-white/10 border-transparent"
+                    }`}
+                  >
+                    {l.short}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
           {/* Bouton déconnexion mobile */}
-          <div className="mt-auto pt-4 border-t border-white/10">
-            <button 
-              onClick={openLogoutModal} 
+          <div className="mt-4 pt-4 border-t border-white/10">
+            <button
+              onClick={openLogoutModal}
               className="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 transition border border-red-500/20"
             >
-              <LogOut size={18} /> Déconnexion
+              <LogOut size={18} /> {t("menu.logout")}
             </button>
           </div>
         </div>

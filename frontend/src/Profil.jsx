@@ -3,10 +3,11 @@ import {
   User, Lock, Eye, EyeOff, Edit2, X, Check, AlertCircle,
   MapPin, Clock, MessageCircle, Share2, MoreHorizontal, 
   Construction, Lightbulb, Trash2, Droplets, TreePine, 
-  Shield, HelpCircle, AlertTriangle, PlayCircle, CheckCircle2,
+  Shield, HelpCircle, AlertTriangle, XCircle, PlayCircle, CheckCircle2,
   ChevronLeft, ChevronRight, Image, Road, Trash, Home,
   Award, Calendar, Bell, Settings, LogOut, Star, Heart
 } from "lucide-react";
+import { useI18n } from "./context/AppContext";
 
 // ✅ COMPOSANT INPUT AVEC VALIDATION - Style modernisé
 const ValidatedInput = ({ 
@@ -24,6 +25,7 @@ const ValidatedInput = ({
   showPasswordToggle = false,
   onTogglePassword
 }) => {
+  const { t } = useI18n();
   const [error, setError] = useState("");
   const [touched, setTouched] = useState(false);
   const [showPassword, setShowPassword] = useState(type === "password");
@@ -31,13 +33,13 @@ const ValidatedInput = ({
 
   const validate = (val) => {
     if (required && !val.trim()) {
-      return "Ce champ est requis";
+      return t("val.required");
     }
     if (minLength && val.length < minLength) {
-      return `Minimum ${minLength} caractères`;
+      return `Minimum ${minLength}`;
     }
     if (pattern && !pattern.test(val)) {
-      return errorMessage || "Format invalide";
+      return errorMessage || t("val.invalidFormat");
     }
     return "";
   };
@@ -123,6 +125,7 @@ const ValidatedInput = ({
 };
 
 export default function Profil() {
+  const { t } = useI18n();
   const [userInfo, setUserInfo] = useState({ 
     nom: "", 
     email: "", 
@@ -159,8 +162,8 @@ export default function Profil() {
   const [currentUserId, setCurrentUserId] = useState(null);
 
   const validateAdresse = (value) => {
-    if (!value.trim()) return "L'adresse est obligatoire";
-    if (value.length < 4) return "L'adresse doit contenir au moins 4 caractères";
+    if (!value.trim()) return t("val.addressRequired");
+    if (value.length < 4) return t("val.addressMin4");
     return null;
   };
 
@@ -263,25 +266,25 @@ export default function Profil() {
   };
 
   const validateNom = (value) => {
-    if (!value.trim()) return "Le nom est requis";
-    if (/\d/.test(value)) return "Le nom ne doit pas contenir de chiffres";
+    if (!value.trim()) return t("val.nameRequired");
+    if (/\d/.test(value)) return t("val.nameNoDigits");
     const nameRegex = /^[a-zA-ZÀ-ÿ\s-]+$/;
-    if (!nameRegex.test(value)) return "Le nom ne doit contenir que des lettres, espaces ou tirets";
-    if (value.length < 2) return "Le nom doit contenir au moins 2 caractères";
+    if (!nameRegex.test(value)) return t("val.nameLetters");
+    if (value.length < 2) return t("val.nameMin2");
     return null;
   };
 
   const validateEmail = (value) => {
-    if (!value.trim()) return "L'email est requis";
+    if (!value.trim()) return t("val.emailRequired");
     if (!value.toLowerCase().endsWith("@gmail.com")) {
-      return "L'email doit être une adresse @gmail.com";
+      return t("val.emailGmail");
     }
     return null;
   };
 
   const handleUpdateProfile = async () => {
     if (!isNomValid || !isEmailValid || !isAdresseValid) {
-      setMessage({ type: "error", text: "Veuillez corriger les erreurs avant de valider" });
+      setMessage({ type: "error", text: t("prof.fixErrors") });
       setTimeout(() => setMessage({ type: "", text: "" }), 3000);
       return;
     }
@@ -303,14 +306,14 @@ export default function Profil() {
 
       if (response.ok) {
         setUserInfo({ ...userInfo, nom: formData.nom, email: formData.email, adresse: formData.adresse });
-        setMessage({ type: "success", text: "Profil mis à jour !" });
+        setMessage({ type: "success", text: t("prof.updated") });
         setIsEditing(false);
       } else {
         const error = await response.text();
         setMessage({ type: "error", text: error || "Erreur lors de la mise à jour" });
       }
     } catch (error) {
-      setMessage({ type: "error", text: "Erreur réseau" });
+      setMessage({ type: "error", text: t("prof.networkError") });
     } finally {
       setIsLoading(false);
       setTimeout(() => setMessage({ type: "", text: "" }), 3000);
@@ -319,7 +322,7 @@ export default function Profil() {
 
   const handleChangePassword = async () => {
     if (!isCurrentPasswordValid || !isNewPasswordValid || !isConfirmPasswordValid) {
-      setMessage({ type: "error", text: "Veuillez corriger les erreurs avant de valider" });
+      setMessage({ type: "error", text: t("prof.fixErrors") });
       setTimeout(() => setMessage({ type: "", text: "" }), 3000);
       return;
     }
@@ -339,7 +342,7 @@ export default function Profil() {
       });
 
       if (response.ok) {
-        setMessage({ type: "success", text: "Mot de passe changé !" });
+        setMessage({ type: "success", text: t("prof.passwordChanged") });
         setShowPasswordForm(false);
         setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
         setIsCurrentPasswordValid(false);
@@ -350,7 +353,7 @@ export default function Profil() {
         setMessage({ type: "error", text: error || "Erreur lors du changement" });
       }
     } catch (error) {
-      setMessage({ type: "error", text: "Erreur réseau" });
+      setMessage({ type: "error", text: t("prof.networkError") });
     } finally {
       setIsLoading(false);
       setTimeout(() => setMessage({ type: "", text: "" }), 3000);
@@ -364,13 +367,13 @@ export default function Profil() {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (response.ok) {
-        setMessage({ type: "success", text: "Signalement supprimé !" });
+        setMessage({ type: "success", text: t("prof.reportDeleted") });
         fetchSignalements();
       } else {
         setMessage({ type: "error", text: "Erreur lors de la suppression" });
       }
     } catch (error) {
-      setMessage({ type: "error", text: "Erreur réseau" });
+      setMessage({ type: "error", text: t("prof.networkError") });
     } finally {
       setShowDeleteConfirm(null);
       setTimeout(() => setMessage({ type: "", text: "" }), 3000);
@@ -421,10 +424,10 @@ export default function Profil() {
   };
 
   const categories = [
-    { id: "VOIRIE", name: "Voirie", icon: Road },
-    { id: "ECLAIRAGE", name: "Éclairage", icon: Lightbulb },
-    { id: "DECHETS", name: "Déchets", icon: Trash },
-    { id: "EAU", name: "Eau", icon: Droplets }
+    { id: "VOIRIE", name: t("type.VOIRIE"), icon: Road },
+    { id: "ECLAIRAGE", name: t("type.ECLAIRAGE"), icon: Lightbulb },
+    { id: "DECHETS", name: t("type.DECHETS"), icon: Trash },
+    { id: "EAU", name: t("type.EAU"), icon: Droplets }
   ];
 
   const getTypeIcon = (type) => {
@@ -450,7 +453,8 @@ export default function Profil() {
       'EN_ATTENTE': 'text-amber-400 bg-amber-500/20',
       'EN_COURS': 'text-blue-400 bg-blue-500/20',
       'RESOLU': 'text-emerald-400 bg-emerald-500/20',
-      'TRAITE': 'text-emerald-400 bg-emerald-500/20'
+      'TRAITE': 'text-emerald-400 bg-emerald-500/20',
+      'REJETE': 'text-red-400 bg-red-500/20'
     };
     return colors[statut] || 'text-gray-400 bg-gray-500/20';
   };
@@ -460,30 +464,26 @@ export default function Profil() {
       'EN_ATTENTE': AlertTriangle,
       'EN_COURS': PlayCircle,
       'RESOLU': CheckCircle2,
-      'TRAITE': CheckCircle2
+      'TRAITE': CheckCircle2,
+      'REJETE': XCircle
     };
     return icons[statut] || AlertTriangle;
   };
 
   const getStatusText = (statut) => {
-    const texts = {
-      'EN_ATTENTE': 'En attente',
-      'EN_COURS': 'En cours',
-      'RESOLU': 'Résolu',
-      'TRAITE': 'Traité'
-    };
-    return texts[statut] || statut;
+    const label = t(`status.${statut}`);
+    return label === `status.${statut}` ? statut : label;
   };
 
   const getRelativeTime = (dateString) => {
-    if (!dateString) return "Récemment";
+    if (!dateString) return t("feed.recently");
     const date = new Date(dateString);
     const now = new Date();
     const diffInSeconds = Math.floor((now - date) / 1000);
-    if (diffInSeconds < 60) return "À l'instant";
-    if (diffInSeconds < 3600) return `Il y a ${Math.floor(diffInSeconds / 60)} min`;
-    if (diffInSeconds < 86400) return `Il y a ${Math.floor(diffInSeconds / 3600)} h`;
-    if (diffInSeconds < 604800) return `Il y a ${Math.floor(diffInSeconds / 86400)} j`;
+    if (diffInSeconds < 60) return t("prof.justNow");
+    if (diffInSeconds < 3600) return t("time.minutes").replace("{n}", Math.floor(diffInSeconds / 60));
+    if (diffInSeconds < 86400) return t("time.hours").replace("{n}", Math.floor(diffInSeconds / 3600));
+    if (diffInSeconds < 604800) return t("time.days").replace("{n}", Math.floor(diffInSeconds / 86400));
     return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
   };
 
@@ -496,7 +496,7 @@ export default function Profil() {
     if (signalement.ville) parts.push(signalement.ville);
     if (signalement.commune && signalement.commune !== signalement.ville) parts.push(`District de ${signalement.commune}`);
     if (parts.length > 0) return parts.join(', ');
-    return signalement.address || signalement.ville || signalement.commune || "Localisation inconnue";
+    return signalement.address || signalement.ville || signalement.commune || t("prof.unknownLocation");
   };
 
   const isProfileFormValid = isNomValid && isEmailValid && isAdresseValid;
@@ -513,8 +513,8 @@ export default function Profil() {
                 <User className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-white">Mon profil</h1>
-                <p className="text-xs text-gray-400">Gérez vos informations</p>
+                <h1 className="text-xl font-bold text-white">{t("prof.title")}</h1>
+                <p className="text-xs text-gray-400">{t("prof.subtitle")}</p>
               </div>
             </div>
           </div>
@@ -567,7 +567,7 @@ export default function Profil() {
                   <p className="text-gray-400 text-sm">{userInfo.email}</p>
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <MapPin size={12} className="text-gray-500" />
-                    <p className="text-gray-500 text-xs">{userInfo.adresse || "Adresse non renseignée"}</p>
+                    <p className="text-gray-500 text-xs">{userInfo.adresse || t("prof.addressNotSet")}</p>
                   </div>
                 </div>
               </div>
@@ -578,7 +578,7 @@ export default function Profil() {
                   className="mt-3 md:mt-0 flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white text-sm font-medium transition-all hover:border-white/20"
                 >
                   <Edit2 size={15} />
-                  Modifier
+                  {t("prof.edit")}
                 </button>
               )}
             </div>
@@ -587,19 +587,19 @@ export default function Profil() {
             <div className="grid grid-cols-3 gap-3 mt-6 pt-6 border-t border-white/5">
               <div className="text-center p-3 rounded-xl bg-white/5">
                 <div className="text-2xl font-bold text-white">{signalements.length}</div>
-                <p className="text-xs text-gray-400">Signalements</p>
+                <p className="text-xs text-gray-400">{t("prof.reports")}</p>
               </div>
               <div className="text-center p-3 rounded-xl bg-white/5">
                 <div className="text-2xl font-bold text-emerald-400">
                   {signalements.filter(s => s.statut === "RESOLU" || s.statut === "TRAITE").length}
                 </div>
-                <p className="text-xs text-gray-400">Résolus</p>
+                <p className="text-xs text-gray-400">{t("feed.resolved")}</p>
               </div>
               <div className="text-center p-3 rounded-xl bg-white/5">
                 <div className="text-2xl font-bold text-amber-400">
                   {signalements.filter(s => s.statut === "EN_ATTENTE").length}
                 </div>
-                <p className="text-xs text-gray-400">En attente</p>
+                <p className="text-xs text-gray-400">{t("status.EN_ATTENTE")}</p>
               </div>
             </div>
 
@@ -607,22 +607,22 @@ export default function Profil() {
               <div className="mt-6 pt-6 border-t border-white/5">
                 <div className="space-y-3">
                   <ValidatedInput
-                    label="Nom complet"
+                    label={t("prof.fullName")}
                     value={formData.nom}
                     onChange={(val) => {
                       setFormData({ ...formData, nom: val });
                       const error = validateNom(val);
                       setIsNomValid(!error);
                     }}
-                    placeholder="Votre nom"
+                    placeholder={t("prof.yourName")}
                     required={true}
                     minLength={2}
-                    errorMessage="Le nom doit contenir au moins 2 caractères"
+                    errorMessage={t("val.nameMin2")}
                     onValidChange={(valid) => setIsNomValid(valid)}
                   />
 
                   <ValidatedInput
-                    label="Email"
+                    label={t("prof.email")}
                     value={formData.email}
                     onChange={(val) => {
                       setFormData({ ...formData, email: val });
@@ -633,22 +633,22 @@ export default function Profil() {
                     placeholder="votre@email.com"
                     required={true}
                     pattern={/^[^\s@]+@[^\s@]+\.[^\s@]+$/}
-                    errorMessage="L'email doit être une adresse @gmail.com"
+                    errorMessage={t("val.emailGmail")}
                     onValidChange={(valid) => setIsEmailValid(valid)}
                   />
 
                   <ValidatedInput
-                    label="Adresse complète"
+                    label={t("prof.fullAddress")}
                     value={formData.adresse}
                     onChange={(val) => {
                       setFormData({ ...formData, adresse: val });
                       const error = validateAdresse(val);
                       setIsAdresseValid(!error);
                     }}
-                    placeholder="Votre adresse complète"
+                    placeholder={t("prof.yourAddress")}
                     required={true}
                     minLength={4}
-                    errorMessage="L'adresse doit contenir au moins 4 caractères"
+                    errorMessage={t("val.addressMin4")}
                     onValidChange={(valid) => setIsAdresseValid(valid)}
                   />
 
@@ -662,7 +662,7 @@ export default function Profil() {
                           : 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-lg shadow-emerald-500/20'
                       }`}
                     >
-                      {isLoading ? "Chargement..." : "Enregistrer"}
+                      {isLoading ? t("prof.loading") : t("prof.save")}
                     </button>
                     <button
                       onClick={() => {
@@ -695,14 +695,14 @@ export default function Profil() {
                 <div className="p-2 rounded-xl bg-emerald-500/20">
                   <Lock size={18} className="text-emerald-400" />
                 </div>
-                <h2 className="font-semibold text-white">Sécurité</h2>
+                <h2 className="font-semibold text-white">{t("prof.security")}</h2>
               </div>
               {!showPasswordForm && (
                 <button
                   onClick={() => setShowPasswordForm(true)}
                   className="text-sm text-emerald-400 hover:text-emerald-300 font-medium px-4 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 transition-colors"
                 >
-                  Changer
+                  {t("prof.change")}
                 </button>
               )}
             </div>
@@ -710,7 +710,7 @@ export default function Profil() {
             {showPasswordForm ? (
               <div className="space-y-3">
                 <ValidatedInput
-                  label="Mot de passe actuel"
+                  label={t("prof.currentPassword")}
                   value={passwordData.currentPassword}
                   onChange={(val) => {
                     setPasswordData({ ...passwordData, currentPassword: val });
@@ -720,13 +720,13 @@ export default function Profil() {
                   placeholder="••••••••"
                   required={true}
                   minLength={6}
-                  errorMessage="Le mot de passe doit contenir au moins 6 caractères"
+                  errorMessage={t("val.passwordMin6")}
                   onValidChange={(valid) => setIsCurrentPasswordValid(valid)}
                   showPasswordToggle={true}
                 />
 
                 <ValidatedInput
-                  label="Nouveau mot de passe"
+                  label={t("prof.newPassword")}
                   value={passwordData.newPassword}
                   onChange={(val) => {
                     setPasswordData({ ...passwordData, newPassword: val });
@@ -736,13 +736,13 @@ export default function Profil() {
                   placeholder="••••••••"
                   required={true}
                   minLength={6}
-                  errorMessage="Le mot de passe doit contenir au moins 6 caractères"
+                  errorMessage={t("val.passwordMin6")}
                   onValidChange={(valid) => setIsNewPasswordValid(valid)}
                   showPasswordToggle={true}
                 />
 
                 <ValidatedInput
-                  label="Confirmer le mot de passe"
+                  label={t("prof.confirmPassword")}
                   value={passwordData.confirmPassword}
                   onChange={(val) => {
                     setPasswordData({ ...passwordData, confirmPassword: val });
@@ -753,8 +753,8 @@ export default function Profil() {
                   required={true}
                   minLength={6}
                   errorMessage={passwordData.confirmPassword !== passwordData.newPassword 
-                    ? "Les mots de passe ne correspondent pas" 
-                    : "Le mot de passe doit contenir au moins 6 caractères"}
+                    ? t("prof.passwordMismatch")
+                    : t("val.passwordMin6")}
                   onValidChange={(valid) => setIsConfirmPasswordValid(valid)}
                   showPasswordToggle={true}
                 />
@@ -769,7 +769,7 @@ export default function Profil() {
                         : 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-lg shadow-emerald-500/20'
                     }`}
                   >
-                    {isLoading ? "Chargement..." : "Changer"}
+                    {isLoading ? t("prof.loading") : t("prof.change")}
                   </button>
                   <button
                     onClick={() => {
@@ -789,7 +789,7 @@ export default function Profil() {
               <div className="flex items-center gap-3 p-4 rounded-xl bg-white/5 border border-white/5">
                 <Lock size={16} className="text-gray-400" />
                 <div>
-                  <p className="text-xs text-gray-400">Mot de passe</p>
+                  <p className="text-xs text-gray-400">{t("prof.password")}</p>
                   <p className="text-white font-medium">••••••••</p>
                 </div>
               </div>
@@ -805,7 +805,7 @@ export default function Profil() {
                 <div className="p-2 rounded-xl bg-emerald-500/20">
                   <MapPin className="w-5 h-5 text-emerald-400" />
                 </div>
-                <h2 className="font-semibold text-white">Mes signalements</h2>
+                <h2 className="font-semibold text-white">{t("prof.myReports")}</h2>
                 <span className="bg-white/10 text-gray-300 text-xs px-3 py-1 rounded-full font-medium">
                   {signalements.length}
                 </span>
@@ -915,18 +915,18 @@ export default function Profil() {
                           <div className="flex items-center gap-4 mt-3 pt-3 border-t border-white/5">
                             <button className="flex items-center gap-1.5 py-1 text-gray-400 hover:text-emerald-400 transition-colors text-xs">
                               <MessageCircle size={14} />
-                              <span>Commenter</span>
+                              <span>{t("feed.comment")}</span>
                             </button>
                             <button className="flex items-center gap-1.5 py-1 text-gray-400 hover:text-emerald-400 transition-colors text-xs">
                               <Share2 size={14} />
-                              <span>Partager</span>
+                              <span>{t("feed.share")}</span>
                             </button>
                             <button 
                               onClick={() => setShowDeleteConfirm(s.id)}
                               className="flex items-center gap-1.5 py-1 text-gray-400 hover:text-rose-400 transition-colors text-xs ml-auto"
                             >
                               <Trash2 size={14} />
-                              <span>Supprimer</span>
+                              <span>{t("sig.delete")}</span>
                             </button>
                           </div>
 
@@ -937,22 +937,22 @@ export default function Profil() {
                                   <div className="w-14 h-14 bg-rose-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
                                     <Trash2 size={28} className="text-rose-400" />
                                   </div>
-                                  <h3 className="text-xl font-bold text-white mb-2">Supprimer le signalement</h3>
+                                  <h3 className="text-xl font-bold text-white mb-2">{t("prof.deleteReportTitle")}</h3>
                                   <p className="text-gray-400 text-sm mb-6">
-                                    Êtes-vous sûr de vouloir supprimer "{s.titre}" ? Cette action est irréversible.
+                                    {t("prof.deleteConfirm").replace("{title}", s.titre)}
                                   </p>
                                   <div className="flex gap-3">
                                     <button
                                       onClick={() => setShowDeleteConfirm(null)}
                                       className="flex-1 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white transition-all border border-white/10 font-medium"
                                     >
-                                      Annuler
+                                      {t("common.cancel")}
                                     </button>
                                     <button
                                       onClick={() => handleDeleteSignalement(s.id)}
                                       className="flex-1 py-3 rounded-xl bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white font-medium transition-all shadow-lg shadow-rose-500/20"
                                     >
-                                      Supprimer
+                                      {t("sig.delete")}
                                     </button>
                                   </div>
                                 </div>

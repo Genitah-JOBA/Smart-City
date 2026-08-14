@@ -85,7 +85,7 @@ public class SignalementController {
             notificationService.createNotification(
                 user.getEmail(),
                 "Signalement enregistré",
-                "Votre signalement #" + saved.getId() + " a bien été enregistré et sera traité rapidement.",
+                "Votre signalement « " + saved.getTitre() + " » a bien été enregistré et sera traité rapidement.",
                 "CONFIRMATION_SIGNALEMENT",
                 "/mes-signalements"
             );
@@ -125,7 +125,11 @@ public class SignalementController {
             existingSignalement.setAddress(signalementDetails.getAddress());
             existingSignalement.setVille(signalementDetails.getVille());
             existingSignalement.setCommune(signalementDetails.getCommune());
-            
+            existingSignalement.setQuartier(signalementDetails.getQuartier());
+            existingSignalement.setFokontany(signalementDetails.getFokontany());
+            existingSignalement.setLieuDit(signalementDetails.getLieuDit());
+            existingSignalement.setRue(signalementDetails.getRue());
+
             if (signalementDetails.getImages() != null && !signalementDetails.getImages().isEmpty()) {
                 existingSignalement.getImages().clear();
                 for (Image img : signalementDetails.getImages()) {
@@ -136,9 +140,10 @@ public class SignalementController {
             
             Signalement updated = signalementRepository.save(existingSignalement);
             return ResponseEntity.ok(updated);
-            
+
         } catch (Exception e) {
-            return ResponseEntity.status(500).body("Erreur: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("Impossible de modifier le signalement pour le moment. Veuillez réessayer.");
         }
     }
 
@@ -227,7 +232,7 @@ public class SignalementController {
                 notificationService.createNotification(
                     signalement.getUtilisateur().getEmail(),
                     "Mise à jour de votre signalement",
-                    "Votre signalement #" + id + " " + messageStatut,
+                    "Votre signalement « " + signalement.getTitre() + " » " + messageStatut,
                     "CHANGEMENT_STATUS",
                     "/mes-signalements",
                     id.longValue()
@@ -252,10 +257,10 @@ public class SignalementController {
             
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.status(500).body("Erreur: " + e.getMessage());
+            return ResponseEntity.status(500).body("Impossible de mettre à jour le statut pour le moment. Veuillez réessayer.");
         }
     }
-    
+
     @PutMapping("/{id}/assigner")
     public ResponseEntity<?> assignerAgent(
             @PathVariable Integer id,
@@ -307,7 +312,7 @@ public class SignalementController {
                 notificationService.createNotification(
                     signalement.getUtilisateur().getEmail(),
                     "👤 Agent assigné",
-                    "Un agent a été assigné à votre signalement #" + id + " : " + agent.getNom(),
+                    "Un agent a été assigné à votre signalement « " + signalement.getTitre() + " » : " + agent.getNom(),
                     "AGENT_ASSIGNE",
                     "/mes-signalements",
                     id.longValue()
@@ -323,10 +328,10 @@ public class SignalementController {
             
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.status(500).body("Erreur: " + e.getMessage());
+            return ResponseEntity.status(500).body("Impossible d'assigner l'agent pour le moment. Veuillez réessayer.");
         }
     }
-    
+
     @GetMapping("/agent/{agentId}")
     public ResponseEntity<?> getByAgent(@PathVariable Long agentId, Principal principal) {
         try {
@@ -341,9 +346,10 @@ public class SignalementController {
             
             List<Signalement> signalements = signalementRepository.findByAgentId(agentId);
             return ResponseEntity.ok(signalements);
-            
+
         } catch (Exception e) {
-            return ResponseEntity.status(500).body("Erreur: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("Impossible de charger les signalements pour le moment. Veuillez réessayer.");
         }
     }
     
@@ -354,7 +360,8 @@ public class SignalementController {
                     .findBySignalementIdOrderByDateModificationDesc(id);
             return ResponseEntity.ok(historique);
         } catch (Exception e) {
-            return ResponseEntity.status(500).body("Erreur: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("Impossible de charger l'historique pour le moment. Veuillez réessayer.");
         }
     }
 
@@ -416,7 +423,7 @@ public class SignalementController {
         } catch (Exception e) {
             System.err.println("ERREUR GLOBALE: " + e.getMessage());
             e.printStackTrace();
-            return ResponseEntity.status(500).body("Erreur lors de la suppression: " + e.getMessage());
+            return ResponseEntity.status(500).body("Impossible de supprimer le signalement pour le moment. Veuillez réessayer.");
         }
     }
 }

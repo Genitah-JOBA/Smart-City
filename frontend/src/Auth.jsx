@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useI18n } from "./context/AppContext";
 import { 
   MapPin, Smartphone, Building2, Shield, ArrowRight, Eye, EyeOff, 
   UserPlus, LogIn, Sparkles, Rocket, Zap, Award, Loader2, Phone, Home,
@@ -51,6 +52,8 @@ export default function Auth() {
   
   const [errors, setErrors] = useState({});
 
+  const { t, lang, setLang, languages } = useI18n();
+
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
@@ -58,6 +61,18 @@ export default function Auth() {
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // La page d'authentification reste toujours en mode sombre,
+  // quel que soit le thème choisi. On restaure le thème en quittant.
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.remove("light");
+    root.classList.add("dark");
+    return () => {
+      root.classList.remove("dark", "light");
+      root.classList.add(localStorage.getItem("theme") || "dark");
+    };
   }, []);
 
   // 🔥 OPTIMISÉ : Vérification de connexion au chargement
@@ -114,85 +129,85 @@ export default function Auth() {
 
   // ⭐ UNE SEULE DÉCLARATION DE roles
   const roles = [
-    { id: "CITIZEN", label: "Citoyen", icon: Smartphone, color: "from-emerald-600 to-teal-500", description: "Signalez des problèmes dans votre quartier", iconColor: "text-emerald-400" },
-    { id: "AGENT", label: "Agent Municipal", icon: Building2, color: "from-green-600 to-green-400", description: "Gérez et résolvez les signalements", iconColor: "text-green-400" },
+    { id: "CITIZEN", label: t("auth.citizen"), icon: Smartphone, color: "from-emerald-600 to-teal-500", description: t("auth.citizenDesc"), iconColor: "text-emerald-400" },
+    { id: "AGENT", label: t("auth.agent"), icon: Building2, color: "from-green-600 to-green-400", description: t("auth.agentDesc"), iconColor: "text-green-400" },
   ];
 
   // ⭐ LISTE DES DOMAINES AVEC ICÔNES
   const domaines = [
-    { id: "VOIRIE", label: "Voirie et infrastructures", icon: Road, description: "Routes, trottoirs, nids-de-poule" },
-    { id: "ECLAIRAGE", label: "Éclairage public", icon: Lightbulb, description: "Lampadaires, éclairage urbain" },
-    { id: "DECHETS", label: "Déchets et Propreté", icon: Trash2, description: "Collecte des déchets, nettoyage" },
-    { id: "ESPACES_VERTS", label: "Espaces verts", icon: Trees, description: "Parcs, jardins, arbres" },
-    { id: "TRANSPORTS", label: "Transports et mobilité", icon: Bus, description: "Transports en commun, stationnement" },
-    { id: "SECURITE", label: "Sécurité et prévention", icon: ShieldCheck, description: "Sécurité publique, prévention" },
-    { id: "URBANISME", label: "Urbanisme", icon: Building, description: "Aménagement urbain, construction" },
+    { id: "VOIRIE", label: t("dom.VOIRIE.label"), icon: Road, description: t("dom.VOIRIE.desc") },
+    { id: "ECLAIRAGE", label: t("dom.ECLAIRAGE.label"), icon: Lightbulb, description: t("dom.ECLAIRAGE.desc") },
+    { id: "DECHETS", label: t("dom.DECHETS.label"), icon: Trash2, description: t("dom.DECHETS.desc") },
+    { id: "ESPACES_VERTS", label: t("dom.ESPACES_VERTS.label"), icon: Trees, description: t("dom.ESPACES_VERTS.desc") },
+    { id: "TRANSPORTS", label: t("dom.TRANSPORTS.label"), icon: Bus, description: t("dom.TRANSPORTS.desc") },
+    { id: "SECURITE", label: t("dom.SECURITE.label"), icon: ShieldCheck, description: t("dom.SECURITE.desc") },
+    { id: "URBANISME", label: t("dom.URBANISME.label"), icon: Building, description: t("dom.URBANISME.desc") },
   ];
 
   // ⭐ MÉTIERS PAR DOMAINE AVEC ICÔNES
   const metiersParDomaine = {
     VOIRIE: [
-      { id: "AGENT_VOIRIE", label: "Agent de voirie", icon: Wrench, description: "Réparation nids-de-poule, entretien chaussées" },
-      { id: "TECHNICIEN_GENIE_CIVIL", label: "Technicien génie civil", icon: HardHat, description: "Inspection ponts, tunnels, ouvrages d'art" },
-      { id: "CHEF_CHANTIER_VOIRIE", label: "Chef de chantier voirie", icon: Clipboard, description: "Coordination travaux routiers" },
-      { id: "AGENT_SIGNALISATION", label: "Agent de signalisation", icon: TrafficCone, description: "Pose et entretien panneaux, feux tricolores" }
+      { id: "AGENT_VOIRIE", label: t("met.AGENT_VOIRIE.label"), icon: Wrench, description: t("met.AGENT_VOIRIE.desc") },
+      { id: "TECHNICIEN_GENIE_CIVIL", label: t("met.TECHNICIEN_GENIE_CIVIL.label"), icon: HardHat, description: t("met.TECHNICIEN_GENIE_CIVIL.desc") },
+      { id: "CHEF_CHANTIER_VOIRIE", label: t("met.CHEF_CHANTIER_VOIRIE.label"), icon: Clipboard, description: t("met.CHEF_CHANTIER_VOIRIE.desc") },
+      { id: "AGENT_SIGNALISATION", label: t("met.AGENT_SIGNALISATION.label"), icon: TrafficCone, description: t("met.AGENT_SIGNALISATION.desc") }
     ],
     ECLAIRAGE: [
-      { id: "TECHNICIEN_ECLAIRAGE", label: "Technicien éclairage", icon: Lightbulb, description: "Réparation lampadaires, entretien du réseau" },
-      { id: "INGENIEUR_ECLAIRAGE", label: "Ingénieur éclairage urbain", icon: Ruler, description: "Conception schéma d'éclairage, optimisation énergétique" },
-      { id: "AGENT_MAINTENANCE_ELEC", label: "Agent maintenance électrique", icon: Gauge, description: "Dépannage pannes électriques" }
+      { id: "TECHNICIEN_ECLAIRAGE", label: t("met.TECHNICIEN_ECLAIRAGE.label"), icon: Lightbulb, description: t("met.TECHNICIEN_ECLAIRAGE.desc") },
+      { id: "INGENIEUR_ECLAIRAGE", label: t("met.INGENIEUR_ECLAIRAGE.label"), icon: Ruler, description: t("met.INGENIEUR_ECLAIRAGE.desc") },
+      { id: "AGENT_MAINTENANCE_ELEC", label: t("met.AGENT_MAINTENANCE_ELEC.label"), icon: Gauge, description: t("met.AGENT_MAINTENANCE_ELEC.desc") }
     ],
     DECHETS: [
-      { id: "AGENT_COLLECTE", label: "Agent de collecte", icon: Trash2, description: "Ramassage ordures ménagères" },
-      { id: "TECHNICIEN_NETTOIEMENT", label: "Technicien nettoiement", icon: Recycle, description: "Nettoyage rues, espaces publics" },
-      { id: "RESPONSABLE_DECHETTERIE", label: "Responsable déchetterie", icon: Recycle, description: "Gestion des déchèteries" },
-      { id: "AGENT_TRI", label: "Agent de tri", icon: Warehouse, description: "Centre de tri des déchets" },
-      { id: "COORDINATEUR_PROPRETE", label: "Coordinateur propreté", icon: BarChart, description: "Planification tournées" }
+      { id: "AGENT_COLLECTE", label: t("met.AGENT_COLLECTE.label"), icon: Trash2, description: t("met.AGENT_COLLECTE.desc") },
+      { id: "TECHNICIEN_NETTOIEMENT", label: t("met.TECHNICIEN_NETTOIEMENT.label"), icon: Recycle, description: t("met.TECHNICIEN_NETTOIEMENT.desc") },
+      { id: "RESPONSABLE_DECHETTERIE", label: t("met.RESPONSABLE_DECHETTERIE.label"), icon: Recycle, description: t("met.RESPONSABLE_DECHETTERIE.desc") },
+      { id: "AGENT_TRI", label: t("met.AGENT_TRI.label"), icon: Warehouse, description: t("met.AGENT_TRI.desc") },
+      { id: "COORDINATEUR_PROPRETE", label: t("met.COORDINATEUR_PROPRETE.label"), icon: BarChart, description: t("met.COORDINATEUR_PROPRETE.desc") }
     ],
     ESPACES_VERTS: [
-      { id: "JARDINIER_MUNICIPAL", label: "Jardinier municipal", icon: Sprout, description: "Entretien parcs, jardins, massifs" },
-      { id: "ELAGUEUR", label: "Élagueur", icon: Scissors, description: "Taille et entretien arbres" },
-      { id: "TECHNICIEN_ESPACES_VERTS", label: "Technicien espaces verts", icon: Trees, description: "Aménagement paysager" },
-      { id: "PAYSAGISTE_URBAIN", label: "Paysagiste urbain", icon: Paintbrush, description: "Conception espaces verts" },
-      { id: "AGENT_ARROSAGE", label: "Agent arrosage", icon: Droplet, description: "Gestion système d'irrigation" }
+      { id: "JARDINIER_MUNICIPAL", label: t("met.JARDINIER_MUNICIPAL.label"), icon: Sprout, description: t("met.JARDINIER_MUNICIPAL.desc") },
+      { id: "ELAGUEUR", label: t("met.ELAGUEUR.label"), icon: Scissors, description: t("met.ELAGUEUR.desc") },
+      { id: "TECHNICIEN_ESPACES_VERTS", label: t("met.TECHNICIEN_ESPACES_VERTS.label"), icon: Trees, description: t("met.TECHNICIEN_ESPACES_VERTS.desc") },
+      { id: "PAYSAGISTE_URBAIN", label: t("met.PAYSAGISTE_URBAIN.label"), icon: Paintbrush, description: t("met.PAYSAGISTE_URBAIN.desc") },
+      { id: "AGENT_ARROSAGE", label: t("met.AGENT_ARROSAGE.label"), icon: Droplet, description: t("met.AGENT_ARROSAGE.desc") }
     ],
     TRANSPORTS: [
-      { id: "AGENT_REGULATION", label: "Agent de régulation", icon: TrafficCone, description: "Gestion trafic, feux, bouchons" },
-      { id: "CONTROLEUR_TRANSPORT", label: "Contrôleur transport", icon: Ticket, description: "Contrôle bus, tramway, métro" },
-      { id: "TECHNICIEN_STATIONNEMENT", label: "Technicien stationnement", icon: ParkingCircle, description: "Gestion parkings, horodateurs" },
-      { id: "AGENT_MOBILITE_DOUCE", label: "Agent mobilité douce", icon: Bike, description: "Entretien pistes cyclables, bornes vélos" }
+      { id: "AGENT_REGULATION", label: t("met.AGENT_REGULATION.label"), icon: TrafficCone, description: t("met.AGENT_REGULATION.desc") },
+      { id: "CONTROLEUR_TRANSPORT", label: t("met.CONTROLEUR_TRANSPORT.label"), icon: Ticket, description: t("met.CONTROLEUR_TRANSPORT.desc") },
+      { id: "TECHNICIEN_STATIONNEMENT", label: t("met.TECHNICIEN_STATIONNEMENT.label"), icon: ParkingCircle, description: t("met.TECHNICIEN_STATIONNEMENT.desc") },
+      { id: "AGENT_MOBILITE_DOUCE", label: t("met.AGENT_MOBILITE_DOUCE.label"), icon: Bike, description: t("met.AGENT_MOBILITE_DOUCE.desc") }
     ],
     SECURITE: [
-      { id: "AGENT_SECURITE_URBAINE", label: "Agent de sécurité urbaine", icon: ShieldCheck, description: "Surveillance quartiers" },
-      { id: "POLICE_MUNICIPALE", label: "Police municipale", icon: UserCog, description: "Maintien ordre public, verbalisation" },
-      { id: "AGENT_MEDIATEUR", label: "Agent médiateur", icon: Handshake, description: "Gestion conflits de quartier" },
-      { id: "COORDINATEUR_VIDEO", label: "Coordinateur vidéoprotection", icon: Video, description: "Supervision caméras" }
+      { id: "AGENT_SECURITE_URBAINE", label: t("met.AGENT_SECURITE_URBAINE.label"), icon: ShieldCheck, description: t("met.AGENT_SECURITE_URBAINE.desc") },
+      { id: "POLICE_MUNICIPALE", label: t("met.POLICE_MUNICIPALE.label"), icon: UserCog, description: t("met.POLICE_MUNICIPALE.desc") },
+      { id: "AGENT_MEDIATEUR", label: t("met.AGENT_MEDIATEUR.label"), icon: Handshake, description: t("met.AGENT_MEDIATEUR.desc") },
+      { id: "COORDINATEUR_VIDEO", label: t("met.COORDINATEUR_VIDEO.label"), icon: Video, description: t("met.COORDINATEUR_VIDEO.desc") }
     ],
     URBANISME: [
-      { id: "URBANISTE", label: "Urbaniste", icon: Building, description: "Planification urbaine" },
-      { id: "ARCHITECTE_CONSEIL", label: "Architecte conseil", icon: Landmark, description: "Conseil en architecture" },
-      { id: "TECHNICIEN_URBANISME", label: "Technicien urbanisme", icon: Ruler, description: "Instruction permis de construire" },
-      { id: "CHARGE_MISSION_URBAIN", label: "Chargé de mission urbain", icon: MapPin, description: "Projets d'aménagement" }
+      { id: "URBANISTE", label: t("met.URBANISTE.label"), icon: Building, description: t("met.URBANISTE.desc") },
+      { id: "ARCHITECTE_CONSEIL", label: t("met.ARCHITECTE_CONSEIL.label"), icon: Landmark, description: t("met.ARCHITECTE_CONSEIL.desc") },
+      { id: "TECHNICIEN_URBANISME", label: t("met.TECHNICIEN_URBANISME.label"), icon: Ruler, description: t("met.TECHNICIEN_URBANISME.desc") },
+      { id: "CHARGE_MISSION_URBAIN", label: t("met.CHARGE_MISSION_URBAIN.label"), icon: MapPin, description: t("met.CHARGE_MISSION_URBAIN.desc") }
     ]
   };
 
   // ⭐ Validation du téléphone (10 chiffres, commence par 032/033/034/037/038)
   const validatePhone = (phone) => {
-    if (!phone) return "Le numéro de téléphone est obligatoire";
+    if (!phone) return t("val.phoneRequired");
     const phoneRegex = /^(032|033|034|037|038)\d{7}$/;
     if (!phoneRegex.test(phone)) {
-      return "Le téléphone doit commencer par 032, 033, 034, 037 ou 038 et contenir exactement 10 chiffres";
+      return t("val.phoneFormat");
     }
     return null;
   };
 
   // ⭐ Validation de l'adresse (minimum 6 caractères, lettres, chiffres et espaces uniquement)
   const validateAddress = (address) => {
-    if (!address) return "L'adresse est obligatoire";
-    if (address.length < 6) return "L'adresse doit contenir au moins 6 caractères";
+    if (!address) return t("val.addressRequired");
+    if (address.length < 6) return t("val.addressMin6");
     const addressRegex = /^[a-zA-Z0-9\s]+$/;
     if (!addressRegex.test(address)) {
-      return "L'adresse ne doit contenir que des lettres, chiffres et espaces (pas de caractères spéciaux)";
+      return t("val.addressChars");
     }
     return null;
   };
@@ -206,10 +221,10 @@ export default function Auth() {
     let newErrors = {};
 
     if (!email.toLowerCase().endsWith("@gmail.com")) {
-      newErrors.email = "L'email doit impérativement être une adresse @gmail.com";
+      newErrors.email = t("val.emailGmail");
     }
     if (motDePasse.length < 6) {
-      newErrors.motDePasse = "Le mot de passe doit contenir plus de 6 caractères.";
+      newErrors.motDePasse = t("val.passwordMin6");
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -228,7 +243,7 @@ export default function Auth() {
       });
 
       if (!response.ok) {
-        throw new Error("Email ou mot de passe incorrect");
+        throw new Error(t("auth.wrongCredentials"));
       }
 
       const token = await response.text();
@@ -275,23 +290,17 @@ export default function Auth() {
       }));
 
       setIsSuccess(true);
-      setMessage(`Connexion réussie ! Bienvenue ${userNom}`);
+      setMessage(`${t("auth.loginSuccessMsg")} ${userNom}`);
       setShowModal(true);
-      
-      // ⭐ Redirection après un court délai
-      setTimeout(() => {
-        if (normalizedRole === "ADMIN") {
-          navigate("/admin/dashboard", { replace: true });
-        } else if (normalizedRole === "AGENT") {
-          navigate("/agent/signalements-assignes", { replace: true });
-        } else {
-          navigate("/signalements", { replace: true });
-        }
-      }, 500);
-      
+      // ⭐ La redirection se fait au clic sur « Continuer » dans le modal
+
     } catch (error) {
       setIsSuccess(false);
-      setMessage(error.message);
+      setMessage(
+        error instanceof TypeError
+          ? "Connexion au serveur impossible. Vérifiez votre connexion Internet et réessayez."
+          : error.message
+      );
       setShowModal(true);
     } finally {
       setIsLoading(false);
@@ -308,17 +317,17 @@ export default function Auth() {
     let newErrors = {};
 
     if (/\d/.test(nom)) {
-      newErrors.nom = "Le nom ne doit pas contenir de chiffres.";
+      newErrors.nom = t("val.nameNoDigitsDot");
     }
     const nameRegex = /^[a-zA-ZÀ-ÿ\s]+$/;
     if (!nameRegex.test(nom)) {
-      newErrors.nom = "Le nom ne doit contenir que des lettres, espaces ou tirets.";
+      newErrors.nom = t("val.nameLettersDot");
     }
     if (!email.toLowerCase().endsWith("@gmail.com")) {
-      newErrors.email = "L'email doit impérativement être une adresse @gmail.com";
+      newErrors.email = t("val.emailGmail");
     }
     if (motDePasse.length < 6) {
-      newErrors.motDePasse = "Le mot de passe doit contenir plus de 6 caractères.";
+      newErrors.motDePasse = t("val.passwordMin6");
     }
     
     // ⭐ Validation du téléphone (obligatoire)
@@ -335,12 +344,12 @@ export default function Auth() {
     
     // Validation du domaine pour les agents
     if (role === "AGENT" && !domaine) {
-      newErrors.domaine = "Veuillez sélectionner votre domaine d'intervention";
+      newErrors.domaine = t("val.selectDomain");
     }
     
     // Validation du métier pour les agents
     if (role === "AGENT" && domaine && !metier) {
-      newErrors.metier = "Veuillez sélectionner votre métier";
+      newErrors.metier = t("val.selectJob");
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -378,11 +387,11 @@ export default function Auth() {
 
       if (!response.ok) {
         const errorMsg = await response.text();
-        throw new Error(errorMsg || "Une erreur est survenue");
+        throw new Error(errorMsg || t("common.genericError"));
       }
 
       setIsSuccess(true);
-      setMessage("Votre compte a été créé avec succès ! Vous pouvez maintenant vous connecter.");
+      setMessage(t("auth.accountCreated"));
       setShowModal(true);
       setNom(""); 
       setEmail(""); 
@@ -395,7 +404,11 @@ export default function Auth() {
       
     } catch (error) {
       setIsSuccess(false);
-      setMessage(error.message);
+      setMessage(
+        error instanceof TypeError
+          ? "Connexion au serveur impossible. Vérifiez votre connexion Internet et réessayez."
+          : error.message
+      );
       setShowModal(true);
     } finally {
       setIsLoading(false);
@@ -404,7 +417,7 @@ export default function Auth() {
 
   const validateEmail = (e) => {
     if (email !== "" && !email.toLowerCase().endsWith("@gmail.com")) {
-      setErrors(prev => ({ ...prev, email: "L'email doit se terminer par @gmail.com" }));
+      setErrors(prev => ({ ...prev, email: t("val.emailGmail") }));
       setTimeout(() => e.target.focus(), 0);
     } else {
       setErrors(prev => ({ ...prev, email: null }));
@@ -414,7 +427,7 @@ export default function Auth() {
   // Validation mot de passe
   const validatePassword = (e) => {
     if (motDePasse !== "" && motDePasse.length < 6) {
-      setErrors(prev => ({ ...prev, motDePasse: "Le mot de passe doit contenir plus de 6 caractères." }));
+      setErrors(prev => ({ ...prev, motDePasse: t("val.passwordMin6") }));
       setTimeout(() => e.target.focus(), 0);
     } else {
       setErrors(prev => ({ ...prev, motDePasse: null }));
@@ -427,12 +440,12 @@ export default function Auth() {
     if (value !== "") {
       const phoneRegex = /^(032|033|034|037|038)\d{7}$/;
       if (!phoneRegex.test(value)) {
-        setErrors(prev => ({ ...prev, telephone: "Le téléphone doit commencer par 032, 033, 034, 037 ou 038 et contenir exactement 10 chiffres" }));
+        setErrors(prev => ({ ...prev, telephone: t("val.phoneFormat") }));
       } else {
         setErrors(prev => ({ ...prev, telephone: null }));
       }
     } else {
-      setErrors(prev => ({ ...prev, telephone: "Le numéro de téléphone est obligatoire" }));
+      setErrors(prev => ({ ...prev, telephone: t("val.phoneRequired") }));
     }
   };
 
@@ -441,17 +454,17 @@ export default function Auth() {
     const value = e.target.value;
     if (value !== "") {
       if (value.length < 6) {
-        setErrors(prev => ({ ...prev, adresse: "L'adresse doit contenir au moins 6 caractères" }));
+        setErrors(prev => ({ ...prev, adresse: t("val.addressMin6") }));
       } else {
         const addressRegex = /^[a-zA-Z0-9\s]+$/;
         if (!addressRegex.test(value)) {
-          setErrors(prev => ({ ...prev, adresse: "L'adresse ne doit contenir que des lettres, chiffres et espaces" }));
+          setErrors(prev => ({ ...prev, adresse: t("val.addressChars") }));
         } else {
           setErrors(prev => ({ ...prev, adresse: null }));
         }
       }
     } else {
-      setErrors(prev => ({ ...prev, adresse: "L'adresse est obligatoire" }));
+      setErrors(prev => ({ ...prev, adresse: t("val.addressRequired") }));
     }
   };
 
@@ -538,8 +551,27 @@ export default function Auth() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4 relative overflow-hidden">
-      
+    <div className="min-h-screen md:h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4 relative overflow-x-hidden md:overflow-hidden">
+
+      {/* Sélecteur de langue */}
+      <div className="absolute top-4 right-4 z-30 flex gap-1 bg-white/10 backdrop-blur-md rounded-full p-1 border border-white/15">
+        {languages.map((l) => (
+          <button
+            key={l.code}
+            type="button"
+            onClick={() => setLang(l.code)}
+            className={`px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wide transition-all ${
+              lang === l.code
+                ? "bg-emerald-500 text-white shadow"
+                : "text-white/60 hover:text-white hover:bg-white/10"
+            }`}
+          >
+            {l.short}
+          </button>
+        ))}
+      </div>
+
+
       {/* Étoiles filantes */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {[...Array(15)].map((_, i) => (
@@ -587,7 +619,7 @@ export default function Auth() {
                 {isSuccess ? <CheckCircle className="w-7 h-7 sm:w-8 sm:h-8" /> : <AlertTriangle className="w-7 h-7 sm:w-8 sm:h-8" />}
               </div>
               <h3 className={`text-lg sm:text-xl font-bold mb-2 ${isSuccess ? 'text-slate-900' : 'text-red-600'}`}>
-                {isSuccess ? "Félicitations !" : "Oups !"}
+                {isSuccess ? t("common.congrats") : t("auth.oops")}
               </h3>
               <p className="text-slate-600 text-xs sm:text-sm mb-6 break-words">{message}</p>
               <button
@@ -621,7 +653,7 @@ export default function Auth() {
                     : 'bg-slate-800 hover:bg-slate-900 shadow-slate-950/20'
                 }`}
               >
-                {isSuccess ? "Continuer" : "Fermer"}
+                {isSuccess ? t("auth.continue") : t("sig.close")}
               </button>
             </div>
           </div>
@@ -637,10 +669,10 @@ export default function Auth() {
       </div>
 
       {/* Container principal */}
-      <div className="relative w-full max-w-full sm:max-w-xl md:max-w-4xl lg:max-w-5xl bg-white/10 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 overflow-hidden mx-2 sm:mx-4 perspective-1000">
+      <div className="relative w-full max-w-full sm:max-w-xl md:max-w-4xl lg:max-w-5xl md:max-h-[calc(100vh-2rem)] bg-white/10 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 overflow-hidden mx-2 sm:mx-4 perspective-1000">
         <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-emerald-600 to-teal-500 animate-shimmer" />
         
-        <div className="flex flex-col md:grid md:grid-cols-2 gap-0 min-h-[650px]">
+        <div className="flex flex-col md:grid md:grid-cols-2 gap-0 md:h-full">
           
           {/* Left Side - Branding & Info - Style moderne */}
           <div className="relative p-8 md:p-12 flex flex-col justify-between overflow-hidden bg-gradient-to-br from-slate-900/80 via-slate-800/80 to-slate-900/80">
@@ -671,14 +703,14 @@ export default function Auth() {
               
               <div className="space-y-4">
                 <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white leading-[1.1]">
-                  Rejoignez la<br />
+                  {t("auth.brandLine1")}<br />
                   <span className="relative">
-                    <span className="text-emerald-400">révolution urbaine</span>
+                    <span className="text-emerald-400">{t("auth.brandLine2")}</span>
                     <span className="absolute -bottom-2 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 to-transparent rounded-full" />
                   </span>
                 </h2>
                 <p className="text-slate-300/90 text-sm leading-relaxed max-w-sm">
-                  Participez activement à l'amélioration de votre ville en signalant les problèmes et en contribuant à une communauté plus responsable.
+                  {t("auth.brandParagraph")}
                 </p>
               </div>
             </div>
@@ -686,9 +718,9 @@ export default function Auth() {
             {/* Statistiques / Points clés */}
             <div className="relative z-10 mt-8 grid grid-cols-3 gap-3 bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10">
               {[
-                { icon: Clock, label: "Temps réel", color: "text-emerald-400" },
-                { icon: Target, label: "Suivi", color: "text-teal-400" },
-                { icon: Users, label: "Communauté", color: "text-emerald-400" }
+                { icon: Clock, label: t("auth.statRealtime"), color: "text-emerald-400" },
+                { icon: Target, label: t("auth.statTracking"), color: "text-teal-400" },
+                { icon: Users, label: t("auth.statCommunity"), color: "text-emerald-400" }
               ].map((item, index) => (
                 <div key={index} className="flex flex-col items-center gap-1 text-center group cursor-pointer">
                   <item.icon className={`w-4 h-4 ${item.color} group-hover:scale-110 transition-transform duration-300`} />
@@ -701,12 +733,12 @@ export default function Auth() {
           </div>
 
           {/* Right Side - Formulaire - Style épuré */}
-          <div className="relative p-6 sm:p-8 md:p-10 flex items-center justify-center min-h-[650px]">
+          <div className="relative p-6 sm:p-8 md:p-10 flex flex-col items-center overflow-y-auto custom-scrollbar md:max-h-[calc(100vh-2rem)]">
             <div className="absolute inset-0 z-0" style={{ backgroundImage: `url('/Image/Smart.jpg')`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
               <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-[2px]" />
             </div>
 
-            <div className={`relative z-10 w-full max-w-md transition-all duration-500 ${getFormAnimationClass()}`}>
+            <div className={`relative z-10 w-full max-w-md my-auto transition-all duration-500 ${getFormAnimationClass()}`}>
               
               {/* Formulaire de Connexion */}
               {isLogin ? (
@@ -714,16 +746,16 @@ export default function Auth() {
                   <div className="text-center space-y-2">
                     <div className="inline-flex items-center gap-2 bg-emerald-500/20 px-4 py-1.5 rounded-full border border-emerald-500/30">
                       <LogIn className="w-3.5 h-3.5 text-emerald-400" />
-                      <span className="text-emerald-400 text-[10px] font-bold tracking-wider">ACCÈS</span>
+                      <span className="text-emerald-400 text-[10px] font-bold tracking-wider">{t("auth.accessBadge")}</span>
                     </div>
-                    <h3 className="text-3xl font-bold text-white">Connexion</h3>
-                    <p className="text-white/50 text-sm">Connectez-vous pour accéder à votre compte</p>
+                    <h3 className="text-3xl font-bold text-white">{t("auth.loginTitle")}</h3>
+                    <p className="text-white/50 text-sm">{t("auth.loginSubtitle")}</p>
                   </div>
 
                   <div className="space-y-1">
                     <label className="text-white/70 text-xs font-medium flex items-center gap-2">
                       <Mail size={14} className="text-emerald-400" />
-                      Adresse email
+                      {t("auth.email")}
                     </label>
                     <input
                       type="email"
@@ -751,7 +783,7 @@ export default function Auth() {
                   <div className="space-y-1">
                     <label className="text-white/70 text-xs font-medium flex items-center gap-2">
                       <Lock size={14} className="text-emerald-400" />
-                      Mot de passe
+                      {t("auth.password")}
                     </label>
                     <div className="relative">
                       <input
@@ -794,20 +826,20 @@ export default function Auth() {
                     {isLoading ? (
                       <>
                         <Loader2 className="w-5 h-5 animate-spin" />
-                        <span>Connexion en cours...</span>
+                        <span>{t("auth.loggingIn")}</span>
                       </>
                     ) : (
                       <>
-                        <span>Se connecter</span>
+                        <span>{t("auth.loginBtn")}</span>
                         <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
                       </>
                     )}
                   </button>
 
                   <p className="text-center text-white/40 text-xs">
-                    Pas encore de compte ?{" "}
+                    {t("auth.noAccount")}{" "}
                     <button type="button" onClick={toggleMode} className="text-emerald-400 hover:text-emerald-300 font-medium transition-all inline-flex items-center gap-1 hover:gap-2">
-                      Inscrivez-vous
+                      {t("auth.signup")}
                       <Sparkles className="w-3 h-3" />
                     </button>
                   </p>
@@ -818,17 +850,17 @@ export default function Auth() {
                   <div className="text-center space-y-2">
                     <div className="inline-flex items-center gap-2 bg-emerald-500/20 px-4 py-1.5 rounded-full border border-emerald-500/30">
                       <UserPlus className="w-3.5 h-3.5 text-emerald-400" />
-                      <span className="text-emerald-400 text-[10px] font-bold tracking-wider">INSCRIPTION</span>
+                      <span className="text-emerald-400 text-[10px] font-bold tracking-wider">{t("auth.registerBadge")}</span>
                     </div>
-                    <h3 className="text-3xl font-bold text-white">Créer un compte</h3>
-                    <p className="text-white/50 text-sm">Rejoignez la communauté en quelques secondes</p>
+                    <h3 className="text-3xl font-bold text-white">{t("auth.registerTitle")}</h3>
+                    <p className="text-white/50 text-sm">{t("auth.registerSubtitle")}</p>
                   </div>
 
                   {/* Nom */}
                   <div className="space-y-1">
                     <label className="text-white/70 text-xs font-medium flex items-center gap-2">
                       <User size={14} className="text-emerald-400" />
-                      Nom complet
+                      {t("auth.fullName")}
                     </label>
                     <input
                       type="text"
@@ -855,7 +887,7 @@ export default function Auth() {
                   <div className="space-y-1">
                     <label className="text-white/70 text-xs font-medium flex items-center gap-2">
                       <Mail size={14} className="text-emerald-400" />
-                      Email
+                      {t("prof.email")}
                     </label>
                     <input
                       type="email"
@@ -883,7 +915,7 @@ export default function Auth() {
                   <div className="space-y-1">
                     <label className="text-white/70 text-xs font-medium flex items-center gap-2">
                       <Lock size={14} className="text-emerald-400" />
-                      Mot de passe
+                      {t("auth.password")}
                     </label>
                     <div className="relative">
                       <input
@@ -921,7 +953,7 @@ export default function Auth() {
                   <div className="space-y-1">
                     <label className="text-white/70 text-xs font-medium flex items-center gap-2">
                       <Phone size={14} className="text-emerald-400" />
-                      Téléphone *
+                      {t("auth.phone")} *
                     </label>
                     <input
                       type="tel"
@@ -946,14 +978,14 @@ export default function Auth() {
                         {errors.telephone}
                       </p>
                     )}
-                    <p className="text-white/20 text-[10px]">Format: 0321234567 (10 chiffres)</p>
+                    <p className="text-white/20 text-[10px]">{t("auth.phoneFormat")}</p>
                   </div>
 
                   {/* Adresse */}
                   <div className="space-y-1">
                     <label className="text-white/70 text-xs font-medium flex items-center gap-2">
                       <Home size={14} className="text-emerald-400" />
-                      Adresse complète *
+                      {t("auth.address")} *
                     </label>
                     <textarea
                       placeholder="Ex: 0203 AR 0180 Antanimalandy centre MAHAJANGA I"
@@ -984,7 +1016,7 @@ export default function Auth() {
                   <div className="space-y-2">
                     <label className="text-white/70 text-xs font-medium text-center block flex items-center justify-center gap-2">
                       <Users size={14} className="text-emerald-400" />
-                      Type de compte
+                      {t("auth.accountType")}
                     </label>
                     <div className="flex gap-3">
                       {roles.map((r) => {
@@ -1016,12 +1048,12 @@ export default function Auth() {
                       {role === "CITIZEN" ? (
                         <>
                           <Smartphone size={12} />
-                          Signalez des problèmes dans votre quartier
+                          {t("auth.citizenDesc")}
                         </>
                       ) : (
                         <>
                           <Building2 size={12} />
-                          Gérez et résolvez les signalements citoyens
+                          {t("auth.agentDesc")}
                         </>
                       )}
                     </p>
@@ -1032,9 +1064,9 @@ export default function Auth() {
                     <div className="space-y-2 animate-slide-in-right">
                       <label className="text-white/70 text-xs font-medium text-center block flex items-center justify-center gap-2">
                         <Briefcase size={14} className="text-emerald-400" />
-                        Domaine d'intervention
+                        {t("auth.interventionDomain")}
                       </label>
-                      <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto custom-scrollbar">
+                      <div className="grid grid-cols-1 gap-2">
                         {domaines.map((d) => {
                           const Icon = d.icon;
                           const isSelected = domaine === d.id;
@@ -1071,9 +1103,9 @@ export default function Auth() {
                     <div className="space-y-2 animate-slide-in-right">
                       <label className="text-white/70 text-xs font-medium text-center block flex items-center justify-center gap-2">
                         <Star size={14} className="text-emerald-400" />
-                        Votre métier
+                        {t("auth.yourJob")}
                       </label>
-                      <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto custom-scrollbar">
+                      <div className="grid grid-cols-1 gap-2">
                         {metiersParDomaine[domaine].map((m) => {
                           const Icon = m.icon;
                           const isSelected = metier === m.id;
@@ -1108,20 +1140,20 @@ export default function Auth() {
                     {isLoading ? (
                       <>
                         <Loader2 className="w-5 h-5 animate-spin" />
-                        <span>Inscription en cours...</span>
+                        <span>{t("auth.registering")}</span>
                       </>
                     ) : (
                       <>
-                        <span>Créer mon compte</span>
+                        <span>{t("auth.registerBtn")}</span>
                         <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
                       </>
                     )}
                   </button>
 
                   <p className="text-center text-white/40 text-xs">
-                    Déjà un compte ?{" "}
+                    {t("auth.hasAccount")}{" "}
                     <button type="button" onClick={toggleMode} className="text-emerald-400 hover:text-emerald-300 font-medium transition-all inline-flex items-center gap-1 hover:gap-2">
-                      Connectez-vous
+                      {t("auth.login")}
                       <Zap className="w-3 h-3" />
                     </button>
                   </p>

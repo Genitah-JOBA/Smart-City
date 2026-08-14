@@ -1,2 +1,230 @@
 @import url('https://googleapis.com');
 @import "tailwindcss";
+
+/* Rendre la variante `dark:` de Tailwind pilotée par la classe .dark sur <html> */
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root { color-scheme: dark; }
+:root.light { color-scheme: light; }
+
+/* =========================================================
+   RESPONSIVE — garde-fous globaux (mobile → TV)
+   Sûrs : ne cassent pas position:sticky (pas d'overflow sur html/body).
+   ========================================================= */
+
+/* Médias fluides : Tailwind (preflight) applique déjà `img/video { max-width:100%; height:auto }`
+   dans la couche `base`. On NE redéfinit PAS `height` ici : une règle non-layered
+   écraserait les classes de hauteur (h-48, h-full) des images et casserait les
+   cartes. On se limite à empêcher un iframe de déborder. */
+iframe { max-width: 100%; }
+
+/* Césure des très longues chaînes (URLs, emails) pour éviter le scroll latéral. */
+p, span, h1, h2, h3, h4, a, li, td { overflow-wrap: break-word; }
+
+/* Grand écran / TV : les conteneurs de page s'étendent sur TOUTE la largeur
+   (plus de plafond centré à 1152px), avec une marge latérale confortable.
+   Ne concerne QUE les grands wrappers de page (5xl/6xl/7xl + .container) :
+   les formulaires et cartes plus étroits (max-w-4xl et moins) restent
+   plafonnés pour rester lisibles. En dessous de 1536px, rien ne change. */
+@media (min-width: 1536px) {
+  .max-w-5xl,
+  .max-w-6xl,
+  .max-w-7xl,
+  .container {
+    max-width: none;
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+@media (min-width: 2400px) {
+  html { font-size: 18px; } /* lisibilité à distance (TV) */
+  .max-w-5xl,
+  .max-w-6xl,
+  .max-w-7xl,
+  .container {
+    padding-left: 3rem;
+    padding-right: 3rem;
+  }
+}
+
+/* Page d'authentification : c'est une CARTE de connexion (branding + formulaire),
+   plafonnée à lg:max-w-5xl et centrée. On ne la met pas edge-to-edge (un champ
+   de saisie étiré serait pénible) mais on l'agrandit franchement sur grand écran
+   pour qu'elle occupe mieux l'espace, tout en restant centrée. */
+@media (min-width: 1536px) {
+  .lg\:max-w-5xl { max-width: 82rem; }
+}
+@media (min-width: 2400px) {
+  .lg\:max-w-5xl { max-width: 96rem; }
+}
+
+/* =========================================================
+   MODE CLAIR — surcharges globales.
+   L'app est stylée en sombre "en dur" ; ces règles ne
+   s'appliquent que lorsque <html class="light"> est actif.
+   ========================================================= */
+:root.light body {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+/* --- Fonds pleine page / cartes sombres --- */
+:root.light .bg-\[\#0f0f1a\] { background-color: #f1f5f9 !important; }
+:root.light .bg-\[\#0f0f1e\] { background-color: #f1f5f9 !important; }
+:root.light .bg-\[\#1a1a2e\] { background-color: #ffffff !important; }
+:root.light .bg-\[\#16162a\] { background-color: #ffffff !important; }
+:root.light .bg-slate-950,
+:root.light .bg-slate-900,
+:root.light .bg-slate-800 { background-color: #ffffff !important; }
+:root.light .bg-slate-900\/90,
+:root.light .bg-slate-900\/95,
+:root.light .bg-slate-900\/98,
+:root.light .bg-slate-800\/90,
+:root.light .bg-slate-800\/95 { background-color: rgba(255, 255, 255, 0.96) !important; }
+:root.light .bg-slate-700 { background-color: #e2e8f0 !important; }
+
+/* --- Surfaces translucides blanches -> gris clair --- */
+:root.light .bg-white\/5 { background-color: rgba(15, 23, 42, 0.04) !important; }
+:root.light .bg-white\/10 { background-color: rgba(15, 23, 42, 0.06) !important; }
+:root.light .bg-white\/20 { background-color: rgba(15, 23, 42, 0.10) !important; }
+
+/* --- Texte blanc -> foncé en mode clair ---
+   On conserve la hiérarchie d'origine (par opacité) mais rehaussée d'un cran
+   pour que les textes secondaires restent bien lisibles. */
+:root.light .text-white { color: #0f172a !important; }
+:root.light .text-white\/90 { color: rgba(15, 23, 42, 0.92) !important; }
+:root.light .text-white\/80 { color: rgba(15, 23, 42, 0.85) !important; }
+:root.light .text-white\/70 { color: rgba(15, 23, 42, 0.80) !important; }
+:root.light .text-white\/60 { color: rgba(15, 23, 42, 0.74) !important; }
+:root.light .text-white\/50 { color: rgba(15, 23, 42, 0.66) !important; }
+:root.light .text-white\/40 { color: rgba(15, 23, 42, 0.60) !important; }
+:root.light .text-white\/30 { color: rgba(15, 23, 42, 0.52) !important; }
+:root.light .text-white\/20 { color: rgba(15, 23, 42, 0.44) !important; }
+
+/* --- Textes gris (gray-*) -> foncés en mode clair --- */
+:root.light .text-gray-500,
+:root.light .text-gray-400,
+:root.light .text-gray-300,
+:root.light .text-gray-200 { color: #334155 !important; }
+
+/* =========================================================
+   MODE CLAIR — TEXTES COLORÉS
+   ========================================================= */
+
+/* --- (A) Le texte BLANC posé sur un fond coloré saturé (boutons, badges,
+   dégradés colorés) DOIT rester blanc : ces fonds ne s'éclaircissent pas en
+   mode clair, donc le remappage "blanc -> foncé" les rendait illisibles
+   (ex. bouton violet "Organisée par IA"). On force le blanc à rester blanc,
+   sur l'élément lui-même comme sur ses descendants. --- */
+:root.light :is(
+  .bg-emerald-500,.bg-emerald-600,.bg-emerald-700,.bg-green-500,.bg-green-600,
+  .bg-teal-500,.bg-teal-600,.bg-blue-500,.bg-blue-600,.bg-blue-700,.bg-sky-500,.bg-sky-600,
+  .bg-indigo-500,.bg-indigo-600,.bg-purple-500,.bg-purple-600,.bg-purple-700,
+  .bg-violet-500,.bg-violet-600,.bg-amber-500,.bg-amber-600,.bg-yellow-500,.bg-yellow-600,
+  .bg-orange-500,.bg-orange-600,.bg-red-500,.bg-red-600,.bg-red-700,.bg-rose-500,.bg-rose-600,
+  .bg-pink-500,.bg-pink-600,.bg-cyan-500,.bg-cyan-600,
+  .from-emerald-400,.from-emerald-500,.from-emerald-600,.from-green-400,.from-green-500,.from-green-600,
+  .from-teal-500,.from-teal-600,.from-blue-400,.from-blue-500,.from-blue-600,.from-sky-500,.from-sky-600,
+  .from-indigo-500,.from-indigo-600,.from-purple-500,.from-purple-600,.from-violet-500,.from-violet-600,
+  .from-amber-500,.from-amber-600,.from-yellow-500,.from-yellow-600,.from-orange-500,.from-orange-600,
+  .from-red-500,.from-red-600,.from-rose-500,.from-rose-600,.from-cyan-500,.from-cyan-600
+):is(.text-white,.text-white\/90,.text-white\/80,.text-white\/70,.text-white\/60,.text-white\/50),
+:root.light :is(
+  .bg-emerald-500,.bg-emerald-600,.bg-emerald-700,.bg-green-500,.bg-green-600,
+  .bg-teal-500,.bg-teal-600,.bg-blue-500,.bg-blue-600,.bg-blue-700,.bg-sky-500,.bg-sky-600,
+  .bg-indigo-500,.bg-indigo-600,.bg-purple-500,.bg-purple-600,.bg-purple-700,
+  .bg-violet-500,.bg-violet-600,.bg-amber-500,.bg-amber-600,.bg-yellow-500,.bg-yellow-600,
+  .bg-orange-500,.bg-orange-600,.bg-red-500,.bg-red-600,.bg-red-700,.bg-rose-500,.bg-rose-600,
+  .bg-pink-500,.bg-pink-600,.bg-cyan-500,.bg-cyan-600,
+  .from-emerald-400,.from-emerald-500,.from-emerald-600,.from-green-400,.from-green-500,.from-green-600,
+  .from-teal-500,.from-teal-600,.from-blue-400,.from-blue-500,.from-blue-600,.from-sky-500,.from-sky-600,
+  .from-indigo-500,.from-indigo-600,.from-purple-500,.from-purple-600,.from-violet-500,.from-violet-600,
+  .from-amber-500,.from-amber-600,.from-yellow-500,.from-yellow-600,.from-orange-500,.from-orange-600,
+  .from-red-500,.from-red-600,.from-rose-500,.from-rose-600,.from-cyan-500,.from-cyan-600
+) :is(.text-white,.text-white\/90,.text-white\/80,.text-white\/70,.text-white\/60,.text-white\/50) {
+  color: #ffffff !important;
+}
+
+/* --- (A bis) Texte blanc posé sur un SCRIM SOMBRE (survol d'image, badges sur
+   photo, ex. « Voir plus » au survol) : le fond noir translucide reste sombre en
+   mode clair, donc le texte doit rester BLANC (sinon il devient foncé/illisible). --- */
+:root.light :is(.bg-black\/40,.bg-black\/50,.bg-black\/60,.bg-black\/70,.bg-black\/80,.bg-black\/90):is(.text-white,.text-white\/90,.text-white\/80,.text-white\/70,.text-white\/60,.text-white\/50,.text-white\/40),
+:root.light :is(.bg-black\/40,.bg-black\/50,.bg-black\/60,.bg-black\/70,.bg-black\/80,.bg-black\/90) :is(.text-white,.text-white\/90,.text-white\/80,.text-white\/70,.text-white\/60,.text-white\/50,.text-white\/40) {
+  color: #ffffff !important;
+}
+
+/* --- (B) Les textes colorés PÂLES (nuances 200/300/400) sont peu lisibles sur
+   fond clair : on les fonce vers la nuance 700 correspondante. Les variantes
+   `hover:` ne sont pas touchées (tokens distincts). --- */
+:root.light .text-emerald-400,:root.light .text-emerald-300,
+:root.light .text-green-400,:root.light .text-green-300,
+:root.light .text-emerald-400\/80,:root.light .text-emerald-400\/60 { color: #047857 !important; }
+:root.light .text-teal-400 { color: #0f766e !important; }
+:root.light .text-cyan-400 { color: #0e7490 !important; }
+:root.light .text-blue-400,:root.light .text-blue-300,
+:root.light .text-blue-400\/60,:root.light .text-blue-400\/40,:root.light .text-blue-300\/70 { color: #1d4ed8 !important; }
+:root.light .text-sky-400 { color: #0369a1 !important; }
+:root.light .text-indigo-400,:root.light .text-indigo-300 { color: #4338ca !important; }
+:root.light .text-amber-400,:root.light .text-amber-300,
+:root.light .text-amber-300\/90,:root.light .text-amber-300\/70 { color: #b45309 !important; }
+:root.light .text-yellow-400 { color: #a16207 !important; }
+:root.light .text-orange-400 { color: #c2410c !important; }
+:root.light .text-red-400,:root.light .text-red-300,
+:root.light .text-red-400\/60 { color: #b91c1c !important; }
+:root.light .text-rose-400,:root.light .text-rose-300 { color: #be123c !important; }
+:root.light .text-purple-400,:root.light .text-purple-300,:root.light .text-purple-200,
+:root.light .text-purple-300\/70 { color: #7e22ce !important; }
+:root.light .text-violet-400,:root.light .text-violet-300 { color: #6d28d9 !important; }
+:root.light .text-pink-400,:root.light .text-pink-300 { color: #be185d !important; }
+
+/* --- Bordures blanches -> foncées discrètes --- */
+:root.light .border-white\/5 { border-color: rgba(15, 23, 42, 0.08) !important; }
+:root.light .border-white\/10 { border-color: rgba(15, 23, 42, 0.10) !important; }
+:root.light .border-white\/20 { border-color: rgba(15, 23, 42, 0.14) !important; }
+
+/* --- Placeholders des champs --- */
+:root.light .placeholder-white\/30::placeholder { color: rgba(15, 23, 42, 0.40) !important; }
+:root.light .placeholder-white\/20::placeholder { color: rgba(15, 23, 42, 0.35) !important; }
+
+/* --- Textes gris (slate) --- */
+:root.light .text-slate-400,
+:root.light .text-slate-300 { color: #475569 !important; }
+:root.light .text-slate-200 { color: #334155 !important; }
+:root.light .text-slate-500 { color: #64748b !important; }
+
+/* --- Autres fonds sombres arbitraires (cartes) -> blanc --- */
+:root.light .bg-\[\#1e1f22\],
+:root.light .bg-\[\#1e1e32\],
+:root.light .bg-\[\#1e1e2f\],
+:root.light .bg-\[\#16162a\],
+:root.light .bg-\[\#242526\] { background-color: #ffffff !important; }
+:root.light .bg-slate-950 { background-color: #f1f5f9 !important; }
+
+/* --- Dégradés sombres -> clairs (on remappe les variables de stops Tailwind) ---
+   Fonds de page / bandeaux : gris clair ; cartes : blanc. */
+:root.light .from-slate-950,
+:root.light .from-slate-900,
+:root.light .from-slate-800 { --tw-gradient-from: #f1f5f9 !important; }
+:root.light .via-slate-950,
+:root.light .via-slate-900,
+:root.light .via-slate-800 { --tw-gradient-via: #f1f5f9 !important; }
+:root.light .to-slate-950,
+:root.light .to-slate-900,
+:root.light .to-slate-800 { --tw-gradient-to: #f1f5f9 !important; }
+
+/* Fonds de page arbitraires (Profil, Signaler…) */
+:root.light .from-\[\#0f0f1a\] { --tw-gradient-from: #f1f5f9 !important; }
+:root.light .via-\[\#1a1a2e\] { --tw-gradient-via: #ffffff !important; }
+:root.light .to-\[\#0f0f1a\] { --tw-gradient-to: #f1f5f9 !important; }
+
+/* Cartes en dégradé arbitraire -> blanc */
+:root.light .from-\[\#1e1e32\] { --tw-gradient-from: #ffffff !important; }
+:root.light .to-\[\#16162a\] { --tw-gradient-to: #f8fafc !important; }
+
+/* --- Fonds arbitraires AVEC opacité (bandeaux d'en-tête sous la navbar) --- */
+:root.light .bg-\[\#1a1a2e\]\/80,
+:root.light .bg-\[\#1a1a2e\]\/90,
+:root.light .bg-\[\#1a1a2e\]\/95 { background-color: rgba(255, 255, 255, 0.92) !important; }
+:root.light .bg-\[\#0f0f1a\]\/80,
+:root.light .bg-\[\#0f0f1a\]\/90,
+:root.light .bg-\[\#0f0f1a\]\/95 { background-color: rgba(241, 245, 249, 0.92) !important; }

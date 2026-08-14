@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { 
-  MapPin, CheckCircle, Clock, PlayCircle, AlertTriangle,
+  MapPin, CheckCircle, Clock, PlayCircle, AlertTriangle, XCircle,
   Image as ImageIcon, ChevronLeft, ChevronRight, X, Eye,
   Upload, Camera, Loader2, AlertCircle, Info, ClipboardList,
   Users, FolderCheck, ListTodo, Award, FileText,
@@ -10,14 +10,17 @@ import {
   Shield, Zap, Rocket, Sparkles, Globe, Lock, Unlock,
   TrendingUp, TrendingDown, Flame, Activity
 } from "lucide-react";
+import { useI18n } from "./context/AppContext";
 
 export default function AgentSignalementsAssignes() {
+  const { t } = useI18n();
   const [signalements, setSignalements] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState("TOUS");
   const [viewMode, setViewMode] = useState("agent"); // "agent" ou "ia"
   const [selectedImages, setSelectedImages] = useState(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [detailSignalement, setDetailSignalement] = useState(null);
   
   // États pour le modal de preuve
   const [showProofModal, setShowProofModal] = useState(false);
@@ -124,10 +127,10 @@ export default function AgentSignalementsAssignes() {
           
           setSignalements(signalementsTries);
         } else {
-          showMessage("error", "Erreur", "Impossible de charger les signalements");
+          showMessage("error", t("common.error"), t("agent.cantLoadReports"));
         }
       } catch (error) {
-        showMessage("error", "Erreur réseau", "Impossible de contacter le serveur");
+        showMessage("error", t("common.networkError"), t("agent.cantReachServer"));
       } finally {
         setIsLoading(false);
       }
@@ -169,10 +172,10 @@ export default function AgentSignalementsAssignes() {
         setSignalements(prev => prev.map(s => 
           s.id === id ? { ...s, statut: "EN_COURS" } : s
         ));
-        showMessage("success", "Succès", "Signalement pris en charge !");
+        showMessage("success", t("common.success"), t("agent.takenCharge"));
       }
     } catch (error) {
-      showMessage("error", "Erreur", "Une erreur est survenue");
+      showMessage("error", t("common.error"), t("common.genericError"));
     }
   };
 
@@ -195,14 +198,14 @@ export default function AgentSignalementsAssignes() {
   const handleProofImagesUpload = async (e) => {
     const files = Array.from(e.target.files);
     if (proofImages.length + files.length > 5) {
-      showMessage("error", "Limite", "5 photos maximum");
+      showMessage("error", t("common.limit"), t("agent.max5photos"));
       return;
     }
     try {
       const base64Images = await Promise.all(files.map(convertToBase64));
       setProofImages(prev => [...prev, ...base64Images]);
     } catch (error) {
-      showMessage("error", "Erreur", "Impossible de charger les images");
+      showMessage("error", t("common.error"), t("agent.cantLoadImages"));
     }
   };
 
@@ -212,7 +215,7 @@ export default function AgentSignalementsAssignes() {
 
   const handleSubmitProof = async () => {
     if (!proofDescription.trim()) {
-      showMessage("error", "Champ requis", "Ajoutez une description");
+      showMessage("error", t("common.requiredField"), t("agent.addDescription"));
       return;
     }
 
@@ -236,7 +239,7 @@ export default function AgentSignalementsAssignes() {
       });
 
       if (!proofResponse.ok) {
-        throw new Error("Erreur lors de l'envoi de la preuve");
+        throw new Error(t("agent.proofSendError"));
       }
 
       const res = await fetch(`http://localhost:8081/api/signalements/${currentSignalementId}/statut`, {
@@ -253,10 +256,12 @@ export default function AgentSignalementsAssignes() {
         setShowProofModal(false);
         setProofDescription("");
         setProofImages([]);
-        showMessage("success", "Félicitations !", "Signalement résolu !");
+        showMessage("success", t("common.congrats"), t("agent.reportResolved"));
       }
     } catch (error) {
-      showMessage("error", "Erreur", error.message);
+      showMessage("error", t("common.error"), error instanceof TypeError
+        ? t("agent.cantReachServer")
+        : (error.message || t("common.genericError")));
     } finally {
       setIsSubmitting(false);
     }
@@ -298,25 +303,48 @@ export default function AgentSignalementsAssignes() {
   const getStatusColor = (statut) => {
     const colors = {
       'EN_ATTENTE': 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-      'EN_COURS': 'bg-blue-500/20 text-blue-300 border-blue-500/30'
+      'EN_COURS': 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+      'REJETE': 'bg-red-500/20 text-red-300 border-red-500/30'
     };
     return colors[statut] || 'bg-gray-500/20 text-gray-300 border-gray-500/30';
   };
 
   const getStatusLabel = (statut) => {
-    const labels = {
-      'EN_ATTENTE': 'En attente',
-      'EN_COURS': 'En cours'
-    };
-    return labels[statut] || statut;
+    const label = t(`status.${statut}`);
+    return label === `status.${statut}` ? statut : label;
   };
 
   const getStatusIcon = (statut) => {
     const icons = {
       'EN_ATTENTE': AlertTriangle,
-      'EN_COURS': Clock
+      'EN_COURS': Clock,
+      'REJETE': XCircle
     };
     return icons[statut] || AlertTriangle;
+  };
+
+  // Vérifie si un signalement possède des coordonnées GPS exploitables
+  const hasCoords = (s) =>
+    s && typeof s.latitude === "number" && typeof s.longitude === "number" &&
+    !(s.latitude === 0 && s.longitude === 0);
+
+  // URL d'intégration OpenStreetMap (gratuit, sans clé) centrée sur le point avec un marqueur
+  const buildOsmEmbedUrl = (lat, lng) => {
+    const d = 0.004; // ~400 m de marge autour du point
+    const bbox = `${lng - d}%2C${lat - d}%2C${lng + d}%2C${lat + d}`;
+    return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat}%2C${lng}`;
+  };
+
+  // Ouvre l'itinéraire Google Maps vers le point du signalement
+  const openDirections = (s) => {
+    let url;
+    if (hasCoords(s)) {
+      url = `https://www.google.com/maps/dir/?api=1&destination=${s.latitude},${s.longitude}`;
+    } else {
+      const query = [s.address, s.quartier, s.commune, s.ville].filter(Boolean).join(", ");
+      url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(query || "Antananarivo")}`;
+    }
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   const showMessage = (type, title, message) => {
@@ -339,7 +367,7 @@ export default function AgentSignalementsAssignes() {
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-10 h-10 text-blue-500 animate-spin mx-auto mb-4" />
-          <p className="text-gray-400">Chargement des signalements...</p>
+          <p className="text-gray-400">{t("agent.loadingReports")}</p>
         </div>
       </div>
     );
@@ -352,12 +380,12 @@ export default function AgentSignalementsAssignes() {
         <div className="text-center mb-6">
           <div className="flex items-center justify-center gap-2 mb-2">
             <ClipboardList className="w-8 h-8 text-emerald-400" />
-            <h1 className="text-3xl font-bold text-white">SIGNALEMENTS ACTIFS</h1>
+            <h1 className="text-3xl font-bold text-white">{t("agent.activeReports")}</h1>
           </div>
           <p className="text-white/50 text-sm mt-2">
             {viewMode === "ia" 
-              ? "Classés par niveau de dangerosité (du plus urgent au moins urgent)" 
-              : "Classés par date (du plus récent au plus ancien)"}
+              ? t("agent.sortedByDanger")
+              : t("agent.sortedByDate")}
           </p>
         </div>
 
@@ -372,7 +400,7 @@ export default function AgentSignalementsAssignes() {
             }`}
           >
             <User size={18} />
-            Organisée par Date le plus récent
+            {t("agent.byDate")}
           </button>
           <button
             onClick={() => setViewMode("ia")}
@@ -383,33 +411,33 @@ export default function AgentSignalementsAssignes() {
             }`}
           >
             <Sparkles size={18} />
-            Organisée par IA - Dangerosité
+            {t("agent.byAI")}
           </button>
         </div>
 
         {/* Statistiques IA (visible uniquement en mode IA) */}
         {viewMode === "ia" && stats.total > 0 && (
           <div className="flex justify-center mb-6">
-            <div className="grid grid-cols-4 gap-2 max-w-2xl">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 max-w-2xl">
               <div className="bg-red-500/20 rounded-xl p-3 text-center border border-red-500/30 min-w-[80px]">
                 <Flame className="w-5 h-5 text-red-400 mx-auto mb-1" />
                 <div className="text-xl font-bold text-red-400">{stats.urgent}</div>
-                <div className="text-white/50 text-xs">Urgent</div>
+                <div className="text-white/50 text-xs">{t("agent.urgent")}</div>
               </div>
               <div className="bg-orange-500/20 rounded-xl p-3 text-center border border-orange-500/30 min-w-[80px]">
                 <TrendingUp className="w-5 h-5 text-orange-400 mx-auto mb-1" />
                 <div className="text-xl font-bold text-orange-400">{stats.important}</div>
-                <div className="text-white/50 text-xs">Important</div>
+                <div className="text-white/50 text-xs">{t("agent.important")}</div>
               </div>
               <div className="bg-yellow-500/20 rounded-xl p-3 text-center border border-yellow-500/30 min-w-[80px]">
                 <Activity className="w-5 h-5 text-yellow-400 mx-auto mb-1" />
                 <div className="text-xl font-bold text-yellow-400">{stats.modere}</div>
-                <div className="text-white/50 text-xs">Modéré</div>
+                <div className="text-white/50 text-xs">{t("agent.moderate")}</div>
               </div>
               <div className="bg-green-500/20 rounded-xl p-3 text-center border border-green-500/30 min-w-[80px]">
                 <TrendingDown className="w-5 h-5 text-green-400 mx-auto mb-1" />
                 <div className="text-xl font-bold text-green-400">{stats.faible}</div>
-                <div className="text-white/50 text-xs">Faible</div>
+                <div className="text-white/50 text-xs">{t("agent.low")}</div>
               </div>
             </div>
           </div>
@@ -421,7 +449,7 @@ export default function AgentSignalementsAssignes() {
           <div className="bg-white/10 rounded-xl p-4 text-center hover:bg-white/20 transition cursor-pointer">
             <FolderCheck className="w-6 h-6 text-emerald-400 mx-auto mb-2" />
             <div className="text-3xl font-bold text-white">{stats.total}</div>
-            <div className="text-white/50 text-xs mt-1">Total actifs</div>
+            <div className="text-white/50 text-xs mt-1">{t("agent.totalActive")}</div>
           </div>
           
           {/* En attente */}
@@ -435,7 +463,7 @@ export default function AgentSignalementsAssignes() {
           >
             <Clock className="w-6 h-6 text-amber-300 mx-auto mb-2" />
             <div className="text-3xl font-bold text-amber-300">{stats.enAttente}</div>
-            <div className="text-amber-300/70 text-xs mt-1">En attente</div>
+            <div className="text-amber-300/70 text-xs mt-1">{t("status.EN_ATTENTE")}</div>
           </div>
           
           {/* En cours */}
@@ -449,7 +477,7 @@ export default function AgentSignalementsAssignes() {
           >
             <PlayCircle className="w-6 h-6 text-blue-300 mx-auto mb-2" />
             <div className="text-3xl font-bold text-blue-300">{stats.enCours}</div>
-            <div className="text-blue-300/70 text-xs mt-1">En cours</div>
+            <div className="text-blue-300/70 text-xs mt-1">{t("status.EN_COURS")}</div>
           </div>
         </div>
 
@@ -464,7 +492,7 @@ export default function AgentSignalementsAssignes() {
             }`}
           >
             <ListTodo size={16} />
-            Tous ({stats.total})
+            {t("sig.all")} ({stats.total})
           </button>
           <button
             onClick={() => setFilter("EN_ATTENTE")}
@@ -475,7 +503,7 @@ export default function AgentSignalementsAssignes() {
             }`}
           >
             <Clock size={16} />
-            En attente ({stats.enAttente})
+            {t("status.EN_ATTENTE")} ({stats.enAttente})
           </button>
           <button
             onClick={() => setFilter("EN_COURS")}
@@ -486,7 +514,7 @@ export default function AgentSignalementsAssignes() {
             }`}
           >
             <PlayCircle size={16} />
-            En cours ({stats.enCours})
+            {t("status.EN_COURS")} ({stats.enCours})
           </button>
         </div>
         
@@ -495,8 +523,8 @@ export default function AgentSignalementsAssignes() {
           {filteredSignalements.length === 0 ? (
             <div className="col-span-full bg-white/10 rounded-xl p-12 text-center">
               <CheckCircle className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
-              <p className="text-white/60 text-lg">Aucun signalement à afficher</p>
-              <p className="text-white/40 text-sm mt-2">Tous les signalements ont été traités !</p>
+              <p className="text-white/60 text-lg">{t("agent.noReportsToShow")}</p>
+              <p className="text-white/40 text-sm mt-2">{t("agent.allTreated")}</p>
             </div>
           ) : (
             filteredSignalements.map((s, index) => {
@@ -570,22 +598,22 @@ export default function AgentSignalementsAssignes() {
                     </div>
 
                     <h3 className="text-white font-bold text-lg mb-2 line-clamp-1">
-                      {s.titre || "Sans titre"}
+                      {s.titre || t("agent.noTitle")}
                     </h3>
                     
                     <p className="text-white/60 text-sm mb-3 line-clamp-2">
-                      {s.description || "Aucune description fournie"}
+                      {s.description || t("agent.noDescription")}
                     </p>
                     
                     <div className="flex items-center gap-2 text-white/40 text-xs mb-2">
                       <MapPin size={12} />
-                      <span>{s.address || s.ville || s.commune || "Localisation non spécifiée"}</span>
+                      <span>{s.address || s.ville || s.commune || t("agent.locationUnspecified")}</span>
                     </div>
 
                     <div className="flex items-center gap-2 text-white/40 text-xs mb-4">
                       <Calendar size={12} />
                       <span>
-                        Créé le {s.dateCreation ? new Date(s.dateCreation).toLocaleDateString('fr-FR', {
+                        {t("agent.createdOn")} {s.dateCreation ? new Date(s.dateCreation).toLocaleDateString('fr-FR', {
                           day: 'numeric',
                           month: 'long',
                           year: 'numeric',
@@ -595,14 +623,22 @@ export default function AgentSignalementsAssignes() {
                       </span>
                     </div>
 
+                    <button
+                      onClick={() => setDetailSignalement(s)}
+                      className="w-full mb-2 bg-white/10 hover:bg-white/20 text-white/90 py-2.5 rounded-lg transition flex items-center justify-center gap-2 text-sm font-medium"
+                    >
+                      <Eye size={16} />
+                      {t("agent.viewMore")}
+                    </button>
+
                     <div className="flex gap-2">
                       {s.statut === "EN_ATTENTE" && (
-                        <button 
-                          onClick={() => handlePrendreEnCharge(s.id)} 
+                        <button
+                          onClick={() => handlePrendreEnCharge(s.id)}
                           className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-lg transition flex items-center justify-center gap-2 text-sm font-medium"
                         >
                           <PlayCircle size={16} />
-                          Prendre en charge
+                          {t("agent.takeCharge")}
                         </button>
                       )}
                       
@@ -611,7 +647,7 @@ export default function AgentSignalementsAssignes() {
                         className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-lg transition flex items-center justify-center gap-2 text-sm font-medium"
                       >
                         <CheckCircle size={16} />
-                        Marquer résolu
+                        {t("agent.markResolved")}
                       </button>
                     </div>
 
@@ -671,6 +707,94 @@ export default function AgentSignalementsAssignes() {
         </div>
       )}
 
+      {/* MODAL DE DÉTAIL + CARTE DE LOCALISATION */}
+      {detailSignalement && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+          onClick={() => setDetailSignalement(null)}
+        >
+          <div
+            className="bg-[#242526] rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-white/20"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-4">
+                <div className="flex items-center gap-2">
+                  <ClipboardList className="w-6 h-6 text-emerald-400" />
+                  <h2 className="text-xl font-bold text-white">{t("agent.detailsTitle")}</h2>
+                </div>
+                <button
+                  onClick={() => setDetailSignalement(null)}
+                  className="text-white/40 hover:text-white transition"
+                >
+                  <X size={22} />
+                </button>
+              </div>
+
+              {/* Statut */}
+              <div className="flex flex-wrap gap-2 mb-3">
+                <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-medium ${getStatusColor(detailSignalement.statut)}`}>
+                  {(() => { const Ic = getStatusIcon(detailSignalement.statut); return <Ic size={14} />; })()}
+                  {getStatusLabel(detailSignalement.statut)}
+                </div>
+              </div>
+
+              <h3 className="text-white font-bold text-lg mb-2">
+                {detailSignalement.titre || t("agent.noTitle")}
+              </h3>
+              <p className="text-white/60 text-sm mb-4">
+                {detailSignalement.description || t("agent.noDescription")}
+              </p>
+
+              {/* Adresse */}
+              <div className="flex items-start gap-2 text-white/70 text-sm mb-4">
+                <MapPin size={16} className="text-emerald-400 mt-0.5 flex-shrink-0" />
+                <span>
+                  {[
+                    detailSignalement.address,
+                    detailSignalement.quartier,
+                    detailSignalement.fokontany,
+                    detailSignalement.commune,
+                    detailSignalement.ville
+                  ].filter(Boolean).join(", ") || t("agent.locationUnspecified")}
+                </span>
+              </div>
+
+              {/* CARTE DE LOCALISATION */}
+              <div className="mb-4">
+                <div className="flex items-center gap-2 text-white/80 text-sm font-semibold mb-2">
+                  <MapPin size={16} className="text-emerald-400" />
+                  {t("agent.locationTitle")}
+                </div>
+                {hasCoords(detailSignalement) ? (
+                  <div className="rounded-xl overflow-hidden border border-white/20">
+                    <iframe
+                      title="localisation"
+                      src={buildOsmEmbedUrl(detailSignalement.latitude, detailSignalement.longitude)}
+                      className="w-full h-64"
+                      loading="lazy"
+                    />
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-white/10 bg-white/5 p-6 text-center text-white/40 text-sm">
+                    {t("agent.noCoordinates")}
+                  </div>
+                )}
+              </div>
+
+              {/* BOUTON ITINÉRAIRE */}
+              <button
+                onClick={() => openDirections(detailSignalement)}
+                className="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-lg transition flex items-center justify-center gap-2 font-medium"
+              >
+                <MapPin size={18} />
+                {t("agent.getDirections")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* MODAL DE PREUVE */}
       {showProofModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
@@ -679,7 +803,7 @@ export default function AgentSignalementsAssignes() {
               <div className="flex justify-between items-center mb-4">
                 <div className="flex items-center gap-2">
                   <FileText className="w-6 h-6 text-emerald-600" />
-                  <h2 className="text-xl font-bold text-slate-900">Preuve de résolution</h2>
+                  <h2 className="text-xl font-bold text-slate-900">{t("agent.proofTitle")}</h2>
                 </div>
                 <button
                   onClick={() => setShowProofModal(false)}
@@ -690,25 +814,25 @@ export default function AgentSignalementsAssignes() {
               </div>
 
               <p className="text-slate-600 text-sm mb-4">
-                Veuillez fournir une preuve que le problème a été résolu.
+                {t("agent.proofIntro")}
               </p>
 
               <div className="mb-4">
                 <label className="block text-slate-700 font-medium mb-2">
-                  Description de la résolution *
+                  {t("agent.proofDescLabel")} *
                 </label>
                 <textarea
                   value={proofDescription}
                   onChange={(e) => setProofDescription(e.target.value)}
                   rows={4}
                   className="w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  placeholder="Décrivez comment le problème a été résolu..."
+                  placeholder={t("agent.proofDescPlaceholder")}
                 />
               </div>
 
               <div className="mb-4">
                 <label className="block text-slate-700 font-medium mb-2">
-                  Photos avant/après
+                  {t("agent.beforeAfter")}
                 </label>
                 <div className="border-2 border-dashed border-slate-300 rounded-lg p-4 text-center">
                   <input
@@ -724,7 +848,7 @@ export default function AgentSignalementsAssignes() {
                     className="cursor-pointer flex flex-col items-center gap-2"
                   >
                     <Camera className="w-8 h-8 text-slate-400" />
-                    <span className="text-slate-500 text-sm">Cliquez pour ajouter des photos</span>
+                    <span className="text-slate-500 text-sm">{t("agent.clickAddPhotos")}</span>
                   </label>
                 </div>
               </div>
@@ -759,7 +883,7 @@ export default function AgentSignalementsAssignes() {
                   onClick={() => setShowProofModal(false)}
                   className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2.5 rounded-lg transition"
                 >
-                  Annuler
+                  {t("common.cancel")}
                 </button>
                 <button
                   onClick={handleSubmitProof}
@@ -774,7 +898,7 @@ export default function AgentSignalementsAssignes() {
                   ) : (
                     <>
                       <Send size={20} />
-                      Confirmer
+                      {t("common.confirm")}
                     </>
                   )}
                 </button>

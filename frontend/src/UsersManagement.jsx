@@ -7,6 +7,7 @@ import {
   CheckCircle, AlertTriangle, Briefcase, Wrench
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useI18n } from "./context/AppContext";
 
 const MessageBox = ({ message, type, onClose }) => {
   useEffect(() => {
@@ -48,6 +49,7 @@ const MessageBox = ({ message, type, onClose }) => {
 };
 
 export default function UsersManagement() {
+  const { t } = useI18n();
   const [agents, setAgents] = useState([]);
   const [citizens, setCitizens] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
@@ -211,10 +213,10 @@ export default function UsersManagement() {
           <div>
             <h1 className="text-3xl font-bold text-white flex items-center gap-2">
               <Users className="w-8 h-8 text-emerald-400" />
-              Gestion des utilisateurs
+              {t("admin.userManagement")}
             </h1>
             <p className="text-white/50 mt-1">
-              {agents.length} agents • {citizens.length} citoyens
+              {agents.length} {t("admin.agentsWord")} • {citizens.length} {t("admin.citizensWord")}
             </p>
           </div>
           
@@ -223,7 +225,7 @@ export default function UsersManagement() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/40 w-4 h-4" />
             <input
               type="text"
-              placeholder="Rechercher un utilisateur..."
+              placeholder={t("feed.searchUser")}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 pr-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:border-emerald-500 w-64"
@@ -242,8 +244,8 @@ export default function UsersManagement() {
                   <Crown className="w-5 h-5 text-yellow-400" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-white">Top Agents</h2>
-                  <p className="text-white/50 text-sm">Classés par signalements traités (en cours + résolus)</p>
+                  <h2 className="text-xl font-bold text-white">{t("admin.topAgents")}</h2>
+                  <p className="text-white/50 text-sm">{t("admin.topAgentsSub")}</p>
                 </div>
               </div>
             </div>
@@ -252,7 +254,7 @@ export default function UsersManagement() {
               {topAgents.length === 0 ? (
                 <div className="text-center py-8">
                   <UserCheck className="w-12 h-12 text-white/20 mx-auto mb-2" />
-                  <p className="text-white/40">Aucun agent actif pour le moment</p>
+                  <p className="text-white/40">{t("admin.noActiveAgent")}</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -276,7 +278,7 @@ export default function UsersManagement() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="text-white font-semibold">{agent.nom}</p>
                           <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400">
-                            {agent.domaine || "Agent"}
+                            {agent.domaine ? t(`type.${agent.domaine}`) : t("role.agent")}
                           </span>
                         </div>
                         <div className="flex items-center gap-3 mt-1 text-xs text-white/50 flex-wrap">
@@ -294,17 +296,17 @@ export default function UsersManagement() {
                         <div className="flex items-center gap-4 mt-2">
                           <div className="flex items-center gap-1 text-blue-400 text-xs">
                             <Activity size={12} />
-                            <span>{agent.inProgressCount} en cours</span>
+                            <span>{agent.inProgressCount} {t("agent.inProgressShort")}</span>
                           </div>
                           <div className="flex items-center gap-1 text-emerald-400 text-xs">
                             <CheckCircle size={12} />
-                            <span>{agent.resolvedCount} résolus</span>
+                            <span>{agent.resolvedCount} {t("agent.resolvedShort")}</span>
                           </div>
                         </div>
                       </div>
                       <div className="text-right">
                         <div className="text-2xl font-bold text-emerald-400">{agent.treatedCount}</div>
-                        <div className="text-white/40 text-xs">traités</div>
+                        <div className="text-white/40 text-xs">{t("agent.treatedShort")}</div>
                       </div>
                     </div>
                   ))}
@@ -321,8 +323,8 @@ export default function UsersManagement() {
                   <Star className="w-5 h-5 text-yellow-400" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-white">Top Citoyens</h2>
-                  <p className="text-white/50 text-sm">Classés par signalements créés</p>
+                  <h2 className="text-xl font-bold text-white">{t("admin.topCitizens")}</h2>
+                  <p className="text-white/50 text-sm">{t("admin.topCitizensSub")}</p>
                 </div>
               </div>
             </div>
@@ -331,7 +333,7 @@ export default function UsersManagement() {
               {topCitizens.length === 0 ? (
                 <div className="text-center py-8">
                   <UserCircle className="w-12 h-12 text-white/20 mx-auto mb-2" />
-                  <p className="text-white/40">Aucun citoyen actif pour le moment</p>
+                  <p className="text-white/40">{t("admin.noActiveCitizen")}</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -361,7 +363,7 @@ export default function UsersManagement() {
                       </div>
                       <div className="text-right">
                         <div className="text-2xl font-bold text-emerald-400">{citizen.activityCount}</div>
-                        <div className="text-white/40 text-xs">signalements</div>
+                        <div className="text-white/40 text-xs">{t("agent.reportsShort")}</div>
                       </div>
                     </div>
                   ))}
@@ -376,7 +378,7 @@ export default function UsersManagement() {
           <div className="p-5 border-b border-white/10 bg-white/5">
             <div className="flex items-center gap-3">
               <Building2 className="w-5 h-5 text-blue-400" />
-              <h2 className="text-xl font-bold text-white">Tous les agents</h2>
+              <h2 className="text-xl font-bold text-white">{t("admin.allAgents")}</h2>
               <span className="bg-blue-500/20 text-blue-400 text-xs px-2 py-0.5 rounded-full">
                 {filteredAgents.length}
               </span>
@@ -387,14 +389,14 @@ export default function UsersManagement() {
             <table className="w-full">
               <thead className="bg-white/5">
                 <tr>
-                  <th className="text-left p-4 text-white/50 text-sm">Nom</th>
-                  <th className="text-left p-4 text-white/50 text-sm">Email</th>
-                  <th className="text-left p-4 text-white/50 text-sm">Téléphone</th>
-                  <th className="text-left p-4 text-white/50 text-sm">Domaine</th>
-                  <th className="text-left p-4 text-white/50 text-sm">Métier</th>
-                  <th className="text-left p-4 text-white/50 text-sm">En cours</th>
-                  <th className="text-left p-4 text-white/50 text-sm">Résolus</th>
-                  <th className="text-left p-4 text-white/50 text-sm">Total traités</th>
+                  <th className="text-left p-4 text-white/50 text-sm">{t("admin.colName")}</th>
+                  <th className="text-left p-4 text-white/50 text-sm">{t("admin.email")}</th>
+                  <th className="text-left p-4 text-white/50 text-sm">{t("admin.phone")}</th>
+                  <th className="text-left p-4 text-white/50 text-sm">{t("admin.domain")}</th>
+                  <th className="text-left p-4 text-white/50 text-sm">{t("admin.job")}</th>
+                  <th className="text-left p-4 text-white/50 text-sm">{t("status.EN_COURS")}</th>
+                  <th className="text-left p-4 text-white/50 text-sm">{t("feed.resolved")}</th>
+                  <th className="text-left p-4 text-white/50 text-sm">{t("admin.totalHandled")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -417,11 +419,11 @@ export default function UsersManagement() {
                         <td className="p-4 text-white/70 text-sm">{agent.telephone || "-"}</td>
                         <td className="p-4">
                           <span className="text-xs px-2 py-1 rounded-full bg-blue-500/20 text-blue-400">
-                            {agent.domaine || "Non défini"}
+                            {agent.domaine ? t(`type.${agent.domaine}`) : t("agent.notDefined")}
                           </span>
                         </td>
                         <td className="p-4 text-white/60 text-sm">
-                          {agent.metier?.replace(/_/g, ' ').toLowerCase() || "-"}
+                          {agent.metier ? t(`met.${agent.metier}.label`) : "-"}
                         </td>
                         <td className="p-4">
                           <span className="text-blue-400 font-medium">{inProgressCount}</span>
@@ -446,7 +448,7 @@ export default function UsersManagement() {
           <div className="p-5 border-b border-white/10 bg-white/5">
             <div className="flex items-center gap-3">
               <Smartphone className="w-5 h-5 text-emerald-400" />
-              <h2 className="text-xl font-bold text-white">Tous les citoyens</h2>
+              <h2 className="text-xl font-bold text-white">{t("admin.allCitizens")}</h2>
               <span className="bg-emerald-500/20 text-emerald-400 text-xs px-2 py-0.5 rounded-full">
                 {filteredCitizens.length}
               </span>
@@ -457,11 +459,11 @@ export default function UsersManagement() {
             <table className="w-full">
               <thead className="bg-white/5">
                 <tr>
-                  <th className="text-left p-4 text-white/50 text-sm">Nom</th>
-                  <th className="text-left p-4 text-white/50 text-sm">Email</th>
-                  <th className="text-left p-4 text-white/50 text-sm">Téléphone</th>
-                  <th className="text-left p-4 text-white/50 text-sm">Date inscription</th>
-                  <th className="text-left p-4 text-white/50 text-sm">Signalements</th>
+                  <th className="text-left p-4 text-white/50 text-sm">{t("admin.colName")}</th>
+                  <th className="text-left p-4 text-white/50 text-sm">{t("admin.email")}</th>
+                  <th className="text-left p-4 text-white/50 text-sm">{t("admin.phone")}</th>
+                  <th className="text-left p-4 text-white/50 text-sm">{t("admin.signupDate")}</th>
+                  <th className="text-left p-4 text-white/50 text-sm">{t("prof.reports")}</th>
                 </tr>
               </thead>
               <tbody>

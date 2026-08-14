@@ -1,9 +1,13 @@
 import { useEffect, useState } from "react";
 import { MapPin, Trash2, Edit2, User, Calendar } from "lucide-react";
+import { useI18n } from "./context/AppContext";
+import MessageBox from "./components/MessageBox";
 
 export default function Problemes() {
+  const { t } = useI18n();
   const [signalements, setSignalements] = useState([]);
   const [stats, setStats] = useState({ total: 0, enAttente: 0, resolus: 0 });
+  const [msg, setMsg] = useState(null);
   const token = localStorage.getItem("token");
 
   useEffect(() => {
@@ -23,6 +27,7 @@ export default function Problemes() {
         }
       } catch (error) {
         console.error(error);
+        setMsg({ type: "error", text: t("agent.cantReachServer") });
       }
     };
     if (token) fetchData();
@@ -37,15 +42,20 @@ export default function Problemes() {
         });
         if (res.ok) {
           setSignalements(prev => prev.filter(s => s.id !== id));
+          setMsg({ type: "success", text: t("sig.deletedOk") });
+        } else {
+          setMsg({ type: "error", text: t("common.genericError") });
         }
       } catch (error) {
         console.error(error);
+        setMsg({ type: "error", text: t("agent.cantReachServer") });
       }
     }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
+      <MessageBox message={msg} onClose={() => setMsg(null)} />
       <div className="container mx-auto max-w-6xl pt-8">
         <h1 className="text-3xl font-bold text-white mb-2">📊 Administration</h1>
         <p className="text-white/60 mb-6">Gestion des signalements citoyens</p>

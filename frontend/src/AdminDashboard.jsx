@@ -9,7 +9,8 @@ import {
   Info, AlertCircle, MessageSquare
 } from "lucide-react";
 
-import { useNavigate } from "react-router-dom"; 
+import { useNavigate } from "react-router-dom";
+import { useI18n } from "./context/AppContext";
 
 const MessageBox = ({ message, type, onClose }) => {
   useEffect(() => {
@@ -53,6 +54,7 @@ const MessageBox = ({ message, type, onClose }) => {
 };
 
 export default function AdminDashboard() {
+  const { t } = useI18n();
   const navigate = useNavigate();
 
   const [stats, setStats] = useState({
@@ -171,7 +173,7 @@ export default function AdminDashboard() {
   const fetchDashboardData = async () => {
     setIsLoading(true);
     try {
-      console.log("🔄 Chargement des données du dashboard...");
+      console.log(" Chargement des données du dashboard...");
       
       const signalementsRes = await fetch("http://localhost:8081/api/signalements", {
         headers: { "Authorization": `Bearer ${token}` }
@@ -216,7 +218,7 @@ export default function AdminDashboard() {
         });
         
         if (urgents.length > 0) {
-          showMessage(`${urgents.length} signalement(s) urgent(s) à traiter`, 'warning');
+          showMessage(`${urgents.length} ${t("admin.urgentToTreat")}`, 'warning');
         }
         
         setSignalementsUrgents(urgents);
@@ -229,7 +231,7 @@ export default function AdminDashboard() {
         setSignalementsParType(Object.entries(typesCount).map(([name, value]) => ({ name, value })));
       } else {
         console.error("❌ Erreur récupération signalements:", signalementsRes.status);
-        showMessage("Impossible de récupérer les signalements", 'error');
+        showMessage(t("admin.cantFetchReports"), 'error');
       }
       
       const agentsRes = await fetch("http://localhost:8081/api/users", {
@@ -246,13 +248,13 @@ export default function AdminDashboard() {
       
     } catch (error) {
       console.error("❌ Erreur chargement dashboard:", error);
-      showMessage("Erreur lors du chargement des données", 'error');
+      showMessage(t("admin.loadDataError"), 'error');
     } finally {
       setIsLoading(false);
     }
   };
   
-  // ⭐ EXPORT WORD (format DOC)
+  // EXPORT WORD (format DOC)
   const exportToWord = () => {
     let html = `
       <html>
@@ -458,7 +460,8 @@ export default function AdminDashboard() {
       'NOUVEAU': 'bg-red-500/20 text-red-400',
       'URGENT': 'bg-red-500/20 text-red-400',
       'EN_COURS': 'bg-blue-500/20 text-blue-400',
-      'RESOLU': 'bg-emerald-500/20 text-emerald-400'
+      'RESOLU': 'bg-emerald-500/20 text-emerald-400',
+      'REJETE': 'bg-red-500/20 text-red-400'
     };
     return colors[statut] || 'bg-gray-500/20 text-gray-400';
   };
@@ -469,9 +472,11 @@ export default function AdminDashboard() {
       'URGENT': 'Urgent',
       'EN_ATTENTE': 'En attente',
       'EN_COURS': 'En cours',
-      'RESOLU': 'Résolu'
+      'RESOLU': 'Résolu',
+      'REJETE': 'Rejeté'
     };
-    return labels[statut] || statut;
+    const tr = t(`status.${statut}`);
+    return tr !== `status.${statut}` ? tr : (labels[statut] || statut);
   };
 
   const openAssignModal = (signalement) => {
@@ -482,7 +487,7 @@ export default function AdminDashboard() {
 
   const assignerSignalement = async () => {
     if (!selectedAgent) {
-      showMessage("Veuillez sélectionner un agent", 'warning');
+      showMessage(t("admin.selectAgent"), 'warning');
       return;
     }
 
@@ -507,11 +512,11 @@ export default function AdminDashboard() {
         fetchDashboardData();
       } else {
         const error = await response.json();
-        showMessage(error.error || "Impossible d'assigner", 'error');
+        showMessage(error.error || t("admin.cantAssign"), 'error');
       }
     } catch (error) {
       console.error("Erreur assignation:", error);
-      showMessage("Erreur réseau lors de l'assignation", 'error');
+      showMessage(t("admin.assignNetworkError"), 'error');
     } finally {
       setIsAssigning(false);
     }
@@ -519,7 +524,7 @@ export default function AdminDashboard() {
 
   const addAgent = async () => {
     if (!newAgent.nom || !newAgent.email || !newAgent.password) {
-      showMessage("Veuillez remplir tous les champs", 'warning');
+      showMessage(t("admin.fillAllFields"), 'warning');
       return;
     }
 
@@ -529,7 +534,7 @@ export default function AdminDashboard() {
     }
 
     if (newAgent.password.length < 6) {
-      showMessage("Le mot de passe doit contenir au moins 6 caractères", 'warning');
+      showMessage(t("val.passwordMin6"), 'warning');
       return;
     }
 
@@ -597,9 +602,9 @@ export default function AdminDashboard() {
           <div>
             <h1 className="text-3xl font-bold text-white flex items-center gap-2">
               <Activity className="w-8 h-8 text-emerald-400" />
-              Tableau de bord
+              {t("admin.dashboardTitle")}
             </h1>
-            <p className="text-white/50 mt-1">Vue d'ensemble de la plateforme SmartCity</p>
+            <p className="text-white/50 mt-1">{t("admin.overview")}</p>
           </div>
           <div className="flex gap-3">
             <button 
@@ -607,7 +612,7 @@ export default function AdminDashboard() {
               className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"
             >
               <Download size={18} />
-              Exporter
+              {t("admin.export")}
             </button>
           </div>
         </div>
@@ -619,7 +624,7 @@ export default function AdminDashboard() {
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-bold text-white flex items-center gap-2">
                   <Download size={20} className="text-emerald-400" />
-                  Exporter les données
+                  {t("admin.export")}
                 </h3>
                 <button onClick={() => setShowExportModal(false)} className="text-white/50 hover:text-white">
                   <X size={20} />
@@ -646,15 +651,15 @@ export default function AdminDashboard() {
                 <label className="flex items-center gap-3 p-3 bg-white/5 rounded-xl cursor-pointer hover:bg-white/10 transition">
                   <input type="radio" name="exportFormat" value="pdf" checked={exportFormat === "pdf"} onChange={(e) => setExportFormat(e.target.value)} className="w-4 h-4 text-emerald-500" />
                   <Printer size={20} className="text-red-400" />
-                  <div><p className="text-white font-medium">PDF / Impression</p><p className="text-white/40 text-xs">Aperçu avant impression</p></div>
+                  <div><p className="text-white font-medium">{t("admin.pdfPrint")}</p><p className="text-white/40 text-xs">{t("admin.printPreview")}</p></div>
                 </label>
               </div>
               
               <div className="flex gap-3">
-                <button onClick={() => setShowExportModal(false)} className="flex-1 bg-white/10 hover:bg-white/20 text-white py-2.5 rounded-lg">Annuler</button>
+                <button onClick={() => setShowExportModal(false)} className="flex-1 bg-white/10 hover:bg-white/20 text-white py-2.5 rounded-lg">{t("common.cancel")}</button>
                 <button onClick={handleExport} disabled={isExporting} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-lg flex items-center justify-center gap-2">
                   {isExporting ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
-                  {isExporting ? "Export..." : "Exporter"}
+                  {isExporting ? "..." : t("admin.export")}
                 </button>
               </div>
             </div>
@@ -666,7 +671,7 @@ export default function AdminDashboard() {
           <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-white/50 text-sm">Total signalements</p>
+                <p className="text-white/50 text-sm">{t("admin.totalReports")}</p>
                 <p className="text-3xl font-bold text-white mt-1">{stats.total}</p>
               </div>
               <div className="bg-blue-500/20 p-3 rounded-xl"><BarChart3 className="text-blue-400" size={24} /></div>
@@ -676,7 +681,7 @@ export default function AdminDashboard() {
           <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-white/50 text-sm">En attente</p>
+                <p className="text-white/50 text-sm">{t("status.EN_ATTENTE")}</p>
                 <p className="text-3xl font-bold text-amber-300 mt-1">{stats.enAttente}</p>
               </div>
               <div className="bg-amber-500/20 p-3 rounded-xl"><Clock className="text-amber-400" size={24} /></div>
@@ -686,7 +691,7 @@ export default function AdminDashboard() {
           <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-white/50 text-sm">Taux de résolution</p>
+                <p className="text-white/50 text-sm">{t("admin.resolutionRate")}</p>
                 <p className="text-3xl font-bold text-emerald-300 mt-1">{stats.tauxResolution}%</p>
               </div>
               <div className="bg-emerald-500/20 p-3 rounded-xl"><Target className="text-emerald-400" size={24} /></div>
@@ -697,7 +702,7 @@ export default function AdminDashboard() {
           <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-white/50 text-sm">Agents actifs</p>
+                <p className="text-white/50 text-sm">{t("admin.activeAgents")}</p>
                 <p className="text-3xl font-bold text-white mt-1">{stats.agentsActifs}</p>
               </div>
               <div className="bg-purple-500/20 p-3 rounded-xl"><UserCheck className="text-purple-400" size={24} /></div>
@@ -711,7 +716,7 @@ export default function AdminDashboard() {
           <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 lg:col-span-1">
             <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
               <BarChart3 size={18} className="text-emerald-400" />
-              Par type de problème
+              {t("admin.byProblemType")}
             </h3>
             <div className="space-y-3">
               {signalementsParType.map((type, index) => (
@@ -727,7 +732,7 @@ export default function AdminDashboard() {
           <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 lg:col-span-1">
             <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 text-red-400" />
-              Signalements urgents
+              {t("admin.urgentReports")}
               {signalementsUrgents.length > 0 && (
                 <span className="bg-red-500/30 text-red-400 text-xs px-2 py-0.5 rounded-full ml-2">
                   {signalementsUrgents.length}
@@ -738,7 +743,7 @@ export default function AdminDashboard() {
             {signalementsUrgents.length === 0 ? (
               <div className="text-center py-8">
                 <CheckCircle className="w-12 h-12 text-emerald-500/30 mx-auto mb-2" />
-                <p className="text-white/50 text-sm">Aucun signalement urgent</p>
+                <p className="text-white/50 text-sm">{t("admin.noUrgent")}</p>
               </div>
             ) : (
               <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -771,7 +776,7 @@ export default function AdminDashboard() {
                 className="w-full mt-4 bg-red-500/20 hover:bg-red-500/30 text-red-400 py-2 rounded-xl text-sm flex items-center justify-center gap-2 transition"
               >
                 <Eye size={16} />
-                Voir tous les signalements urgents
+                {t("admin.seeUrgent")}
                 <ChevronRight size={16} />
               </button>
             )}
@@ -783,18 +788,18 @@ export default function AdminDashboard() {
           <div className="p-6 border-b border-white/10 flex justify-between items-center">
             <h3 className="text-white font-semibold flex items-center gap-2">
               <Activity size={18} className="text-blue-400" />
-              Derniers signalements
+              {t("admin.latestReports")}
             </h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-white/5">
                 <tr>
-                  <th className="text-left p-4 text-white/50 text-sm">Titre</th>
-                  <th className="text-left p-4 text-white/50 text-sm">Type</th>
-                  <th className="text-left p-4 text-white/50 text-sm">Localisation</th>
-                  <th className="text-left p-4 text-white/50 text-sm">Statut</th>
-                  <th className="text-left p-4 text-white/50 text-sm">Date</th>
+                  <th className="text-left p-4 text-white/50 text-sm">{t("admin.colTitle")}</th>
+                  <th className="text-left p-4 text-white/50 text-sm">{t("admin.colType")}</th>
+                  <th className="text-left p-4 text-white/50 text-sm">{t("admin.colLocation")}</th>
+                  <th className="text-left p-4 text-white/50 text-sm">{t("admin.colStatus")}</th>
+                  <th className="text-left p-4 text-white/50 text-sm">{t("admin.colDate")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -820,7 +825,7 @@ export default function AdminDashboard() {
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-bold text-white flex items-center gap-2">
                 <UserPlus size={20} className="text-emerald-400" />
-                Assigner un agent
+                {t("admin.assignAgent")}
               </h3>
               <button 
                 onClick={() => setShowAssignModal(false)} 
@@ -869,7 +874,7 @@ export default function AdminDashboard() {
                 ) : (
                   <UserPlus size={16} />
                 )}
-                {isAssigning ? "Assignation..." : "Assigner"}
+                {isAssigning ? t("admin.assigning") : t("admin.assign")}
               </button>
             </div>
           </div>

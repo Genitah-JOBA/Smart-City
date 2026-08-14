@@ -74,7 +74,7 @@ public class MessageController {
             return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.status(500).body(Map.of("error", "Erreur lors de l'envoi: " + e.getMessage()));
+            return ResponseEntity.status(500).body(Map.of("error", "L'envoi du message a échoué. Veuillez réessayer."));
         }
     }
     
@@ -118,12 +118,13 @@ public class MessageController {
             response.put("nonLuCount", nonLuCount);
             
             return ResponseEntity.ok(response);
-            
+
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", "Impossible de charger vos messages pour le moment. Veuillez réessayer."));
         }
     }
-    
+
     @GetMapping("/non-lus")
     public ResponseEntity<?> getMessagesNonLus(Principal principal) {
         try {
@@ -136,14 +137,15 @@ public class MessageController {
             
             Map<String, Object> response = new HashMap<>();
             response.put("nonLuCount", count);
-            
+
             return ResponseEntity.ok(response);
-            
+
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", "Impossible de charger vos messages pour le moment. Veuillez réessayer."));
         }
     }
-    
+
     @PutMapping("/{id}/lu")
     public ResponseEntity<?> marquerCommeLu(@PathVariable Long id, Principal principal) {
         try {
@@ -158,10 +160,11 @@ public class MessageController {
         } catch (RuntimeException e) {
             return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", "Cette action n'a pas pu être effectuée. Veuillez réessayer."));
         }
     }
-    
+
     @DeleteMapping("/{id}")
     public ResponseEntity<?> supprimerMessage(@PathVariable Long id, Principal principal) {
         try {
@@ -177,10 +180,11 @@ public class MessageController {
         } catch (RuntimeException e) {
             return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", "La suppression du message a échoué. Veuillez réessayer."));
         }
     }
-    
+
     @GetMapping("/utilisateurs")
     public ResponseEntity<?> getUtilisateurs(Principal principal) {
         try {
@@ -217,9 +221,10 @@ public class MessageController {
             response.put("count", userList.size());
             
             return ResponseEntity.ok(response);
-            
+
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", "Impossible de charger la liste des utilisateurs pour le moment. Veuillez réessayer."));
         }
     }
 }

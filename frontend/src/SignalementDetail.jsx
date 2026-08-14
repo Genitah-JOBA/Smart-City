@@ -4,7 +4,7 @@ import {
   MapPin, Clock, MessageCircle, Share2, 
   Construction, Lightbulb, Trash2, Droplets, TreePine, 
   Shield, HelpCircle, X, ChevronLeft, ChevronRight, Image,
-  AlertTriangle, PlayCircle, Send, CheckCircle2, ArrowLeft,
+  AlertTriangle, XCircle, PlayCircle, Send, CheckCircle2, ArrowLeft,
   CheckCircle, Loader2, Edit2
 } from "lucide-react";
 
@@ -160,7 +160,8 @@ export default function SignalementDetail() {
       'EN_ATTENTE': AlertTriangle,
       'EN_COURS': PlayCircle,
       'RESOLU': CheckCircle2,
-      'TRAITE': CheckCircle2
+      'TRAITE': CheckCircle2,
+      'REJETE': XCircle
     };
     return icons[statut] || AlertTriangle;
   };
@@ -170,7 +171,8 @@ export default function SignalementDetail() {
       'EN_ATTENTE': 'En attente',
       'EN_COURS': 'En cours',
       'RESOLU': 'Résolu',
-      'TRAITE': 'Traité'
+      'TRAITE': 'Traité',
+      'REJETE': 'Rejeté'
     };
     return texts[statut] || statut;
   };
@@ -179,7 +181,8 @@ export default function SignalementDetail() {
     const colors = {
       'EN_ATTENTE': { bg: 'rgba(245, 158, 11, 0.2)', border: 'rgba(245, 158, 11, 0.3)', text: '#fbbf24' },
       'EN_COURS': { bg: 'rgba(59, 130, 246, 0.2)', border: 'rgba(59, 130, 246, 0.3)', text: '#60a5fa' },
-      'RESOLU': { bg: 'rgba(16, 185, 129, 0.2)', border: 'rgba(16, 185, 129, 0.3)', text: '#34d399' }
+      'RESOLU': { bg: 'rgba(16, 185, 129, 0.2)', border: 'rgba(16, 185, 129, 0.3)', text: '#34d399' },
+      'REJETE': { bg: 'rgba(239, 68, 68, 0.2)', border: 'rgba(239, 68, 68, 0.3)', text: '#f87171' }
     };
     return colors[statut] || colors['EN_ATTENTE'];
   };

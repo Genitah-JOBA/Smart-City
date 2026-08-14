@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { User, Lock, Save, Eye, EyeOff, Edit2, X, Check, Shield, Award, Crown, Sparkles, Moon, Star, AlertCircle } from "lucide-react";
+import { useI18n } from "./context/AppContext";
 
 export default function Profil() {
+  const { t } = useI18n();
   const [userInfo, setUserInfo] = useState({ 
     id: "",
     nom: "", 
@@ -44,30 +46,30 @@ export default function Profil() {
 
   // ✅ Validation du nom (≥ 2 lettres, pas de chiffres, pas de caractères spéciaux)
   const validateNom = (value) => {
-    if (!value.trim()) return "Le nom est requis";
-    if (/\d/.test(value)) return "Le nom ne doit pas contenir de chiffres";
+    if (!value.trim()) return t("val.nameRequired");
+    if (/\d/.test(value)) return t("val.nameNoDigits");
     const nameRegex = /^[a-zA-ZÀ-ÿ\s-]+$/;
-    if (!nameRegex.test(value)) return "Le nom ne doit contenir que des lettres, espaces ou tirets";
-    if (value.length < 2) return "Le nom doit contenir au moins 2 caractères";
+    if (!nameRegex.test(value)) return t("val.nameLetters");
+    if (value.length < 2) return t("val.nameMin2");
     return "";
   };
 
   // ✅ Validation de l'email
   const validateEmail = (value) => {
-    if (!value.trim()) return "L'email est requis";
+    if (!value.trim()) return t("val.emailRequired");
     if (!value.toLowerCase().endsWith("@gmail.com")) {
-      return "L'email doit impérativement se terminer par @gmail.com";
+      return t("val.emailGmail");
     }
     const localPart = value.toLowerCase().replace("@gmail.com", "");
     if (localPart.length === 0) return "Veuillez saisir un email valide";
-    if (/\s/.test(localPart)) return "L'email ne doit pas contenir d'espaces";
+    if (/\s/.test(localPart)) return t("val.emailNoSpaces");
     return "";
   };
 
   // ✅ Validation mot de passe (≥ 6 caractères)
   const validatePassword = (value) => {
-    if (!value || value.trim() === "") return "Le mot de passe est requis";
-    if (value.length < 6) return "Le mot de passe doit contenir au moins 6 caractères";
+    if (!value || value.trim() === "") return t("val.passwordRequired");
+    if (value.length < 6) return t("val.passwordMin6");
     return "";
   };
 
@@ -75,7 +77,7 @@ export default function Profil() {
   const validateConfirmPassword = (value) => {
     if (!value || value.trim() === "") return "La confirmation est requise";
     if (value !== passwordData.newPassword) return "Les mots de passe ne correspondent pas";
-    if (value.length < 6) return "Le mot de passe doit contenir au moins 6 caractères";
+    if (value.length < 6) return t("val.passwordMin6");
     return "";
   };
 
@@ -346,10 +348,10 @@ export default function Profil() {
 
   const getRoleLabel = (role) => {
     const roles = {
-      'ADMIN': 'Administrateur',
-      'AGENT': 'Agent Municipal',
-      'CITOYEN': 'Citoyen',
-      'CITIZEN': 'Citoyen'
+      'ADMIN': t("roleFull.admin"),
+      'AGENT': t("auth.agent"),
+      'CITOYEN': t("role.citizen"),
+      'CITIZEN': t("role.citizen")
     };
     return roles[role] || role;
   };
@@ -393,7 +395,7 @@ export default function Profil() {
           <div className="inline-flex items-center gap-3 bg-white/5 backdrop-blur-xl rounded-full px-6 py-2 mb-4 border border-white/10 shadow-xl">
             <Moon className="w-5 h-5 text-indigo-400" />
             <Sparkles className="w-5 h-5 text-sky-400 animate-pulse" />
-            <span className="text-white/80 font-medium">Espace Personnel</span>
+            <span className="text-white/80 font-medium">{t("admin.personalSpace")}</span>
           </div>
         </div>
         
@@ -420,7 +422,7 @@ export default function Profil() {
                 </div>
               </div>
             </div>
-            <p className="mt-4 text-white/60">Chargement de votre profil...</p>
+            <p className="mt-4 text-white/60">{t("prof.loading")}</p>
           </div>
         )}
 
@@ -434,7 +436,7 @@ export default function Profil() {
                 <div className="flex items-center justify-between mb-8">
                   <h2 className="text-2xl font-bold text-white flex items-center gap-2">
                     <User className="w-6 h-6 text-indigo-400" />
-                    Informations personnelles
+                    {t("prof.personalInfo")}
                   </h2>
                   {!isEditing && (
                     <button
@@ -443,7 +445,7 @@ export default function Profil() {
                     >
                       <span className="flex items-center gap-2">
                         <Edit2 size={16} className="group-hover:rotate-12 transition-transform" />
-                        Modifier
+                        {t("prof.edit")}
                       </span>
                     </button>
                   )}
@@ -482,7 +484,7 @@ export default function Profil() {
                   <div className="group/field relative">
                     <div className="absolute inset-0 bg-white/5 rounded-xl opacity-0 group-hover/field:opacity-100 transition-opacity duration-300"></div>
                     <div className="relative p-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 group-hover/field:border-white/20 transition-all">
-                      <p className="text-white/50 text-xs mb-1 font-medium">NOM COMPLET</p>
+                      <p className="text-white/50 text-xs mb-1 font-medium">{t("admin.fullNameCaps")}</p>
                       {isEditing ? (
                         <>
                           <input
@@ -496,7 +498,7 @@ export default function Profil() {
                                 ? "border-red-500 focus:ring-red-500/50" 
                                 : "border-white/20 focus:border-indigo-500/50 focus:ring-indigo-500/30"
                             }`}
-                            placeholder="Votre nom"
+                            placeholder={t("prof.yourName")}
                           />
                           {nomError && (
                             <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
@@ -514,7 +516,7 @@ export default function Profil() {
                   <div className="group/field relative">
                     <div className="absolute inset-0 bg-white/5 rounded-xl opacity-0 group-hover/field:opacity-100 transition-opacity duration-300"></div>
                     <div className="relative p-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 group-hover/field:border-white/20 transition-all">
-                      <p className="text-white/50 text-xs mb-1 font-medium">ADRESSE EMAIL</p>
+                      <p className="text-white/50 text-xs mb-1 font-medium">{t("admin.emailCaps")}</p>
                       {isEditing ? (
                         <>
                           <input
@@ -546,7 +548,7 @@ export default function Profil() {
                   <div className="group/field relative">
                     <div className="absolute inset-0 bg-white/5 rounded-xl opacity-0 group-hover/field:opacity-100 transition-opacity duration-300"></div>
                     <div className="relative p-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
-                      <p className="text-white/50 text-xs mb-1 font-medium">RÔLE</p>
+                      <p className="text-white/50 text-xs mb-1 font-medium">{t("admin.roleCaps")}</p>
                       <div className="flex items-center gap-2">
                         {getRoleIcon(userInfo.role)}
                         <p className="text-white text-lg font-medium">{getRoleLabel(userInfo.role)}</p>
@@ -571,7 +573,7 @@ export default function Profil() {
                       ) : (
                         <>
                           <Save size={18} />
-                          Enregistrer
+                          {t("prof.save")}
                         </>
                       )}
                     </button>
@@ -585,7 +587,7 @@ export default function Profil() {
                       className="px-6 bg-white/10 backdrop-blur-xl hover:bg-white/20 text-white font-semibold py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 transform hover:scale-105 border border-white/20"
                     >
                       <X size={18} />
-                      Annuler
+                      {t("common.cancel")}
                     </button>
                   </div>
                 )}
@@ -598,14 +600,14 @@ export default function Profil() {
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-2xl font-bold text-white flex items-center gap-2">
                     <Lock className="w-6 h-6 text-indigo-400" />
-                    Sécurité
+                    {t("prof.security")}
                   </h2>
                   {!showPasswordForm && (
                     <button
                       onClick={() => setShowPasswordForm(true)}
                       className="px-4 py-2 bg-white/10 backdrop-blur-xl hover:bg-white/20 rounded-xl text-white font-medium hover:shadow-lg transition-all duration-300 transform hover:scale-105 border border-white/20"
                     >
-                      Changer le mot de passe
+                      {t("admin.changePassword")}
                     </button>
                   )}
                 </div>
@@ -613,7 +615,7 @@ export default function Profil() {
                 {showPasswordForm ? (
                   <div className="space-y-4 animate-fade-in">
                     <div>
-                      <label className="text-white/70 text-sm mb-2 block font-medium">Mot de passe actuel</label>
+                      <label className="text-white/70 text-sm mb-2 block font-medium">{t("prof.currentPassword")}</label>
                       <div className="relative group/input">
                         <input
                           ref={currentPasswordInputRef}
@@ -626,7 +628,7 @@ export default function Profil() {
                               ? "border-red-500 focus:ring-red-500/30" 
                               : "border-white/20 focus:border-indigo-500/50 focus:ring-indigo-500/30"
                           }`}
-                          placeholder="•••••••• (6 caractères min)"
+                          placeholder={`•••••••• (${t("prof.min6")})`}
                         />
                         <button
                           type="button"
@@ -645,7 +647,7 @@ export default function Profil() {
                     </div>
 
                     <div>
-                      <label className="text-white/70 text-sm mb-2 block font-medium">Nouveau mot de passe</label>
+                      <label className="text-white/70 text-sm mb-2 block font-medium">{t("prof.newPassword")}</label>
                       <div className="relative group/input">
                         <input
                           ref={newPasswordInputRef}
@@ -658,7 +660,7 @@ export default function Profil() {
                               ? "border-red-500 focus:ring-red-500/30" 
                               : "border-white/20 focus:border-indigo-500/50 focus:ring-indigo-500/30"
                           }`}
-                          placeholder="•••••••• (6 caractères min)"
+                          placeholder={`•••••••• (${t("prof.min6")})`}
                         />
                         <button
                           type="button"
@@ -677,7 +679,7 @@ export default function Profil() {
                     </div>
 
                     <div>
-                      <label className="text-white/70 text-sm mb-2 block font-medium">Confirmer le mot de passe</label>
+                      <label className="text-white/70 text-sm mb-2 block font-medium">{t("prof.confirmPassword")}</label>
                       <div className="relative group/input">
                         <input
                           ref={confirmPasswordInputRef}
@@ -738,7 +740,7 @@ export default function Profil() {
                         className="px-6 bg-white/10 backdrop-blur-xl hover:bg-white/20 text-white font-semibold py-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 transform hover:scale-105 border border-white/20"
                       >
                         <X size={18} />
-                        Annuler
+                        {t("common.cancel")}
                       </button>
                     </div>
                   </div>
@@ -746,12 +748,12 @@ export default function Profil() {
                   <div className="p-6 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
                     <div className="flex items-center gap-3 mb-2">
                       <Lock className="w-5 h-5 text-indigo-400" />
-                      <p className="text-white/60 text-sm font-medium">Mot de passe</p>
+                      <p className="text-white/60 text-sm font-medium">{t("auth.password")}</p>
                     </div>
                     <p className="text-white text-lg font-mono">••••••••</p>
                     <p className="text-white/30 text-xs mt-2 flex items-center gap-1">
                       <Shield className="w-3 h-3" />
-                      Protégé par chiffrement AES-256
+                      {t("admin.encrypted")}
                     </p>
                   </div>
                 )}
