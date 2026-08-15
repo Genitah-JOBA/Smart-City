@@ -1,3 +1,4 @@
+import { API_URL } from "./config/api";
 import { useState, useEffect, useRef } from "react";
 import { 
   User, Lock, Eye, EyeOff, Edit2, X, Check, AlertCircle,
@@ -182,7 +183,7 @@ export default function Profil() {
     if (!token) return;
 
     try {
-      const response = await fetch("http://localhost:8081/api/auth/me", {
+      const response = await fetch(`${API_URL}/api/auth/me`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
 
@@ -228,7 +229,7 @@ export default function Profil() {
     if (!token) return;
 
     try {
-      const response = await fetch("http://localhost:8081/api/signalements", {
+      const response = await fetch(`${API_URL}/api/signalements`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
 
@@ -253,7 +254,7 @@ export default function Profil() {
   const fetchCurrentUser = async () => {
     if (!token) return;
     try {
-      const response = await fetch("http://localhost:8081/api/auth/me", {
+      const response = await fetch(`${API_URL}/api/auth/me`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (response.ok) {
@@ -291,7 +292,7 @@ export default function Profil() {
     
     setIsLoading(true);
     try {
-      const response = await fetch("http://localhost:8081/api/auth/update-profile", {
+      const response = await fetch(`${API_URL}/api/auth/update-profile`, {
         method: "PUT",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -329,7 +330,7 @@ export default function Profil() {
 
     setIsLoading(true);
     try {
-      const response = await fetch("http://localhost:8081/api/auth/change-password", {
+      const response = await fetch(`${API_URL}/api/auth/change-password`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -362,7 +363,7 @@ export default function Profil() {
 
   const handleDeleteSignalement = async (id) => {
     try {
-      const response = await fetch(`http://localhost:8081/api/signalements/${id}`, {
+      const response = await fetch(`${API_URL}/api/signalements/${id}`, {
         method: "DELETE",
         headers: { "Authorization": `Bearer ${token}` }
       });

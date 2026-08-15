@@ -1,3 +1,4 @@
+import { API_URL } from "./config/api";
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useI18n } from "./context/AppContext";
@@ -236,7 +237,7 @@ export default function Auth() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:8081/api/auth/login", {
+      const response = await fetch(`${API_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, motDePasse }),
@@ -374,7 +375,7 @@ export default function Auth() {
       
       console.log("📤 Envoi inscription:", requestBody);
 
-      const response = await fetch("http://localhost:8081/api/auth/register", {
+      const response = await fetch(`${API_URL}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestBody),

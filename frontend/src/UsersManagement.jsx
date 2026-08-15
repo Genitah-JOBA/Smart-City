@@ -1,3 +1,4 @@
+import { API_URL } from "./config/api";
 import { useEffect, useState } from "react";
 import { 
   Users, UserCheck, UserCircle, Phone, Mail, Award, 
@@ -72,7 +73,7 @@ export default function UsersManagement() {
   // Récupérer tous les utilisateurs
   const fetchUsers = async () => {
     try {
-      const response = await fetch("http://localhost:8081/api/users", {
+      const response = await fetch(`${API_URL}/api/users`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       
@@ -101,7 +102,7 @@ export default function UsersManagement() {
   // Récupérer les signalements
   const fetchSignalements = async () => {
     try {
-      const response = await fetch("http://localhost:8081/api/signalements", {
+      const response = await fetch(`${API_URL}/api/signalements`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       

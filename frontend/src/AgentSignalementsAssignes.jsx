@@ -1,3 +1,4 @@
+import { API_URL } from "./config/api";
 import { useEffect, useState } from "react";
 import { 
   MapPin, CheckCircle, Clock, PlayCircle, AlertTriangle, XCircle,
@@ -97,7 +98,7 @@ export default function AgentSignalementsAssignes() {
   useEffect(() => {
     const fetchSignalements = async () => {
       try {
-        const res = await fetch("http://localhost:8081/api/signalements", {
+        const res = await fetch(`${API_URL}/api/signalements`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (res.ok) {
@@ -160,7 +161,7 @@ export default function AgentSignalementsAssignes() {
 
   const handlePrendreEnCharge = async (id) => {
     try {
-      const res = await fetch(`http://localhost:8081/api/signalements/${id}/statut`, {
+      const res = await fetch(`${API_URL}/api/signalements/${id}/statut`, {
         method: "PUT",
         headers: { 
           "Authorization": `Bearer ${token}`, 
@@ -229,7 +230,7 @@ export default function AgentSignalementsAssignes() {
         dateResolution: new Date().toISOString()
       };
 
-      const proofResponse = await fetch("http://localhost:8081/api/preuves", {
+      const proofResponse = await fetch(`${API_URL}/api/preuves`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -242,7 +243,7 @@ export default function AgentSignalementsAssignes() {
         throw new Error(t("agent.proofSendError"));
       }
 
-      const res = await fetch(`http://localhost:8081/api/signalements/${currentSignalementId}/statut`, {
+      const res = await fetch(`${API_URL}/api/signalements/${currentSignalementId}/statut`, {
         method: "PUT",
         headers: { 
           "Authorization": `Bearer ${token}`, 

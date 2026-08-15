@@ -1,3 +1,4 @@
+import { API_URL } from "./config/api";
 import { useEffect, useState } from "react";
 import { 
   Camera, MapPin, Trash2, X, Shield, Road,
@@ -96,7 +97,7 @@ export default function Signaler() {
     const token = localStorage.getItem("token");
     if (!token) return;
     try {
-      const res = await fetch("http://localhost:8081/api/signalements", {
+      const res = await fetch(`${API_URL}/api/signalements`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
@@ -115,7 +116,7 @@ export default function Signaler() {
     const token = localStorage.getItem("token");
     if (!token) return;
     try {
-      const response = await fetch("http://localhost:8081/api/auth/me", {
+      const response = await fetch(`${API_URL}/api/auth/me`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (response.ok) {
@@ -168,7 +169,7 @@ export default function Signaler() {
     const token = localStorage.getItem("token");
     if (!deleteConfirmId) return;
     try {
-      const res = await fetch(`http://localhost:8081/api/signalements/${deleteConfirmId}`, { 
+      const res = await fetch(`${API_URL}/api/signalements/${deleteConfirmId}`, { 
         method: "DELETE", headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {

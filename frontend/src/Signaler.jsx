@@ -1,3 +1,4 @@
+import { API_URL } from "./config/api";
 import { useEffect, useState, useRef } from "react";
 import { 
   Camera, MapPin, Send, Trash2, Edit2, X, Shield, Road, 
@@ -237,7 +238,7 @@ export default function Signaler() {
     const token = localStorage.getItem("token");
     try {
       const res = await fetch(
-        `http://localhost:8081/api/geocode/reverse?lat=${lat}&lng=${lng}`,
+        `${API_URL}/api/geocode/reverse?lat=${lat}&lng=${lng}`,
         { headers: token ? { "Authorization": `Bearer ${token}` } : {} }
       );
       // 200 => Google a répondu ; 204 => pas de clé/échec => fallback OSM
@@ -517,7 +518,7 @@ export default function Signaler() {
     const token = localStorage.getItem("token");
     if (!token) return;
     try {
-      const response = await fetch("http://localhost:8081/api/auth/me", {
+      const response = await fetch(`${API_URL}/api/auth/me`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (response.ok) {
@@ -534,7 +535,7 @@ export default function Signaler() {
     const token = localStorage.getItem("token");
     if (!token) return;
     try {
-      const res = await fetch("http://localhost:8081/api/signalements", {
+      const res = await fetch(`${API_URL}/api/signalements`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
@@ -744,7 +745,7 @@ export default function Signaler() {
     const token = localStorage.getItem("token");
     if (!deleteConfirmId) return;
     try {
-      const res = await fetch(`http://localhost:8081/api/signalements/${deleteConfirmId}`, { 
+      const res = await fetch(`${API_URL}/api/signalements/${deleteConfirmId}`, { 
         method: "DELETE", headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
@@ -785,7 +786,7 @@ export default function Signaler() {
     }
 
     const method = editingId ? "PUT" : "POST";
-    const url = `http://localhost:8081/api/signalements${editingId ? `/${editingId}` : ''}`;
+    const url = `${API_URL}/api/signalements${editingId ? `/${editingId}` : ''}`;
     
     let fullAddress = "";
     if (formData.quartier) fullAddress += formData.quartier;

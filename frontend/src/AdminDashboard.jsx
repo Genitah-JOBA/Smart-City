@@ -1,3 +1,4 @@
+import { API_URL } from "./config/api";
 import { useEffect, useState } from "react";
 import { 
   TrendingUp, TrendingDown, Users, AlertTriangle, 
@@ -175,7 +176,7 @@ export default function AdminDashboard() {
     try {
       console.log(" Chargement des données du dashboard...");
       
-      const signalementsRes = await fetch("http://localhost:8081/api/signalements", {
+      const signalementsRes = await fetch(`${API_URL}/api/signalements`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       
@@ -234,7 +235,7 @@ export default function AdminDashboard() {
         showMessage(t("admin.cantFetchReports"), 'error');
       }
       
-      const agentsRes = await fetch("http://localhost:8081/api/users", {
+      const agentsRes = await fetch(`${API_URL}/api/users`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (agentsRes.ok) {
@@ -493,7 +494,7 @@ export default function AdminDashboard() {
 
     setIsAssigning(true);
     try {
-      const response = await fetch(`http://localhost:8081/api/signalements/${selectedSignalement.id}/assigner`, {
+      const response = await fetch(`${API_URL}/api/signalements/${selectedSignalement.id}/assigner`, {
         method: "PUT",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -540,7 +541,7 @@ export default function AdminDashboard() {
 
     setIsAddingAgent(true);
     try {
-      const response = await fetch("http://localhost:8081/api/auth/register", {
+      const response = await fetch(`${API_URL}/api/auth/register`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json"

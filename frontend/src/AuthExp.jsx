@@ -1,3 +1,4 @@
+import { API_URL } from "./config/api";
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { MapPin, Smartphone, Building2, Shield, ArrowRight, Eye, EyeOff, UserPlus, LogIn, Sparkles, Rocket, Zap, Award, Loader2 } from "lucide-react";
@@ -71,7 +72,7 @@ export default function Auth() {
   // 🔥 PLUS FIABLE : Récupérer le rôle depuis l'API
   const fetchUserRole = async (token) => {
     try {
-      const response = await fetch("http://localhost:8081/api/auth/me", {
+      const response = await fetch(`${API_URL}/api/auth/me`, {
         method: "GET",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -137,7 +138,7 @@ export default function Auth() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:8081/api/auth/login", {
+      const response = await fetch(`${API_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, motDePasse }),
@@ -203,7 +204,7 @@ export default function Auth() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:8081/api/auth/register", {
+      const response = await fetch(`${API_URL}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ nom, email, motDePasse, role }),

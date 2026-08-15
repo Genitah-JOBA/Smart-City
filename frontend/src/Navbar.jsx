@@ -1,3 +1,4 @@
+import { API_URL } from "./config/api";
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useTheme, useI18n } from "./context/AppContext";
@@ -85,7 +86,7 @@ export default function Navbar() {
     
     setIsLoadingNotifications(true);
     try {
-      const response = await fetch("http://localhost:8081/api/notifications", {
+      const response = await fetch(`${API_URL}/api/notifications`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       
@@ -122,7 +123,7 @@ export default function Navbar() {
     console.log("🔔 Notification cliquée:", notif);
     
     try {
-      const response = await fetch(`http://localhost:8081/api/notifications/${notif.id}/read`, {
+      const response = await fetch(`${API_URL}/api/notifications/${notif.id}/read`, {
         method: "PUT",
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -171,7 +172,7 @@ export default function Navbar() {
 
   const markAllAsRead = async () => {
     try {
-      const response = await fetch("http://localhost:8081/api/notifications/read-all", {
+      const response = await fetch(`${API_URL}/api/notifications/read-all`, {
         method: "PUT",
         headers: { "Authorization": `Bearer ${token}` }
       });

@@ -1,3 +1,4 @@
+import { API_URL } from "./config/api";
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { 
@@ -34,7 +35,7 @@ export default function SignalementDetail() {
   const updateStatut = async (nouveauStatut) => {
     setIsUpdatingStatut(true);
     try {
-      const response = await fetch(`http://localhost:8081/api/signalements/${id}/statut`, {
+      const response = await fetch(`${API_URL}/api/signalements/${id}/statut`, {
         method: "PUT",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -71,7 +72,7 @@ export default function SignalementDetail() {
 
   const fetchSignalementDetail = async () => {
     try {
-      const response = await fetch(`http://localhost:8081/api/signalements/${id}`, {
+      const response = await fetch(`${API_URL}/api/signalements/${id}`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       

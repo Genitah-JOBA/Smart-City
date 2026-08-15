@@ -1,3 +1,4 @@
+import { API_URL } from "./config/api";
 import { useEffect, useState } from "react";
 import { 
   Activity, CheckCircle, Clock, AlertTriangle, 
@@ -50,10 +51,10 @@ export default function AgentDashboard() {
       // Essayer plusieurs endpoints pour récupérer les infos
       let userData = null;
       const endpoints = [
-        "http://localhost:8081/api/auth/me",
-        "http://localhost:8081/api/users/me",
-        "http://localhost:8081/api/agent/me",
-        "http://localhost:8081/api/utilisateurs/me"
+        `${API_URL}/api/auth/me`,
+        `${API_URL}/api/users/me`,
+        `${API_URL}/api/agent/me`,
+        `${API_URL}/api/utilisateurs/me`
       ];
 
       for (const endpoint of endpoints) {
@@ -151,7 +152,7 @@ export default function AgentDashboard() {
       // Si pas d'ID, essayer de récupérer via /me
       if (!agentId) {
         try {
-          const meRes = await fetch("http://localhost:8081/api/auth/me", {
+          const meRes = await fetch(`${API_URL}/api/auth/me`, {
             headers: { "Authorization": `Bearer ${token}` }
           });
           if (meRes.ok) {
@@ -169,17 +170,17 @@ export default function AgentDashboard() {
 
       if (agentId) {
         endpoints = [
-          `http://localhost:8081/api/signalements/agent/${agentId}`,
-          `http://localhost:8081/api/signalements/assignee/${agentId}`,
-          `http://localhost:8081/api/signalements?agentId=${agentId}`,
-          `http://localhost:8081/api/agent/${agentId}/signalements`
+          `${API_URL}/api/signalements/agent/${agentId}`,
+          `${API_URL}/api/signalements/assignee/${agentId}`,
+          `${API_URL}/api/signalements?agentId=${agentId}`,
+          `${API_URL}/api/agent/${agentId}/signalements`
         ];
       } else {
         endpoints = [
-          "http://localhost:8081/api/signalements/mes-signalements",
-          "http://localhost:8081/api/signalements/agent",
-          "http://localhost:8081/api/signalements/assigned",
-          "http://localhost:8081/api/signalements"
+          `${API_URL}/api/signalements/mes-signalements`,
+          `${API_URL}/api/signalements/agent`,
+          `${API_URL}/api/signalements/assigned`,
+          `${API_URL}/api/signalements`
         ];
       }
 
@@ -255,7 +256,7 @@ export default function AgentDashboard() {
   const handlePrendreEnCharge = async (id) => {
     setActionLoading(id);
     try {
-      const res = await fetch(`http://localhost:8081/api/signalements/${id}/statut`, {
+      const res = await fetch(`${API_URL}/api/signalements/${id}/statut`, {
         method: "PUT",
         headers: { 
           "Authorization": `Bearer ${token}`, 
@@ -332,7 +333,7 @@ export default function AgentDashboard() {
         dateResolution: new Date().toISOString()
       };
 
-      const proofResponse = await fetch("http://localhost:8081/api/preuves", {
+      const proofResponse = await fetch(`${API_URL}/api/preuves`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -345,7 +346,7 @@ export default function AgentDashboard() {
         throw new Error(t("agent.proofSendError"));
       }
 
-      const res = await fetch(`http://localhost:8081/api/signalements/${currentSignalementId}/statut`, {
+      const res = await fetch(`${API_URL}/api/signalements/${currentSignalementId}/statut`, {
         method: "PUT",
         headers: { 
           "Authorization": `Bearer ${token}`, 

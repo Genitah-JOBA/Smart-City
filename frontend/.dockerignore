@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.git/
+.gitignore
+*.md
+.vscode/
+# NB : .env.prod est nécessaire au build (--mode prod) : ne pas l'exclure.
+.env.development
+.env.local

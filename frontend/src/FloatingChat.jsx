@@ -1,3 +1,4 @@
+import { API_URL } from "./config/api";
 import { useState, useEffect, useRef } from "react";
 import { MessageCircle, Mail, Send, X, Bell, Check, Trash2, Eye, Move, Reply } from "lucide-react";
 import { useI18n } from "./context/AppContext";
@@ -117,7 +118,7 @@ export default function FloatingChat() {
 
   const fetchMessages = async () => {
     try {
-      const response = await fetch("http://localhost:8081/api/messages", {
+      const response = await fetch(`${API_URL}/api/messages`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       
@@ -159,7 +160,7 @@ export default function FloatingChat() {
 
   const fetchNonLuCount = async () => {
     try {
-      const response = await fetch("http://localhost:8081/api/messages/non-lus", {
+      const response = await fetch(`${API_URL}/api/messages/non-lus`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       
@@ -175,7 +176,7 @@ export default function FloatingChat() {
   const fetchUtilisateurs = async () => {
     try {
       console.log("🔍 Récupération des utilisateurs...");
-      const response = await fetch("http://localhost:8081/api/messages/utilisateurs", {
+      const response = await fetch(`${API_URL}/api/messages/utilisateurs`, {
         headers: { 
           "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json"
@@ -210,7 +211,7 @@ export default function FloatingChat() {
 
   const marquerCommeLu = async (messageId) => {
     try {
-      const response = await fetch(`http://localhost:8081/api/messages/${messageId}/lu`, {
+      const response = await fetch(`${API_URL}/api/messages/${messageId}/lu`, {
         method: "PUT",
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -228,7 +229,7 @@ export default function FloatingChat() {
     if (!confirm("Supprimer ce message ?")) return;
     
     try {
-      const response = await fetch(`http://localhost:8081/api/messages/${messageId}`, {
+      const response = await fetch(`${API_URL}/api/messages/${messageId}`, {
         method: "DELETE",
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -310,7 +311,7 @@ export default function FloatingChat() {
 
     setIsLoading(true);
     try {
-      const response = await fetch("http://localhost:8081/api/messages/envoyer", {
+      const response = await fetch(`${API_URL}/api/messages/envoyer`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,

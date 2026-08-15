@@ -1,3 +1,4 @@
+import { API_URL } from "./config/api";
 import { useState, useEffect } from "react";
 import { 
   Brain, MapPin, User, Building2, Wrench, CheckCircle, 
@@ -96,7 +97,7 @@ export default function AssignationIA() {
     if (!token) return;
     setIsLoading(true);
     try {
-      const response = await fetch("http://localhost:8081/api/signalements", {
+      const response = await fetch(`${API_URL}/api/signalements`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (response.ok) {
@@ -116,7 +117,7 @@ export default function AssignationIA() {
   const fetchAgents = async () => {
     if (!token) return;
     try {
-      const response = await fetch("http://localhost:8081/api/users/role/AGENT", {
+      const response = await fetch(`${API_URL}/api/users/role/AGENT`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (response.ok) {
@@ -124,7 +125,7 @@ export default function AssignationIA() {
         
         const agentsWithWorkload = await Promise.all(data.map(async (agent) => {
           try {
-            const assignedRes = await fetch(`http://localhost:8081/api/signalements/agent/${agent.id}`, {
+            const assignedRes = await fetch(`${API_URL}/api/signalements/agent/${agent.id}`, {
               headers: { "Authorization": `Bearer ${token}` }
             });
             const assignedSignalements = assignedRes.ok ? await assignedRes.json() : [];
@@ -193,7 +194,7 @@ export default function AssignationIA() {
     
     setIsLoading(true);
     try {
-      const response = await fetch(`http://localhost:8081/api/signalements/${selectedSignalement.id}/assigner`, {
+      const response = await fetch(`${API_URL}/api/signalements/${selectedSignalement.id}/assigner`, {
         method: "PUT",
         headers: {
           "Authorization": `Bearer ${token}`,

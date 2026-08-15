@@ -1,3 +1,17 @@
 node_modules/
-.env
 target/
+
+# Secrets / environnement local (NE PAS committer)
+.env
+.env.local
+**/.env.local
+# On garde volontairement versionnés : .env.example, frontend/.env.development, frontend/.env.prod
+# (ils ne contiennent aucun secret)
+
+# Artefacts de build
+dist/
+frontend/dist/
+
+# Divers
+.DS_Store
+*.log

@@ -1,3 +1,4 @@
+import { API_URL } from "./config/api";
 import { useEffect, useState } from "react";
 import { 
   Clock, MapPin, CheckCircle, Image as ImageIcon, 
@@ -89,7 +90,7 @@ export default function AgentIntervention() {
       setIsLoading(true);
       console.log("Fetching signalements...");
       
-      const res = await fetch("http://localhost:8081/api/signalements", {
+      const res = await fetch(`${API_URL}/api/signalements`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       
@@ -122,7 +123,7 @@ export default function AgentIntervention() {
     if (agentNames[email]) return agentNames[email];
     
     try {
-      const res = await fetch(`http://localhost:8081/api/utilisateurs/email/${email}`, {
+      const res = await fetch(`${API_URL}/api/utilisateurs/email/${email}`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       
@@ -150,7 +151,7 @@ export default function AgentIntervention() {
       setLoadingPreuves(prev => ({ ...prev, [signalementId]: true }));
       setErrorPreuves(prev => ({ ...prev, [signalementId]: null }));
       
-      const res = await fetch(`http://localhost:8081/api/preuves/signalement/${signalementId}`, {
+      const res = await fetch(`${API_URL}/api/preuves/signalement/${signalementId}`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       
@@ -240,9 +241,9 @@ export default function AgentIntervention() {
   const getImageUrl = (imagePath) => {
     if (!imagePath) return '';
     if (imagePath.startsWith('http')) return imagePath;
-    if (imagePath.startsWith('/uploads')) return `http://localhost:8081${imagePath}`;
+    if (imagePath.startsWith('/uploads')) return `${API_URL}${imagePath}`;
     if (imagePath.startsWith('data:image')) return imagePath;
-    return `http://localhost:8081/uploads/${imagePath}`;
+    return `${API_URL}/uploads/${imagePath}`;
   };
 
   const getResolvedBy = (signalementId) => {

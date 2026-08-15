@@ -1,3 +1,4 @@
+import { API_URL } from "./config/api";
 import { useEffect, useState } from "react";
 import { MapPin, Trash2, Edit2, User, Calendar } from "lucide-react";
 import { useI18n } from "./context/AppContext";
@@ -13,7 +14,7 @@ export default function Problemes() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch("http://localhost:8081/api/signalements", {
+        const res = await fetch(`${API_URL}/api/signalements`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (res.ok) {
@@ -36,7 +37,7 @@ export default function Problemes() {
   const handleDelete = async (id) => {
     if (window.confirm("Supprimer ce signalement ?")) {
       try {
-        const res = await fetch(`http://localhost:8081/api/signalements/${id}`, {
+        const res = await fetch(`${API_URL}/api/signalements/${id}`, {
           method: "DELETE",
           headers: { "Authorization": `Bearer ${token}` }
         });

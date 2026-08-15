@@ -1,3 +1,4 @@
+import { API_URL } from "./config/api";
 import { useEffect, useState } from "react";
 import { MapPin, CheckCircle, Clock } from "lucide-react";
 import { useI18n } from "./context/AppContext";
@@ -12,7 +13,7 @@ export default function SignalementsResolus() {
   useEffect(() => {
     const fetchSignalements = async () => {
       try {
-        const res = await fetch("http://localhost:8081/api/signalements", {
+        const res = await fetch(`${API_URL}/api/signalements`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (res.ok) {
@@ -29,7 +30,7 @@ export default function SignalementsResolus() {
 
   const handleResoudre = async (id) => {
     try {
-      const res = await fetch(`http://localhost:8081/api/signalements/${id}`, {
+      const res = await fetch(`${API_URL}/api/signalements/${id}`, {
         method: "PUT",
         headers: { 
           "Authorization": `Bearer ${token}`,

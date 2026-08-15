@@ -1,3 +1,4 @@
+import { API_URL } from "./config/api";
 import { useState, useEffect, useRef } from "react";
 import { User, Mail, Shield, Save, Lock, Eye, EyeOff, Edit2, X, Check, AlertCircle, CheckCircle, Info, Briefcase, MapPin, Wrench, Building2, Lightbulb, Trash2, TreePine, Bus, ShieldCheck, Palette, Home, Phone } from "lucide-react";
 import { useI18n } from "./context/AppContext";
@@ -412,7 +413,7 @@ export default function Profil() {
     if (!token) return;
 
     try {
-      const response = await fetch("http://localhost:8081/api/auth/me", {
+      const response = await fetch(`${API_URL}/api/auth/me`, {
         headers: {
           "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json"
@@ -540,7 +541,7 @@ export default function Profil() {
     }
 
     try {
-      const response = await fetch("http://localhost:8081/api/auth/update-profile", {
+      const response = await fetch(`${API_URL}/api/auth/update-profile`, {
         method: "PUT",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -619,7 +620,7 @@ export default function Profil() {
     hideMessage();
 
     try {
-      const response = await fetch("http://localhost:8081/api/auth/change-password", {
+      const response = await fetch(`${API_URL}/api/auth/change-password`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,

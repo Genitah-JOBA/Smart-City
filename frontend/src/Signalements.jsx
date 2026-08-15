@@ -1,3 +1,4 @@
+import { API_URL } from "./config/api";
 import { useEffect, useState } from "react";
 import { 
   MapPin, Clock, MessageCircle, Share2, MoreHorizontal, 
@@ -54,7 +55,7 @@ export default function Signalements() {
   const fetchUsers = async () => {
     if (!token) return;
     try {
-      const response = await fetch("http://localhost:8081/api/users", {
+      const response = await fetch(`${API_URL}/api/users`, {
         headers: { 
           "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json"
@@ -82,7 +83,7 @@ export default function Signalements() {
     }
 
     try {
-      const res = await fetch("http://localhost:8081/api/signalements", {
+      const res = await fetch(`${API_URL}/api/signalements`, {
         method: "GET",
         headers: { 
           "Authorization": `Bearer ${token}`,
@@ -236,7 +237,7 @@ export default function Signalements() {
           senderName: senderName
         };
         
-        const response = await fetch("http://localhost:8081/api/notifications/share", {
+        const response = await fetch(`${API_URL}/api/notifications/share`, {
           method: "POST",
           headers: {
             "Authorization": `Bearer ${token}`,

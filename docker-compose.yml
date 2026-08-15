@@ -1,0 +1,49 @@
+# ============================================================
+# SmartCity — orchestration de production (VPS Docker)
+# Lancer :   docker compose up -d --build
+# Les variables sensibles sont lues depuis le fichier .env (voir .env.example)
+# ============================================================
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-City}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD est requis (voir .env)}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-City}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # Pas de port publié : accessible uniquement par le backend (réseau interne).
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-City}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-onboarding@resend.dev}
+      APP_FRONTEND_URL: ${APP_FRONTEND_URL:-http://localhost}
+      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-}
+    # Port 8081 exposé uniquement en interne (le frontend/nginx le proxifie).
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"   # exposer le site sur le port 80 du VPS (adapter si besoin)
+
+volumes:
+  pgdata:

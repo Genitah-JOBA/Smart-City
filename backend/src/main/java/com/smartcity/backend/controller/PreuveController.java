@@ -15,7 +15,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/preuves")
-@CrossOrigin(origins = "http://localhost:5173")
 public class PreuveController {
 
     @Autowired
