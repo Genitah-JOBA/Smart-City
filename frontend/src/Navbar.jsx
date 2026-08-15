@@ -68,10 +68,21 @@ export default function Navbar() {
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
         const email = payload.sub;
+        // Repli immédiat sur le début de l'email, en attendant le vrai nom.
         setUserName(email.split('@')[0]);
         setUserId(payload.userId || payload.id);
         const role = localStorage.getItem("userRole") || payload.role || "CITIZEN";
         setUserRole(role.toUpperCase());
+
+        // Récupérer le vrai nom du profil (le token ne contient pas le nom).
+        fetch(`${API_URL}/api/auth/me`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        })
+          .then(res => (res.ok ? res.json() : null))
+          .then(data => {
+            if (data && data.nom && data.nom.trim()) setUserName(data.nom.trim());
+          })
+          .catch(() => {});
       } catch (error) {
         console.error("Erreur décodage token:", error);
         setUserName("Utilisateur");
