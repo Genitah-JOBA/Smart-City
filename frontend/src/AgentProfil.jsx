@@ -383,6 +383,32 @@ export default function Profil() {
     setMessageBox({ show: false, type: "", text: "" });
   };
 
+  const [showAccountDelete, setShowAccountDelete] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    setDeletingAccount(true);
+    try {
+      const res = await fetch(`${API_URL}/api/auth/delete-account`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        localStorage.clear();
+        window.location.href = "/auth";
+      } else {
+        const data = await res.json().catch(() => ({}));
+        showMessage("error", data.error || t("prof.deleteError"));
+        setShowAccountDelete(false);
+      }
+    } catch {
+      showMessage("error", t("prof.deleteError"));
+      setShowAccountDelete(false);
+    } finally {
+      setDeletingAccount(false);
+    }
+  };
+
   useEffect(() => {
     fetchUserProfile();
   }, [token]);
@@ -1078,7 +1104,49 @@ export default function Profil() {
             )}
           </div>
         </div>
+
+        {/* Zone de danger - Suppression du compte */}
+        <div className="rounded-3xl bg-white/5 border border-red-500/20 p-6 mt-6">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-2 rounded-xl bg-red-500/20">
+              <Trash2 className="w-5 h-5 text-red-400" />
+            </div>
+            <h2 className="font-semibold text-white">{t("prof.dangerZone")}</h2>
+          </div>
+          <p className="text-white/50 text-sm mb-4">{t("prof.deleteWarning")}</p>
+          <button
+            onClick={() => setShowAccountDelete(true)}
+            className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-medium transition text-sm flex items-center gap-2"
+          >
+            <Trash2 size={16} /> {t("prof.deleteAccount")}
+          </button>
+        </div>
       </div>
+
+      {/* Modal de confirmation suppression du compte */}
+      {showAccountDelete && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+             onClick={() => !deletingAccount && setShowAccountDelete(false)}>
+          <div className="bg-slate-800 rounded-2xl max-w-sm w-full border border-red-500/30 p-6"
+               onClick={(e) => e.stopPropagation()}>
+            <div className="mx-auto w-14 h-14 rounded-2xl flex items-center justify-center mb-4 bg-red-500/20 border border-red-500/30">
+              <Trash2 className="w-7 h-7 text-red-500" />
+            </div>
+            <h3 className="text-lg font-bold text-white text-center mb-2">{t("prof.deleteAccount")}</h3>
+            <p className="text-white/60 text-sm text-center mb-6">{t("prof.deleteConfirm")}</p>
+            <div className="flex gap-3">
+              <button onClick={() => setShowAccountDelete(false)} disabled={deletingAccount}
+                      className="flex-1 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition">
+                {t("common.cancel")}
+              </button>
+              <button onClick={handleDeleteAccount} disabled={deletingAccount}
+                      className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-medium transition disabled:opacity-50">
+                {deletingAccount ? t("prof.loading") : t("prof.deleteConfirmBtn")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         @keyframes modal-pop {

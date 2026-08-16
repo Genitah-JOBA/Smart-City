@@ -4,6 +4,7 @@ import com.smartcity.backend.model.Utilisateur;
 import com.smartcity.backend.model.EmailVerification;
 import com.smartcity.backend.repository.UtilisateurRepository;
 import com.smartcity.backend.repository.EmailVerificationRepository;
+import com.smartcity.backend.repository.SignalementRepository;
 import com.smartcity.backend.security.JwtUtil;
 import com.smartcity.backend.service.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,6 +45,9 @@ public class AuthController {
 
     @Autowired
     private EmailVerificationRepository emailVerificationRepository;
+
+    @Autowired
+    private SignalementRepository signalementRepository;
 
     @Value("${app.frontend.url}")
     private String frontendUrl;
@@ -393,6 +397,31 @@ public class AuthController {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("error", "Impossible de modifier votre mot de passe pour le moment. Veuillez réessayer."));
+        }
+    }
+
+    // ================= SUPPRESSION DU COMPTE =================
+
+    @DeleteMapping("/delete-account")
+    public ResponseEntity<?> deleteAccount(Principal principal) {
+        try {
+            if (principal == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Non authentifié"));
+            }
+            String email = principal.getName();
+            Utilisateur user = utilisateurRepository.findByEmail(email).orElse(null);
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Compte introuvable"));
+            }
+            // Détacher les signalements créés (on conserve les rapports, anonymisés)
+            signalementRepository.detacherUtilisateur(user.getId());
+            // Supprimer le compte
+            utilisateurRepository.delete(user);
+            return ResponseEntity.ok(Map.of("message", "Votre compte a été supprimé."));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "La suppression du compte a échoué. Veuillez réessayer."));
         }
     }
 }
