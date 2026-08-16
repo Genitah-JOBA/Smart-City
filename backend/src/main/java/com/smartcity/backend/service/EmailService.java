@@ -1,39 +1,62 @@
 package com.smartcity.backend.service;
 
-import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 
 /**
- * Envoi d'emails via SMTP (Gmail) — configuré par spring.mail.* (variables
- * MAIL_USERNAME / MAIL_PASSWORD). Fonctionne vers n'importe quel destinataire,
- * sans domaine à vérifier.
+ * Envoi d'emails via l'API HTTP de Brevo (ex-Sendinblue).
+ * Passe en HTTPS (port 443) — donc NON bloqué par Render (contrairement au SMTP).
+ * Gratuit 300 emails/jour, sans domaine (il suffit de vérifier l'expéditeur).
+ * Config : BREVO_API_KEY + BREVO_SENDER_EMAIL (variables d'environnement).
  */
 @Service
 public class EmailService {
 
-    private final JavaMailSender mailSender;
+    @Value("${brevo.api.key:}")
+    private String apiKey;
 
-    @Value("${spring.mail.username:}")
-    private String fromEmail;
+    @Value("${brevo.sender.email:}")
+    private String senderEmail;
 
-    public EmailService(JavaMailSender mailSender) {
-        this.mailSender = mailSender;
-    }
+    private final HttpClient httpClient = HttpClient.newHttpClient();
 
-    /** Envoi bas niveau d'un email HTML. */
+    /** Envoi bas niveau via l'API Brevo. */
     private void envoyerHtml(String destinataire, String sujet, String htmlContent) {
         try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            helper.setFrom(fromEmail, "SmartCity");
-            helper.setTo(destinataire);
-            helper.setSubject("[SmartCity] " + sujet);
-            helper.setText(htmlContent, true);
-            mailSender.send(message);
-            System.out.println("✅ Email envoyé à " + destinataire);
+            String htmlEscaped = htmlContent.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n");
+            String sujetEscaped = sujet.replace("\"", "\\\"");
+            String jsonBody = String.format("""
+                {
+                  "sender": {"name": "SmartCity", "email": "%s"},
+                  "to": [{"email": "%s"}],
+                  "subject": "[SmartCity] %s",
+                  "htmlContent": "%s"
+                }
+                """, senderEmail, destinataire, sujetEscaped, htmlEscaped);
+
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://api.brevo.com/v3/smtp/email"))
+                .header("api-key", apiKey)
+                .header("Content-Type", "application/json")
+                .header("Accept", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+                .timeout(Duration.ofSeconds(30))
+                .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 201 || response.statusCode() == 200) {
+                System.out.println("✅ Email envoyé à " + destinataire);
+            } else {
+                System.err.println("⚠️ Erreur Brevo (" + response.statusCode() + "): " + response.body());
+                throw new RuntimeException("L'email n'a pas pu être envoyé. Veuillez réessayer plus tard.");
+            }
+        } catch (RuntimeException e) {
+            throw e;
         } catch (Exception e) {
             System.err.println("❌ Erreur envoi email: " + e.getMessage());
             throw new RuntimeException("L'email n'a pas pu être envoyé. Veuillez réessayer plus tard.");
