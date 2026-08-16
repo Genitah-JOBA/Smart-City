@@ -43,7 +43,14 @@ public class Utilisateur {
     
     @Column(nullable = true, length = 500)
     private String adresse;
-    
+
+    // Réinitialisation de mot de passe
+    @Column(name = "reset_token")
+    private String resetToken;
+
+    @Column(name = "reset_token_expiry")
+    private LocalDateTime resetTokenExpiry;
+
     @PrePersist
     protected void onCreate() {
         dateCreation = LocalDateTime.now();

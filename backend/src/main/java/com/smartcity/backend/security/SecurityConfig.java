@@ -38,8 +38,15 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                // ⭐ Autoriser uniquement login et register
-                .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
+                // ⭐ Endpoints publics (utilisateur non connecté)
+                .requestMatchers(
+                    "/api/auth/login",
+                    "/api/auth/register",
+                    "/api/auth/send-verification-code",
+                    "/api/auth/verify-code",
+                    "/api/auth/forgot-password",
+                    "/api/auth/reset-password"
+                ).permitAll()
                 // ⭐ Toutes les autres routes nécessitent authentification
                 .anyRequest().authenticated()
             )

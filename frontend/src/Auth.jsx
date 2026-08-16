@@ -53,7 +53,98 @@ export default function Auth() {
   
   const [errors, setErrors] = useState({});
 
+  // Vérification d'email (inscription) + mot de passe oublié
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [codeSent, setCodeSent] = useState(false);
+  const [verificationCode, setVerificationCode] = useState("");
+  const [codeLoading, setCodeLoading] = useState(false);
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [infoMsg, setInfoMsg] = useState(null);
+
   const { t, lang, setLang, languages } = useI18n();
+
+  const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+  // Envoie un code de vérification à l'email saisi (inscription)
+  const handleSendCode = async () => {
+    setErrors(prev => ({ ...prev, email: "" }));
+    setInfoMsg(null);
+    if (!EMAIL_RE.test(email || "")) {
+      setErrors(prev => ({ ...prev, email: t("auth.emailInvalid") }));
+      return;
+    }
+    setCodeLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/auth/send-verification-code`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setCodeSent(true);
+        setInfoMsg({ type: "success", text: t("auth.codeSent") });
+      } else {
+        setErrors(prev => ({ ...prev, email: data.error || t("auth.codeSendError") }));
+      }
+    } catch {
+      setErrors(prev => ({ ...prev, email: t("auth.codeSendError") }));
+    } finally {
+      setCodeLoading(false);
+    }
+  };
+
+  // Confirme le code saisi
+  const handleVerifyCode = async () => {
+    setErrors(prev => ({ ...prev, code: "" }));
+    if (!verificationCode || verificationCode.length < 6) {
+      setErrors(prev => ({ ...prev, code: t("auth.codeInvalid") }));
+      return;
+    }
+    setCodeLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/auth/verify-code`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, code: verificationCode }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setEmailVerified(true);
+        setInfoMsg({ type: "success", text: t("auth.emailConfirmed") });
+      } else {
+        setErrors(prev => ({ ...prev, code: data.error || t("auth.codeInvalid") }));
+      }
+    } catch {
+      setErrors(prev => ({ ...prev, code: t("auth.codeSendError") }));
+    } finally {
+      setCodeLoading(false);
+    }
+  };
+
+  // Mot de passe oublié : envoie le lien de réinitialisation
+  const handleForgotPassword = async () => {
+    setErrors(prev => ({ ...prev, email: "" }));
+    setInfoMsg(null);
+    if (!EMAIL_RE.test(email || "")) {
+      setErrors(prev => ({ ...prev, email: t("auth.emailInvalid") }));
+      return;
+    }
+    setForgotLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/auth/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json().catch(() => ({}));
+      setInfoMsg({ type: "success", text: data.message || t("auth.resetSent") });
+    } catch {
+      setInfoMsg({ type: "error", text: t("auth.codeSendError") });
+    } finally {
+      setForgotLoading(false);
+    }
+  };
 
   useEffect(() => {
     const checkMobile = () => {
@@ -108,6 +199,10 @@ export default function Auth() {
       setTelephone("");
       setAdresse("");
       setShowPassword(false);
+      setEmailVerified(false);
+      setCodeSent(false);
+      setVerificationCode("");
+      setInfoMsg(null);
       setIsAnimating(false);
     }, 500);
   };
@@ -311,9 +406,15 @@ export default function Auth() {
   // Gestion de l'inscription OPTIMISÉE avec validations renforcées
   const handleRegister = async (e) => {
     e.preventDefault();
-    
+
     if (isLoading) return;
-    
+
+    // L'email doit d'abord être confirmé via le code reçu par mail
+    if (!emailVerified) {
+      setInfoMsg({ type: "error", text: t("auth.confirmEmailFirst") });
+      return;
+    }
+
     setMessage("");
     let newErrors = {};
 
@@ -817,7 +918,27 @@ export default function Auth() {
                         {errors.motDePasse}
                       </p>
                     )}
+                    <div className="text-right pt-1">
+                      <button
+                        type="button"
+                        onClick={handleForgotPassword}
+                        disabled={forgotLoading || isLoading}
+                        className="text-emerald-400 hover:text-emerald-300 text-xs font-medium transition-all disabled:opacity-60"
+                      >
+                        {forgotLoading ? t("auth.sending") : t("auth.forgotPassword")}
+                      </button>
+                    </div>
                   </div>
+
+                  {infoMsg && (
+                    <div className={`text-xs rounded-lg px-3 py-2 border ${
+                      infoMsg.type === "success"
+                        ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
+                        : "bg-red-500/10 border-red-500/30 text-red-300"
+                    }`}>
+                      {infoMsg.text}
+                    </div>
+                  )}
 
                   <button
                     type="submit"
@@ -884,30 +1005,85 @@ export default function Auth() {
                     )}
                   </div>
 
-                  {/* Email */}
+                  {/* Email + vérification */}
                   <div className="space-y-1">
                     <label className="text-white/70 text-xs font-medium flex items-center gap-2">
                       <Mail size={14} className="text-emerald-400" />
                       {t("prof.email")}
                     </label>
-                    <input
-                      type="email"
-                      placeholder="jean@gmail.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      onBlur={validateEmail}
-                      className={`w-full bg-white/5 border-2 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none transition-all text-sm backdrop-blur-sm ${
-                        errors.email 
-                          ? 'border-red-500/50 focus:border-red-500' 
-                          : 'border-white/10 focus:border-emerald-500/50 focus:bg-white/10'
-                      }`}
-                      required
-                      disabled={isLoading}
-                    />
+                    <div className="flex gap-2">
+                      <input
+                        type="email"
+                        placeholder="jean@gmail.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        onBlur={validateEmail}
+                        className={`flex-1 bg-white/5 border-2 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none transition-all text-sm backdrop-blur-sm ${
+                          errors.email
+                            ? 'border-red-500/50 focus:border-red-500'
+                            : emailVerified
+                              ? 'border-emerald-500/60'
+                              : 'border-white/10 focus:border-emerald-500/50 focus:bg-white/10'
+                        }`}
+                        required
+                        disabled={isLoading || emailVerified}
+                      />
+                      {emailVerified ? (
+                        <span className="flex items-center gap-1 px-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-medium whitespace-nowrap">
+                          <CheckCircle size={14} /> {t("auth.emailConfirmed")}
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleSendCode}
+                          disabled={codeLoading || isLoading}
+                          className="px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium whitespace-nowrap transition disabled:opacity-60"
+                        >
+                          {codeLoading ? t("auth.sending") : (codeSent ? t("auth.resendCode") : t("auth.sendCode"))}
+                        </button>
+                      )}
+                    </div>
                     {errors.email && (
                       <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
                         <AlertTriangle size={10} />
                         {errors.email}
+                      </p>
+                    )}
+
+                    {/* Saisie du code reçu par email */}
+                    {codeSent && !emailVerified && (
+                      <div className="pt-2 space-y-1">
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={6}
+                            placeholder={t("auth.codePlaceholder")}
+                            value={verificationCode}
+                            onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ""))}
+                            className="flex-1 bg-white/5 border-2 border-white/10 focus:border-emerald-500/50 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none text-sm tracking-[6px] text-center"
+                            disabled={isLoading}
+                          />
+                          <button
+                            type="button"
+                            onClick={handleVerifyCode}
+                            disabled={codeLoading || isLoading}
+                            className="px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium transition disabled:opacity-60"
+                          >
+                            {t("auth.confirm")}
+                          </button>
+                        </div>
+                        {errors.code && (
+                          <p className="text-red-400 text-xs flex items-center gap-1">
+                            <AlertTriangle size={10} /> {errors.code}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {infoMsg && (
+                      <p className={`text-xs mt-1 ${infoMsg.type === "success" ? "text-emerald-300" : "text-red-300"}`}>
+                        {infoMsg.text}
                       </p>
                     )}
                   </div>
@@ -1135,7 +1311,8 @@ export default function Auth() {
 
                   <button
                     type="submit"
-                    disabled={isLoading}
+                    disabled={isLoading || !emailVerified}
+                    title={!emailVerified ? t("auth.confirmEmailFirst") : ""}
                     className="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-semibold py-3.5 rounded-xl shadow-lg shadow-emerald-500/20 transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 text-sm group disabled:opacity-70 disabled:cursor-not-allowed"
                   >
                     {isLoading ? (

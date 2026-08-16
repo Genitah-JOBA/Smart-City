@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import { useEffect, useState } from "react";
 import Navbar from "./Navbar";
 import Auth from "./Auth";
+import ResetPassword from "./ResetPassword";
 import FloatingChat from "./FloatingChat";
 
 // Pages Citoyen
@@ -104,6 +105,7 @@ function App() {
       <Routes>
         {/* Routes publiques (sans navbar et sans chat flottant) */}
         <Route path="/auth" element={<Auth />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         
         {/* ========== ROUTES COMMUNES ========== */}
         <Route 
