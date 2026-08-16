@@ -138,7 +138,11 @@ export default function Auth() {
         body: JSON.stringify({ email }),
       });
       const data = await res.json().catch(() => ({}));
-      setInfoMsg({ type: "success", text: data.message || t("auth.resetSent") });
+      if (!res.ok) {
+        setInfoMsg({ type: "error", text: data.error || t("auth.codeSendError") });
+      } else {
+        setInfoMsg({ type: "success", text: data.message || t("auth.resetSent") });
+      }
     } catch {
       setInfoMsg({ type: "error", text: t("auth.codeSendError") });
     } finally {
