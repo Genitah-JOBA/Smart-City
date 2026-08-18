@@ -4,6 +4,7 @@ target/
 # Secrets / environnement local (NE PAS committer)
 .env
 .env.local
+Financement.md
 **/.env.local
 # On garde volontairement versionnés : .env.example, frontend/.env.development, frontend/.env.prod
 # (ils ne contiennent aucun secret)
