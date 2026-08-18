@@ -1,4 +1,4 @@
-# SmartCity — Plateforme citoyenne de signalement
+# SmartCity — Plateforme des signalements urbains
 
 Application web de **signalement des problèmes urbains** pour Antananarivo (Madagascar).
 Les citoyens signalent les incidents (voirie, éclairage, déchets, eau, sécurité…), les
@@ -12,14 +12,14 @@ Interface **multilingue** (Français 🇫🇷 · Malagasy 🇲🇬 · Anglais �
 
 ## Fonctionnalités
 
-### itoyen
+### Citoyen
 - Créer un signalement : titre, description, **catégorie**, **photos** (caméra, galerie, URL), **localisation GPS**.
 - Géolocalisation avec **rattachement au quartier** (gazetteer local + OpenStreetMap, sans API payante).
 - Fil des signalements, carte interactive (Leaflet), commentaires, partage.
 - Suivi de ses propres signalements et de leur statut.
 - Profil : édition, changement de mot de passe, **suppression du compte**.
 
-### gent
+### Agent
 - Tableau de bord des signalements **assignés**.
 - **Prise en charge** et **résolution** avec preuves (photos avant/après).
 - Vue « **IA — dangerosité** » qui trie les signalements par urgence.
@@ -48,7 +48,7 @@ Interface **multilingue** (Français 🇫🇷 · Malagasy 🇲🇬 · Anglais �
 | **Base de données** | PostgreSQL |
 | **Email** | API HTTP Brevo (transactionnel) |
 | **Conteneurisation** | Docker (backend + frontend nginx) |
-| **Hébergement** | Supabase (DB) · Render (backend) · Vercel (frontend) — ou VPS via Docker Compose |
+| **Hébergement** | Supabase (DB) · Render (backend) · Vercel (frontend)  |
 
 ---
 
