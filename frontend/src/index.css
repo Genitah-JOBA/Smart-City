@@ -7,6 +7,24 @@
 :root { color-scheme: dark; }
 :root.light { color-scheme: light; }
 
+/* Curseur « main » sur les éléments cliquables (toute la page) */
+button:not(:disabled),
+a[href],
+label[for],
+select,
+summary,
+[role="button"],
+[role="tab"],
+[role="link"],
+[role="menuitem"] {
+  cursor: pointer;
+}
+button:disabled,
+[disabled],
+[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
 /* =========================================================
    RESPONSIVE — garde-fous globaux (mobile → TV)
    Sûrs : ne cassent pas position:sticky (pas d'overflow sur html/body).

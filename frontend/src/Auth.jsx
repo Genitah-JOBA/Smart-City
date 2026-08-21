@@ -63,6 +63,15 @@ export default function Auth() {
 
   const { t, lang, setLang, languages } = useI18n();
 
+  // Les messages d'erreur sont stockés déjà traduits dans le state. Quand la langue
+  // change, on les efface pour ne pas conserver l'ancienne langue (ils réapparaîtront
+  // traduits dès la prochaine saisie / soumission).
+  useEffect(() => {
+    setErrors({});
+    setMessage("");
+    setInfoMsg(null);
+  }, [lang]);
+
   const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
   // Envoie un code de vérification à l'email saisi (inscription)
@@ -540,6 +549,23 @@ export default function Auth() {
     }
   };
 
+  // Saisie en direct : on efface l'erreur dès que la valeur devient valide
+  // (sans la RE-poser pendant la frappe — la validation stricte reste au blur/submit).
+  const handleEmailChange = (e) => {
+    const v = e.target.value;
+    setEmail(v);
+    if (!v || v.toLowerCase().endsWith("@gmail.com")) {
+      setErrors(prev => ({ ...prev, email: null }));
+    }
+  };
+  const handlePasswordChange = (e) => {
+    const v = e.target.value;
+    setMotDePasse(v);
+    if (v.length >= 6) {
+      setErrors(prev => ({ ...prev, motDePasse: null }));
+    }
+  };
+
   // ⭐ Validation en temps réel du téléphone
   const validatePhoneField = (e) => {
     const value = e.target.value;
@@ -848,7 +874,7 @@ export default function Auth() {
               
               {/* Formulaire de Connexion */}
               {isLogin ? (
-                <form onSubmit={handleLogin} className="space-y-5">
+                <form onSubmit={handleLogin} className="space-y-5" noValidate>
                   <div className="text-center space-y-2">
                     <div className="inline-flex items-center gap-2 bg-emerald-500/20 px-4 py-1.5 rounded-full border border-emerald-500/30">
                       <LogIn className="w-3.5 h-3.5 text-emerald-400" />
@@ -867,7 +893,7 @@ export default function Auth() {
                       type="email"
                       placeholder="votre@email.com"
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={handleEmailChange}
                       onBlur={validateEmail}
                       onFocus={() => setFocusedField('email')}
                       className={`w-full bg-white/5 border-2 rounded-xl px-4 py-3.5 text-white placeholder-white/30 focus:outline-none transition-all text-sm backdrop-blur-sm ${
@@ -896,7 +922,7 @@ export default function Auth() {
                         type={showPassword ? "text" : "password"}
                         placeholder="••••••••"
                         value={motDePasse}
-                        onChange={(e) => setMotDePasse(e.target.value)}
+                        onChange={handlePasswordChange}
                         onBlur={validatePassword}
                         onFocus={() => setFocusedField('password')}
                         className={`w-full bg-white/5 border-2 rounded-xl px-4 py-3.5 text-white placeholder-white/30 focus:outline-none transition-all pr-12 text-sm backdrop-blur-sm ${
@@ -972,7 +998,7 @@ export default function Auth() {
                 </form>
               ) : (
                 /* Formulaire d'Inscription - Style épuré */
-                <form onSubmit={handleRegister} className="space-y-4">
+                <form onSubmit={handleRegister} className="space-y-4" noValidate>
                   <div className="text-center space-y-2">
                     <div className="inline-flex items-center gap-2 bg-emerald-500/20 px-4 py-1.5 rounded-full border border-emerald-500/30">
                       <UserPlus className="w-3.5 h-3.5 text-emerald-400" />
@@ -1020,7 +1046,7 @@ export default function Auth() {
                         type="email"
                         placeholder="jean@gmail.com"
                         value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        onChange={handleEmailChange}
                         onBlur={validateEmail}
                         className={`flex-1 bg-white/5 border-2 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none transition-all text-sm backdrop-blur-sm ${
                           errors.email
@@ -1103,7 +1129,7 @@ export default function Auth() {
                         type={showPassword ? "text" : "password"}
                         placeholder="••••••••"
                         value={motDePasse}
-                        onChange={(e) => setMotDePasse(e.target.value)}
+                        onChange={handlePasswordChange}
                         onBlur={validatePassword}
                         className={`w-full bg-white/5 border-2 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none transition-all pr-12 text-sm backdrop-blur-sm ${
                           errors.motDePasse 
