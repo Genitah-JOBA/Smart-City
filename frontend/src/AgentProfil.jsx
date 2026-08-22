@@ -356,6 +356,7 @@ export default function Profil() {
   });
   const [messageBox, setMessageBox] = useState({ show: false, type: "", text: "" });
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingProfile, setLoadingProfile] = useState(true);
   
   // États de validation
   const [isNomValid, setIsNomValid] = useState(false);
@@ -521,6 +522,8 @@ export default function Profil() {
       }
     } catch (error) {
       console.error("Erreur récupération profil:", error);
+    } finally {
+      setLoadingProfile(false);
     }
   };
 
@@ -721,6 +724,17 @@ export default function Profil() {
   };
 
   const isAgent = userRole === "AGENT";
+
+  if (loadingProfile) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-10 h-10 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-white/60">{t("prof.loading")}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
