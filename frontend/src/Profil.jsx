@@ -868,7 +868,7 @@ export default function Profil() {
         )}
 
         {/* Section Mes signalements - Style modernisé */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#1e1e32] to-[#16162a] border border-white/5 shadow-2xl">
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#1e1e32] to-[#16162a] border border-white/5 shadow-2xl mt-6">
           <div className="relative p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">

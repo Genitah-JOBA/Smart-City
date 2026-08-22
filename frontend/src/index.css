@@ -167,7 +167,7 @@ p, span, h1, h2, h3, h4, a, li, td { overflow-wrap: break-word; }
    photo, ex. « Voir plus » au survol) : le fond noir translucide reste sombre en
    mode clair, donc le texte doit rester BLANC (sinon il devient foncé/illisible). --- */
 :root.light :is(.bg-black\/40,.bg-black\/50,.bg-black\/60,.bg-black\/70,.bg-black\/80,.bg-black\/90):is(.text-white,.text-white\/90,.text-white\/80,.text-white\/70,.text-white\/60,.text-white\/50,.text-white\/40),
-:root.light :is(.bg-black\/40,.bg-black\/50,.bg-black\/60,.bg-black\/70,.bg-black\/80,.bg-black\/90) :is(.text-white,.text-white\/90,.text-white\/80,.text-white\/70,.text-white\/60,.text-white\/50,.text-white\/40) {
+:root.light :is(.bg-black\/40,.bg-black\/50,.bg-black\/60,.bg-black\/70,.bg-black\/80,.bg-black\/90) > :is(.text-white,.text-white\/90,.text-white\/80,.text-white\/70,.text-white\/60,.text-white\/50,.text-white\/40) {
   color: #ffffff !important;
 }
 

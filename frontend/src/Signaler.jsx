@@ -93,6 +93,7 @@ export default function Signaler() {
   const [errors, setErrors] = useState({});
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [locationAccuracy, setLocationAccuracy] = useState(null);
   
@@ -775,8 +776,9 @@ export default function Signaler() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return; // garde anti double-soumission
     const token = localStorage.getItem("token");
-    
+
     if (!validateForm()) {
       setMessage(t("sig.fixErrors"));
       setIsSuccess(false);
@@ -817,14 +819,15 @@ export default function Signaler() {
       images: images.map(img => ({ url: img.url }))
     };
 
+    setIsSubmitting(true);
     try {
-      const res = await fetch(url, { 
-        method, 
-        headers: { 
-          "Authorization": `Bearer ${token}`, 
-          "Content-Type": "application/json" 
-        }, 
-        body: JSON.stringify(payload) 
+      const res = await fetch(url, {
+        method,
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
       });
       if (res.ok) {
         handleCancelEdit();
@@ -849,6 +852,8 @@ export default function Signaler() {
       setMessage("Connexion au serveur impossible. Vérifiez votre connexion Internet et réessayez.");
       setIsSuccess(false);
       setShowModal(true);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -975,7 +980,7 @@ export default function Signaler() {
       {/* Module Caméra */}
       {showCamera && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl">
-          <div className="bg-[#1a1a2e] rounded-2xl w-full max-w-lg border border-white/10 overflow-hidden">
+          <div className="bg-white dark:bg-[#1a1a2e] rounded-2xl w-full max-w-lg border border-black/10 dark:border-white/10 overflow-hidden">
             <div className="relative bg-black">
               <video
                 ref={videoRef}
@@ -1015,7 +1020,7 @@ export default function Signaler() {
       {/* Modal de confirmation */}
       {showModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl">
-          <div className="bg-[#1a1a2e] rounded-2xl p-6 max-w-sm w-full border border-white/10">
+          <div className="bg-white dark:bg-[#1a1a2e] rounded-2xl p-6 max-w-sm w-full border border-black/10 dark:border-white/10">
             <div className="text-center">
               <div className={`mx-auto w-14 h-14 rounded-full flex items-center justify-center mb-4 ${
                 isSuccess ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
@@ -1042,7 +1047,7 @@ export default function Signaler() {
       {/* Modal de détail */}
       {showDetailModal && selectedSignalement && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl animate-fade-in">
-          <div className="bg-[#1a1a2e] rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-white/10 animate-modal-pop custom-scrollbar">
+          <div className="bg-white dark:bg-[#1a1a2e] rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-black/10 dark:border-white/10 animate-modal-pop custom-scrollbar">
             
             {selectedSignalement.images && selectedSignalement.images.length > 0 && (
               <div className="relative h-64 md:h-96 overflow-hidden rounded-t-2xl bg-[#0f0f1a]">
@@ -1512,11 +1517,21 @@ export default function Signaler() {
               )}
 
               <div className="flex gap-3 pt-4 border-t border-white/5">
-                <button 
-                  type="submit" 
-                  className="flex-1 bg-gradient-to-r from-blue-500/20 to-emerald-500/20 hover:from-blue-500/30 hover:to-emerald-500/30 text-white font-medium py-3 rounded-xl transition flex items-center justify-center gap-2 border border-white/10"
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex-1 bg-gradient-to-r from-blue-500/20 to-emerald-500/20 hover:from-blue-500/30 hover:to-emerald-500/30 text-white font-medium py-3 rounded-xl transition flex items-center justify-center gap-2 border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Send size={18}/> {editingId ? t("sig.update") : t("sig.send")}
+                  {isSubmitting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      {t("sig.sending")}
+                    </>
+                  ) : (
+                    <>
+                      <Send size={18}/> {editingId ? t("sig.update") : t("sig.send")}
+                    </>
+                  )}
                 </button>
                 
                 {editingId && (

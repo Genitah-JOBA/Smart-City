@@ -12,6 +12,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useI18n } from "./context/AppContext";
 import MessageBox from "./components/MessageBox";
+import Loading from "./components/Loading";
 
 export default function Signalements() {
   const { t } = useI18n();
@@ -484,19 +485,7 @@ export default function Signalements() {
   };
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-[#0f0f1a] flex items-center justify-center">
-        <div className="relative">
-          <div className="w-16 h-16 border-3 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-emerald-500 rounded-full animate-ping opacity-75"></div>
-          </div>
-          <p className="text-blue-400/40 mt-4 text-xs font-medium tracking-[0.3em] text-center animate-pulse">
-            CHARGEMENT
-          </p>
-        </div>
-      </div>
-    );
+    return <Loading />;
   }
 
   return (

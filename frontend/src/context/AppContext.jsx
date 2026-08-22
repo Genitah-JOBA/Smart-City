@@ -84,6 +84,7 @@ const translations = {
     "logout.title": "Déconnexion",
     "logout.question": "Êtes-vous sûr de vouloir vous déconnecter ?",
     "common.cancel": "Annuler",
+    "common.loading": "Chargement",
 
     "sig.newTitle": "Nouveau signalement",
     "sig.editTitle": "Modifier le signalement",
@@ -112,6 +113,7 @@ const translations = {
     "sig.urlPlaceholder": "URL de l'image",
     "sig.capture": "Capturer",
     "sig.send": "Envoyer",
+    "sig.sending": "Envoi en cours...",
     "sig.update": "Mettre à jour",
     "sig.searchPlaceholder": "Rechercher un signalement...",
     "sig.filterType": "Type de problème",
@@ -667,6 +669,7 @@ const translations = {
     "logout.title": "Hivoaka",
     "logout.question": "Tena te-hivoaka ve ianao ?",
     "common.cancel": "Aoka ihany",
+    "common.loading": "Eo am-pakàna",
 
     "sig.newTitle": "Fitarainana vaovao",
     "sig.editTitle": "Hanova ny fitarainana",
@@ -695,6 +698,7 @@ const translations = {
     "sig.urlPlaceholder": "URL-n'ny sary",
     "sig.capture": "Raiso",
     "sig.send": "Alefaso",
+    "sig.sending": "Andefasana...",
     "sig.update": "Hanavao",
     "sig.searchPlaceholder": "Hikaroka fitarainana...",
     "sig.filterType": "Karazana olana",
@@ -1250,6 +1254,7 @@ const translations = {
     "logout.title": "Log out",
     "logout.question": "Are you sure you want to log out?",
     "common.cancel": "Cancel",
+    "common.loading": "Loading",
 
     "sig.newTitle": "New report",
     "sig.editTitle": "Edit report",
@@ -1278,6 +1283,7 @@ const translations = {
     "sig.urlPlaceholder": "Image URL",
     "sig.capture": "Capture",
     "sig.send": "Send",
+    "sig.sending": "Sending...",
     "sig.update": "Update",
     "sig.searchPlaceholder": "Search a report...",
     "sig.filterType": "Issue type",

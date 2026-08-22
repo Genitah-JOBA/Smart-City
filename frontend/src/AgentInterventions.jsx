@@ -7,6 +7,7 @@ import {
   FolderOpen, Briefcase, Award, FileCheck
 } from "lucide-react";
 import { useI18n } from "./context/AppContext";
+import Loading from "./components/Loading";
 
 export default function AgentIntervention() {
   const { t } = useI18n();
@@ -279,11 +280,7 @@ export default function AgentIntervention() {
   };
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
-        <Loader2 className="w-10 h-10 text-emerald-500 animate-spin" />
-      </div>
-    );
+    return <Loading />;
   }
 
   return (

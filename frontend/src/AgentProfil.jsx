@@ -2,6 +2,7 @@ import { API_URL } from "./config/api";
 import { useState, useEffect, useRef } from "react";
 import { User, Mail, Shield, Save, Lock, Eye, EyeOff, Edit2, X, Check, AlertCircle, CheckCircle, Info, Briefcase, MapPin, Wrench, Building2, Lightbulb, Trash2, TreePine, Bus, ShieldCheck, Palette, Home, Phone } from "lucide-react";
 import { useI18n } from "./context/AppContext";
+import Loading from "./components/Loading";
 
 // ✅ COMPOSANT MESSAGEBOX MODERNE
 const MessageBox = ({ type, message, onClose, autoClose = 5000 }) => {
@@ -726,14 +727,7 @@ export default function Profil() {
   const isAgent = userRole === "AGENT";
 
   if (loadingProfile) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-10 h-10 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-white/60">{t("prof.loading")}</p>
-        </div>
-      </div>
-    );
+    return <Loading />;
   }
 
   return (

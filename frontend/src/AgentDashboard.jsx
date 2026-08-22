@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useI18n } from "./context/AppContext";
+import Loading from "./components/Loading";
 
 export default function AgentDashboard() {
   const { t } = useI18n();
@@ -507,14 +508,7 @@ export default function AgentDashboard() {
   };
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-10 h-10 text-blue-500 animate-spin mx-auto mb-4" />
-          <p className="text-gray-400">{t("agent.loadingDashboard")}</p>
-        </div>
-      </div>
-    );
+    return <Loading />;
   }
 
   // Modal de preuve

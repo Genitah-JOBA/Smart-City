@@ -2,6 +2,7 @@ import { API_URL } from "./config/api";
 import { useState, useEffect, useRef } from "react";
 import { User, Lock, Save, Eye, EyeOff, Edit2, X, Check, Shield, Award, Crown, Sparkles, Moon, Star, AlertCircle } from "lucide-react";
 import { useI18n } from "./context/AppContext";
+import Loading from "./components/Loading";
 
 export default function Profil() {
   const { t } = useI18n();
@@ -365,6 +366,10 @@ export default function Profil() {
     }
   };
 
+  if (isLoading && !userInfo.nom) {
+    return <Loading />;
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 relative overflow-hidden">
       {/* Animated Background Elements */}
@@ -413,19 +418,6 @@ export default function Profil() {
           </div>
         )}
 
-        {isLoading && !userInfo.nom && (
-          <div className="text-center text-white py-8">
-            <div className="inline-block">
-              <div className="relative">
-                <div className="w-16 h-16 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin"></div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <User className="w-6 h-6 text-indigo-400 animate-pulse" />
-                </div>
-              </div>
-            </div>
-            <p className="mt-4 text-white/60">{t("prof.loading")}</p>
-          </div>
-        )}
 
         {userInfo.nom && (
           <div className="space-y-6 animate-fade-in-up">
